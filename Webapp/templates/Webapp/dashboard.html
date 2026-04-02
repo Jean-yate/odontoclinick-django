@@ -1,0 +1,152 @@
+{% extends 'Webapp/base.html' %}
+
+{% block title %}Panel Administrativo | OdontoClinick{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Tarjetas de estadísticas infladas con colores personalizados */
+    .clay-stat-card {
+        border-radius: 35px;
+        border: none;
+        padding: 2rem;
+        transition: transform 0.3s ease;
+        box-shadow: var(--clay-shadow);
+    }
+    
+    .clay-stat-card:hover {
+        transform: translateY(-8px);
+    }
+
+    .bg-clay-primary {
+        background-color: var(--primary-color);
+        color: white !important;
+        box-shadow: 12px 12px 24px rgba(63, 46, 35, 0.2), inset 6px 6px 12px rgba(255,255,255,0.2);
+    }
+
+    .bg-clay-accent {
+        background-color: var(--accent-color);
+        color: var(--primary-color) !important;
+        box-shadow: 12px 12px 24px rgba(210, 180, 140, 0.3), inset 6px 6px 12px rgba(255,255,255,0.4);
+    }
+
+    /* Botones de acción como "módulos" táctiles */
+    .clay-action-tile {
+        background: white;
+        border-radius: 25px;
+        padding: 2rem 1rem;
+        border: none;
+        text-decoration: none;
+        display: block;
+        transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        box-shadow: 8px 8px 16px #d1cdc7, inset 4px 4px 8px rgba(255,255,255,0.8);
+    }
+
+    .clay-action-tile:hover:not([disabled]) {
+        transform: scale(1.05);
+        background-color: #fdfaf8;
+    }
+
+    .clay-action-tile i {
+        color: var(--primary-color);
+        margin-bottom: 15px;
+        display: block;
+    }
+
+    .clay-action-tile strong {
+        color: var(--secondary-color);
+        font-size: 0.9rem;
+    }
+
+    /* Estado deshabilitado clay */
+    .clay-action-tile[disabled] {
+        opacity: 0.6;
+        cursor: not-allowed;
+        box-shadow: inset 4px 4px 8px rgba(0,0,0,0.05);
+        background: #ececec;
+    }
+
+    .section-header-clay {
+        background: white;
+        border-radius: 20px 20px 0 0;
+        padding: 1.5rem;
+        margin-bottom: 0;
+        border-bottom: 2px solid var(--bg-body);
+        color: var(--primary-color);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row mb-5 align-items-center">
+        <div class="col-md-8">
+            <h1 class="fw-bold" style="color: var(--primary-color); letter-spacing: -1px;">
+                Panel de Gestión Clínica
+            </h1>
+            <p class="text-muted fw-medium">
+                Bienvenido, <span class="text-dark fw-bold">{{ nombre_admin }}</span>. Estás en modo administrador.
+            </p>
+        </div>
+        <div class="col-md-4 text-md-end">
+            <span class="badge py-2 px-4 rounded-pill" style="background-color: white; color: var(--primary-color); box-shadow: 4px 4px 8px rgba(0,0,0,0.05);">
+                <i class="bi bi-shield-lock-fill me-2"></i>ADMINISTRADOR
+            </span>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-5">
+        <div class="col-md-6 col-lg-4">
+            <div class="card clay-stat-card bg-clay-primary h-100">
+                <div class="card-body text-center p-4">
+                    <i class="bi bi-people-fill fs-1 mb-3 d-block"></i>
+                    <h6 class="text-uppercase fw-bold opacity-75 small">Pacientes Registrados</h6>
+                    <h1 class="display-3 fw-bold mb-0">{{ total_pacientes }}</h1>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 col-lg-4">
+            <div class="card clay-stat-card bg-clay-accent h-100">
+                <div class="card-body text-center p-4">
+                    <i class="bi bi-calendar-check-fill fs-1 mb-3 d-block"></i>
+                    <h6 class="text-uppercase fw-bold opacity-75 small">Citas de Hoy</h6>
+                    <h1 class="display-3 fw-bold mb-0">0</h1>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card border-0 shadow-none" style="background: transparent;">
+                <h5 class="fw-bold mb-4" style="color: var(--primary-color); padding-left: 10px;">Acciones de Administración</h5>
+                <div class="row g-4 text-center">
+                    <div class="col-6 col-md-3">
+                        <a href="{% url 'registro' %}" class="clay-action-tile">
+                            <i class="bi bi-person-plus-fill fs-1"></i>
+                            <strong>Registrar Paciente</strong>
+                        </a>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <button class="clay-action-tile w-100" disabled>
+                            <i class="bi bi-calendar2-plus fs-1"></i>
+                            <strong>Agendar Cita</strong>
+                        </button>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <a href="/admin/" class="clay-action-tile">
+                            <i class="bi bi-cpu-fill fs-1"></i>
+                            <strong>Configuración Django</strong>
+                        </a>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <a href="{% url 'lista_pacientes' %}" class="clay-action-tile">
+                            <i class="bi bi-archive-fill fs-1"></i>
+                            <strong>Base de Datos</strong>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

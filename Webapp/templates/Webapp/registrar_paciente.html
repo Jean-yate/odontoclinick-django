@@ -1,0 +1,172 @@
+{% extends 'Webapp/base.html' %}
+
+{% block title %}Registrar Paciente | OdontoClinick{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Tarjeta principal con efecto de relieve (Claymorphism) */
+    .clay-card-form {
+        background: white;
+        border-radius: 35px;
+        box-shadow: var(--clay-shadow);
+        border: none;
+        padding: 3rem;
+        max-width: 900px;
+        margin: 2rem auto;
+    }
+
+    .form-section-title {
+        color: var(--primary-color);
+        font-weight: 800;
+        letter-spacing: -0.5px;
+        border-bottom: 2px solid #f0f4f9;
+        padding-bottom: 0.5rem;
+        margin-top: 1.5rem;
+    }
+
+    /* Estilo para los inputs inyectados por Django (Efecto hundido) */
+    .clay-card-form input, 
+    .clay-card-form select, 
+    .clay-card-form textarea {
+        display: block;
+        width: 100%;
+        padding: 0.75rem 1.1rem;
+        background-color: #f0f4f9 !important;
+        border: none !important;
+        border-radius: 15px !important;
+        box-shadow: inset 3px 3px 6px rgba(0,0,0,0.05), inset -2px -2px 5px rgba(255,255,255,0.7);
+        font-weight: 600;
+        color: var(--secondary-color);
+        margin-top: 0.3rem;
+        transition: all 0.3s ease;
+    }
+
+    .clay-card-form input:focus {
+        outline: none;
+        box-shadow: inset 1px 1px 3px rgba(0,0,0,0.1), 0 0 0 3px rgba(63, 46, 35, 0.1);
+        transform: scale(0.99);
+    }
+
+    .clay-card-form label {
+        font-weight: 700;
+        font-size: 0.85rem;
+        color: var(--primary-color);
+        margin-left: 10px;
+    }
+
+    /* Mensajes de error específicos */
+    .error-msg {
+        color: #dc3545;
+        font-size: 0.75rem;
+        font-weight: 700;
+        margin-left: 10px;
+        margin-top: 4px;
+    }
+
+    .alert-clay {
+        border-radius: 15px;
+        border: none;
+        box-shadow: 4px 4px 8px rgba(0,0,0,0.05);
+        font-weight: 600;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4 mb-5">
+    <div class="clay-card-form">
+        <div class="d-flex align-items-center mb-4">
+            <div class="p-3 bg-primary text-white rounded-4 shadow-sm me-3">
+                <i class="bi bi-person-plus-fill fs-2"></i>
+            </div>
+            <div>
+                <h3 class="fw-bold mb-0" style="color: var(--primary-color);">Nuevo Registro</h3>
+                <p class="text-muted small mb-0">Completa los datos para dar de alta a un paciente.</p>
+            </div>
+        </div>
+
+        <form method="post" novalidate>
+            {% csrf_token %}
+            
+            {% if form_user.non_field_errors %}
+                <div class="alert alert-danger alert-clay mb-4">
+                    {{ form_user.non_field_errors.0 }}
+                </div>
+            {% endif %}
+
+            <h5 class="form-section-title mb-4"><i class="bi bi-shield-lock me-2"></i>Datos de Cuenta</h5>
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <label>{{ form_user.nombre_usuario.label }}</label>
+                    {{ form_user.nombre_usuario }}
+                    {% if form_user.nombre_usuario.errors %}<div class="error-msg">{{ form_user.nombre_usuario.errors.0 }}</div>{% endif %}
+                </div>
+                <div class="col-md-4">
+                    <label>{{ form_user.correo.label }}</label>
+                    {{ form_user.correo }}
+                    {% if form_user.correo.errors %}<div class="error-msg">{{ form_user.correo.errors.0 }}</div>{% endif %}
+                </div>
+                <div class="col-md-4">
+                    <label>{{ form_user.telefono.label }}</label>
+                    {{ form_user.telefono }}
+                    {% if form_user.telefono.errors %}<div class="error-msg">{{ form_user.telefono.errors.0 }}</div>{% endif %}
+                </div>
+            </div>
+
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <label>{{ form_user.password.label }}</label>
+                    {{ form_user.password }}
+                    {% if form_user.password.errors %}<div class="error-msg">{{ form_user.password.errors.0 }}</div>{% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label>{{ form_user.confirmar_password.label }}</label>
+                    {{ form_user.confirmar_password }}
+                    {% if form_user.confirmar_password.errors %}<div class="error-msg">{{ form_user.confirmar_password.errors.0 }}</div>{% endif %}
+                </div>
+            </div>
+
+            <h5 class="form-section-title mb-4"><i class="bi bi-person-lines-fill me-2"></i>Información del Paciente</h5>
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label>{{ form_user.nombre.label }}</label>
+                    {{ form_user.nombre }}
+                    {% if form_user.nombre.errors %}<div class="error-msg">{{ form_user.nombre.errors.0 }}</div>{% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label>{{ form_user.apellidos.label }}</label>
+                    {{ form_user.apellidos }}
+                    {% if form_user.apellidos.errors %}<div class="error-msg">{{ form_user.apellidos.errors.0 }}</div>{% endif %}
+                </div>
+            </div>
+
+            <div class="row mb-5">
+                <div class="col-md-4">
+                    <label>{{ form_paciente.fecha_nacimiento.label }}</label>
+                    {{ form_paciente.fecha_nacimiento }}
+                    {% if form_paciente.fecha_nacimiento.errors %}<div class="error-msg">{{ form_paciente.fecha_nacimiento.errors.0 }}</div>{% endif %}
+                </div>
+                <div class="col-md-4">
+                    <label>{{ form_paciente.genero.label }}</label>
+                    {{ form_paciente.genero }}
+                    {% if form_paciente.genero.errors %}<div class="error-msg">{{ form_paciente.genero.errors.0 }}</div>{% endif %}
+                </div>
+                <div class="col-md-4">
+                    <label>{{ form_paciente.direccion.label }}</label>
+                    {{ form_paciente.direccion }}
+                    {% if form_paciente.direccion.errors %}<div class="error-msg">{{ form_paciente.direccion.errors.0 }}</div>{% endif %}
+                </div>
+            </div>
+
+            <div class="d-flex justify-content-end gap-3 pt-3">
+                <a href="{% url 'panel_secretaria' %}" class="btn btn-light rounded-pill px-4 fw-bold border-0" style="background: #e2e8f0;">
+                    Cancelar
+                </a>
+                <button type="submit" class="btn btn-primary rounded-pill px-5 fw-bold shadow">
+                    <i class="bi bi-save me-2"></i>Guardar Paciente
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

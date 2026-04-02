@@ -1,0 +1,50 @@
+{% extends 'Webapp/base.html' %}
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow border-0 p-4">
+                <h2 class="fw-bold mb-4 text-primary"><i class="bi bi-calendar-plus"></i> Agendar Nueva Cita</h2>
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Paciente</label>
+                            {{ form.id_paciente }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Doctor</label>
+                            {{ form.id_doctor }}
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Fecha y Hora</label>
+                            {{ form.fecha_hora }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Estado Inicial</label>
+                            {{ form.id_estado_cita }}
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Notas o Motivo</label>
+                        {{ form.notas_paciente }}
+                    </div>
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                        <a href="{% url 'panel_secretaria' %}" class="btn btn-secondary">Cancelar</a>
+                        <button type="submit" class="btn btn-primary">Confirmar Cita</button>
+                    </div>
+                    {% if form.non_field_errors %}
+    <div class="alert alert-danger shadow-sm border-0">
+        {% for error in form.non_field_errors %}
+            <i class="bi bi-exclamation-triangle-fill me-2"></i> {{ error }}
+        {% endfor %}
+    </div>
+{% endif %}
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

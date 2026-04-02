@@ -1,0 +1,193 @@
+{% extends 'Webapp/base.html' %}
+
+{% block extra_css %}
+<style>
+    /* Buscador Estilo Clay (Hundido) */
+    .search-container-clay {
+        max-width: 600px;
+        background: white;
+        padding: 0.8rem;
+        border-radius: 50px;
+        box-shadow: var(--clay-shadow), var(--clay-inset);
+        margin-bottom: 3rem;
+    }
+    
+    .search-input-clay {
+        border: none !important;
+        background: #f0ece9 !important;
+        border-radius: 30px !important;
+        padding: 0.6rem 1.5rem;
+        font-weight: 600;
+        box-shadow: inset 4px 4px 8px rgba(0,0,0,0.05);
+        color: var(--primary-color);
+    }
+    
+    .search-input-clay:focus {
+        box-shadow: inset 2px 2px 4px rgba(0,0,0,0.1);
+        transform: scale(0.99);
+    }
+
+    /* Contenedor de Tabla Clay */
+    .clay-table-card {
+        background: white;
+        border-radius: 40px;
+        padding: 1.5rem;
+        box-shadow: var(--clay-shadow);
+        border: none;
+        overflow: hidden;
+    }
+
+    .table thead th {
+        background-color: transparent;
+        border-bottom: 2px solid var(--bg-body);
+        color: var(--secondary-color);
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        font-weight: 800;
+        padding: 1.5rem 1rem;
+    }
+
+    .table tbody td {
+        padding: 1.2rem 1rem;
+        color: var(--primary-color);
+        border-bottom: 1px solid var(--bg-body);
+        font-weight: 500;
+    }
+
+    .table-hover tbody tr {
+        transition: all 0.2s ease;
+    }
+
+    .table-hover tbody tr:hover {
+        background-color: var(--bg-body) !important;
+        transform: scale(1.01);
+    }
+
+    /* Badges de Estado "Inflados" */
+    .status-badge-clay {
+        font-size: 0.75rem;
+        font-weight: 800;
+        padding: 0.5rem 1rem;
+        border-radius: 15px;
+        display: inline-block;
+        box-shadow: inset 2px 2px 4px rgba(0,0,0,0.05);
+    }
+    .status-activo { background-color: #d1fae5; color: #065f46; }
+    .status-inactivo { background-color: #fee2e2; color: #991b1b; }
+
+    /* Botones de Acción Táctiles */
+    .btn-action-clay {
+        width: 38px;
+        height: 38px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 12px;
+        background: white;
+        color: var(--secondary-color);
+        box-shadow: 4px 4px 8px #d1cdc7, inset 2px 2px 4px rgba(255,255,255,0.8);
+        border: none;
+        transition: all 0.2s;
+        margin: 0 4px;
+    }
+    .btn-action-clay:hover {
+        transform: translateY(-3px);
+        color: var(--primary-color);
+        background: white;
+        box-shadow: 6px 6px 12px #d1cdc7;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row mb-5 align-items-center">
+        <div class="col-md-7">
+            <h2 class="fw-bold mb-1" style="color: var(--primary-color); letter-spacing: -1px;">Gestión de Pacientes</h2>
+            <p class="text-muted fw-semibold mb-0">Listado general de usuarios registrados en el sistema.</p>
+        </div>
+        <div class="col-md-5 text-md-end mt-3 mt-md-0">
+            <a href="{% url 'registro' %}" class="btn btn-primary d-inline-flex align-items-center px-4 py-2">
+                <i class="bi bi-person-plus-fill me-2 fs-5"></i> REGISTRAR NUEVO
+            </a>
+        </div>
+    </div>
+
+    <div class="search-container-clay mx-auto mx-md-0">
+        <form method="GET" class="d-flex gap-2">
+            <input type="text" name="q" class="form-control search-input-clay" 
+                   placeholder="Buscar por nombre o usuario..." value="{{ query|default:'' }}">
+            <button class="btn btn-primary rounded-pill px-4" type="submit">
+                <i class="bi bi-search"></i>
+            </button>
+            {% if query %}
+                <a href="{% url 'lista_pacientes' %}" class="btn btn-light rounded-pill d-flex align-items-center fw-bold text-muted px-3">
+                    <i class="bi bi-x-lg"></i>
+                </a>
+            {% endif %}
+        </form>
+    </div>
+
+    <div class="clay-table-card mb-5">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th class="ps-4">Usuario</th>
+                        <th>Nombre Completo</th>
+                        <th>Contacto</th>
+                        <th>Estado</th>
+                        <th class="text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in pacientes %}
+                    <tr>
+                        <td class="ps-4">
+                            <span class="badge rounded-pill px-3 py-2" style="background: var(--bg-body); color: var(--primary-color); font-weight: 700;">
+                                {{ p.nombre_usuario }}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="fw-bold" style="color: var(--primary-color);">{{ p.nombre }} {{ p.apellidos }}</div>
+                            <div class="text-muted small fw-semibold">{{ p.correo }}</div>
+                        </td>
+                        <td>
+                            <div class="small fw-bold text-muted">
+                                <i class="bi bi-telephone-fill me-1 opacity-50"></i> {{ p.telefono|default:"---" }}
+                            </div>
+                        </td>
+                        <td>
+                            {% if p.id_estado.nombre_estado == 'Activo' %}
+                                <span class="status-badge-clay status-activo">Activo</span>
+                            {% else %}
+                                <span class="status-badge-clay status-inactivo">Inactivo</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            <a href="#" class="btn-action-clay" title="Ver detalle">
+                                <i class="bi bi-eye-fill"></i>
+                            </a>
+                            <a href="{% url 'editar_paciente' p.id_usuario %}" class="btn-action-clay" title="Editar">
+                                <i class="bi bi-pencil-fill"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center py-5">
+                            <div class="py-4">
+                                <i class="bi bi-emoji-frown fs-1 opacity-25 d-block mb-3"></i>
+                                <h5 class="fw-bold text-muted">No encontramos a nadie</h5>
+                                <p class="small text-muted">Intenta con otros términos de búsqueda.</p>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

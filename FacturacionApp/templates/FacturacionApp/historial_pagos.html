@@ -1,0 +1,94 @@
+{% extends 'Webapp/base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-end mb-4">
+        <div>
+            <h2 class="text-primary fw-bold mb-0">🧾 Historial de Facturación</h2>
+            <p class="text-muted small">Reporte general de ingresos y movimientos</p>
+            
+            <div class="mt-2">
+                <a href="{% url 'exportar_pdf' %}" class="btn btn-outline-danger btn-sm fw-bold shadow-sm me-2">
+                    <i class="bi bi-file-earmark-pdf-fill me-1"></i> Descargar PDF
+                </a>
+                <a href="{% url 'exportar_excel' %}" class="btn btn-outline-success btn-sm fw-bold shadow-sm">
+                    <i class="bi bi-file-earmark-excel-fill me-1"></i> Exportar Excel
+                </a>
+            </div>
+        </div>
+
+        <div class="bg-white p-3 rounded shadow-sm border-start border-4 border-success text-end">
+            <small class="text-muted d-block text-uppercase fw-bold" style="font-size: 0.7rem;">Total Recaudado</small>
+            <h3 class="mb-0 fw-bold text-success">$ {{ total_recaudado }}</h3>
+        </div>
+    </div>
+
+    <div class="card shadow border-0" style="border-radius: 15px;">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-4">Fecha y Hora</th>
+                            <th>Paciente</th>
+                            <th>Método</th>
+                            <th>Referencia</th>
+                            <th class="text-end pe-4">Monto</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for pago in pagos %}
+                        <tr>
+                            <td class="ps-4">
+                                <div class="fw-bold text-dark">{{ pago.fecha_pago|date:"d/m/Y" }}</div>
+                                <small class="text-muted">{{ pago.fecha_pago|time:"H:i" }}</small>
+                            </td>
+
+                            <td>
+                                <span class="fw-semibold text-primary">{{ pago.id_cita.id_paciente }}</span>
+                            </td>
+
+                            <td>
+                                <span class="badge rounded-pill bg-info text-dark px-3">
+                                    {{ pago.id_metodo_pago.nombre_metodo }}
+                                </span>
+                            </td>
+
+                            <td>
+                                <code class="text-secondary small">{{ pago.referencia|default:"Sin ref." }}</code>
+                            </td>
+
+                            <td class="text-end pe-4">
+                                <span class="fw-bold text-success">$ {{ pago.monto }}</span>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center py-5">
+                                <div class="text-muted">
+                                    <i class="bi bi-cash-stack display-4 opacity-25"></i>
+                                    <p class="mt-2">No hay pagos registrados en el sistema.</p>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .table thead th {
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #6c757d;
+        border-top: none;
+    }
+    .table-hover tbody tr:hover {
+        background-color: #f8f9fa;
+    }
+</style>
+{% endblock %}

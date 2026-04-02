@@ -1,0 +1,201 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{% block title %}OdontoClinick{% endblock %}</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            /* PALETA ADAPTADA A CLAYMORFISMO */
+            --primary-color: #3f2e23; 
+            --secondary-color: #786b5e;
+            --accent-color: #d2b48c;
+            --bg-body: #f0ece9;       /* Un poco más oscuro para que el blanco resalte */
+            --clay-white: #ffffff;
+            /* Sombras Claymorphic */
+            --clay-shadow: 12px 12px 24px #d1cdc7, -12px -12px 24px #ffffff;
+            --clay-inset: inset 6px 6px 12px rgba(0,0,0,0.03), inset -6px -6px 12px rgba(255,255,255,0.7);
+        }
+
+        body { 
+            font-family: 'Quicksand', sans-serif; 
+            background-color: var(--bg-body);
+            color: var(--secondary-color);
+            overflow-x: hidden;
+        }
+
+        /* Navbar estilo Claymorphic Float */
+        .navbar {
+            background: var(--bg-body) !important;
+            padding: 1.5rem 0;
+            border: none;
+        }
+        .nav-container-clay {
+            background: white;
+            border-radius: 50px;
+            padding: 0.5rem 2rem;
+            box-shadow: var(--clay-shadow), var(--clay-inset);
+            display: flex;
+            width: 100%;
+            align-items: center;
+        }
+
+        .navbar-brand { 
+            font-weight: 700; 
+            font-size: 1.3rem; 
+            color: var(--primary-color) !important;
+            letter-spacing: -0.02em;
+        }
+
+        .nav-link { 
+            color: var(--secondary-color) !important; 
+            font-size: 0.95rem;
+            font-weight: 600;
+            padding: 0.5rem 1.2rem !important;
+            transition: all 0.3s ease;
+        }
+        .nav-link:hover {
+            color: var(--primary-color) !important;
+            transform: scale(1.05);
+        }
+
+        /* Botones estilo "Gomita" */
+        .btn-primary {
+            background-color: var(--primary-color);
+            border: none;
+            border-radius: 20px;
+            padding: 0.8rem 1.8rem;
+            font-size: 0.9rem;
+            font-weight: 700;
+            box-shadow: 6px 6px 12px rgba(63, 46, 35, 0.2), 
+                        inset 4px 4px 8px rgba(255, 255, 255, 0.2);
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .btn-primary:hover { 
+            background-color: var(--secondary-color); 
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 8px 8px 16px rgba(63, 46, 35, 0.25);
+        }
+
+        /* Dropdowns */
+        .dropdown-menu {
+            border: none;
+            border-radius: 20px;
+            box-shadow: var(--clay-shadow);
+            padding: 1rem;
+            background: white;
+        }
+        .dropdown-item {
+            border-radius: 12px;
+            font-weight: 600;
+            padding: 0.6rem 1rem;
+        }
+        .dropdown-item:hover {
+            background-color: var(--bg-body);
+            color: var(--primary-color);
+        }
+
+        /* Footer suave */
+        footer { 
+            background: transparent;
+            color: var(--secondary-color); 
+            padding: 4rem 0;
+            margin-top: 5rem;
+        }
+        .footer-clay {
+            background: white;
+            border-radius: 40px 40px 0 0;
+            box-shadow: 0 -12px 24px #d1cdc7, inset 0 6px 12px rgba(255,255,255,0.8);
+            padding: 3rem 0;
+        }
+
+        /* Alerts Claymorphic */
+        .alert {
+            border-radius: 20px;
+            border: none;
+            box-shadow: 8px 8px 16px rgba(0,0,0,0.05), inset 4px 4px 8px rgba(255,255,255,0.5);
+            font-weight: 600;
+        }
+
+        {% block extra_css %} {% endblock %}
+    </style>
+</head>
+<body>
+
+  <nav class="navbar navbar-expand-lg sticky-top">
+    <div class="container">
+      <div class="nav-container-clay">
+        <a class="navbar-brand" href="{% url 'home' %}">ODONTOCLINICK</a>
+        
+        <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+          <i class="bi bi-list fs-3" style="color: var(--primary-color);"></i>
+        </button>
+
+        <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
+          <ul class="navbar-nav align-items-center">
+            <li class="nav-item"><a class="nav-link" href="{% url 'home' %}">Inicio</a></li>
+            
+            {% if user.is_authenticated %}
+              {% if user.id_rol.nombre_rol == 'Secretaria' or user.id_rol.nombre_rol == 'Administrador' %}
+                <li class="nav-item"><a class="nav-link" href="{% url 'panel_secretaria' %}">Dashboard</a></li>
+                <li class="nav-item"><a class="nav-link" href="{% url 'lista_pacientes' %}">Pacientes</a></li>
+              {% endif %}
+
+              <li class="nav-item dropdown ms-lg-2">
+                <a class="nav-link dropdown-toggle fw-bold" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" style="color: var(--primary-color) !important;">
+                  {{ user.nombre|upper }}
+                </a>
+                <ul class="dropdown-menu dropdown-menu-end shadow">
+                  <li><a class="dropdown-item" href="{% url 'perfil_paciente' %}">Configuración</a></li>
+                  <li><hr class="dropdown-divider opacity-50"></li>
+                  <li>
+                    <form action="{% url 'logout' %}" method="post" class="px-2">
+                      {% csrf_token %}
+                      <button type="submit" class="btn btn-link text-danger text-decoration-none fw-bold w-100 text-start">Salir</button>
+                    </form>
+                  </li>
+                </ul>
+              </li>
+            {% else %}
+              <li class="nav-item ms-lg-3"><a class="btn btn-primary" href="{% url 'login' %}">ACCESO</a></li>
+            {% endif %}
+          </ul>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mt-4">
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                <i class="bi bi-info-circle-fill me-2"></i> {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+  </div>
+
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer>
+    <div class="footer-clay text-center">
+        <div class="container">
+            <p class="mb-1 fw-bold" style="letter-spacing: 1px; color: var(--primary-color);">ODONTOCLINICK</p>
+            <p class="mb-0 small">© 2026 Gestión Profesional de Salud Dental</p>
+            <div class="mt-2 opacity-50 small fw-bold">Bogotá, Colombia</div>
+        </div>
+    </div>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

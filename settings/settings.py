@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 from pathlib import Path
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -37,6 +38,14 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'Webapp',            # La página principal
+    'CuentasApp',        # Usuarios y Roles
+    'PacienteApp',       # Fichas de pacientes
+    'MedicoApp',         # Doctores y Horarios
+    'CitaApp',           # Gestión de citas
+    'TratamientoApp',    # Servicios y procedimientos
+    'InventarioApp',     # Stock de insumos
+    'FacturacionApp',    # Pagos y recibos
 ]
 
 MIDDLEWARE = [
@@ -49,7 +58,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-ROOT_URLCONF = 'odontoclinick.urls'
+ROOT_URLCONF = 'settings.urls'
 
 TEMPLATES = [
     {
@@ -66,7 +75,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'odontoclinick.wsgi.application'
+WSGI_APPLICATION = 'settings.wsgi.application'
 
 # DB SQLITE
 
@@ -119,9 +128,9 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/6.0/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'es-co'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'America/Bogota'
 
 USE_I18N = True
 
@@ -132,7 +141,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
-
+STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
 #Indica dónde almacenar archivos multimedia
 MEDIA_URL = 'media/'
 
@@ -146,3 +155,7 @@ EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = ''  # Tu correo de Gmail
 EMAIL_HOST_PASSWORD = ''  # NO tu contraseña habitual
+
+AUTH_USER_MODEL = 'CuentasApp.Usuario'
+LOGIN_REDIRECT_URL = 'home'
+LOGOUT_REDIRECT_URL = 'home'

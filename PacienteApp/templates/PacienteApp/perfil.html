@@ -1,0 +1,252 @@
+{% extends 'Webapp/base.html' %}
+
+{% block title %}Mi Perfil | OdontoClinick{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --clay-shadow: 0 10px 30px rgba(0,0,0,0.08);
+        --primary-soft: rgba(63, 46, 35, 0.1);
+    }
+
+    .clay-card-profile {
+        background: white;
+        border-radius: 30px;
+        box-shadow: var(--clay-shadow);
+        border: none;
+        padding: 2rem;
+        transition: transform 0.3s ease;
+    }
+
+    .profile-avatar {
+        width: 100px;
+        height: 100px;
+        background: #f8f9fa;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1.5rem;
+        box-shadow: inset 4px 4px 8px rgba(0,0,0,0.05);
+        color: var(--primary-color);
+        font-size: 3rem;
+    }
+
+    .nav-pills-clay .nav-link {
+        border-radius: 15px;
+        color: var(--secondary-color);
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        transition: all 0.3s ease;
+        border: 1px solid transparent;
+    }
+
+    .nav-pills-clay .nav-link.active {
+        background-color: var(--primary-color) !important;
+        color: white !important;
+        box-shadow: 0 4px 15px rgba(63, 46, 35, 0.2);
+    }
+
+    .appointment-card {
+        background: #f8fafc;
+        border-radius: 20px;
+        border-left: 5px solid var(--primary-color);
+        transition: all 0.3s ease;
+    }
+
+    /* ESTILOS DEL FORMULARIO BONITO */
+    .clay-form-inner .form-control {
+        border: 2px solid #f1f3f5;
+        border-radius: 12px;
+        padding: 0.70rem 1rem;
+        transition: all 0.3s ease;
+        background-color: #fcfcfc;
+    }
+
+    .clay-form-inner .form-control:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 0.25rem var(--primary-soft);
+        background-color: white;
+        outline: none;
+    }
+
+    .form-label {
+        color: #4a5568;
+        margin-bottom: 0.4rem;
+    }
+
+    .section-divider {
+        border-bottom: 2px solid #f8f9fa;
+        margin: 2rem 0 1.5rem;
+        padding-bottom: 0.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-5 mb-5">
+    
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show shadow-sm mb-4" role="alert" style="border-radius: 15px;">
+                <i class="bi {% if message.tags == 'error' %}bi-exclamation-triangle{% else %}bi-check-circle{% endif %} me-2"></i>
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="row">
+        <div class="col-lg-4 mb-4">
+            <div class="clay-card-profile text-center mb-4 shadow-sm">
+                <div class="profile-avatar">
+                    <i class="bi bi-person-circle"></i>
+                </div>
+                <h4 class="fw-bold mb-1">{{ request.user.nombre }} {{ request.user.apellidos }}</h4>
+                <p class="text-muted mb-4 small">Paciente de OdontoClinick</p>
+                
+                <div class="nav flex-column nav-pills nav-pills-clay" id="v-pills-tab" role="tablist">
+                    <button class="nav-link {% if not form.errors %}active{% endif %}" id="tab-citas" data-bs-toggle="pill" data-bs-target="#content-citas" type="button">
+                        <i class="bi bi-calendar-event me-2"></i>Mis Citas
+                    </button>
+                    <button class="nav-link {% if form.errors %}active{% endif %}" id="tab-datos" data-bs-toggle="pill" data-bs-target="#content-datos" type="button">
+                        <i class="bi bi-person-gear me-2"></i>Editar Mis Datos
+                    </button>
+                    <button class="nav-link" id="tab-historial" data-bs-toggle="pill" data-bs-target="#content-historial" type="button">
+                        <i class="bi bi-clock-history me-2"></i>Historial Médico
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-8">
+            <div class="clay-card-profile h-100 shadow-sm">
+                <div class="tab-content" id="v-pills-tabContent">
+                    
+                    <div class="tab-pane fade {% if not form.errors %}show active{% endif %}" id="content-citas">
+                        <h3 class="fw-bold mb-4" style="color: var(--primary-color);">Mis Próximas Citas</h3>
+                        {% if citas_proximas %}
+                            {% for cita in citas_proximas %}
+                            <div class="appointment-card p-3 mb-3 d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="fw-bold mb-1 text-uppercase">{{ cita.id_servicio.nombre_servicio }}</h6>
+                                    <p class="mb-0 text-muted small">
+                                        <i class="bi bi-calendar3 me-1"></i> {{ cita.fecha_hora|date:"D, d M Y" }} 
+                                        <i class="bi bi-clock ms-2 me-1"></i> {{ cita.fecha_hora|date:"h:i A" }}
+                                    </p>
+                                    <p class="mb-0 small"><i class="bi bi-person-badge me-1"></i> Dr. {{ cita.id_doctor.id_usuario.nombre }}</p>
+                                </div>
+                                <span class="badge bg-primary rounded-pill px-3">Programada</span>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="text-center py-5">
+                                <i class="bi bi-calendar-x fs-1 text-muted"></i>
+                                <p class="mt-3 text-muted">No tienes citas pendientes.</p>
+                                <a href="{% url 'home' %}" class="btn btn-outline-primary rounded-pill px-4">Agendar Cita</a>
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="tab-pane fade {% if form.errors %}show active{% endif %}" id="content-datos">
+                        <div class="d-flex align-items-center mb-4">
+                            <h3 class="fw-bold mb-0" style="color: var(--primary-color);">Configuración de Perfil</h3>
+                        </div>
+
+                        <form method="post" class="clay-form-inner px-2">
+                            {% csrf_token %}
+                            
+                            <div class="row g-3">
+                                <div class="col-12">
+                                    <h6 class="section-divider text-uppercase text-muted fw-bold small">Información Personal</h6>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold small"><i class="bi bi-person me-1"></i> Nombre(s)</label>
+                                    {{ form.nombre }}
+                                    {% if form.nombre.errors %}<div class="text-danger small mt-1">{{ form.nombre.errors.0 }}</div>{% endif %}
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold small"><i class="bi bi-person-badge me-1"></i> Apellidos</label>
+                                    {{ form.apellidos }}
+                                    {% if form.apellidos.errors %}<div class="text-danger small mt-1">{{ form.apellidos.errors.0 }}</div>{% endif %}
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold small"><i class="bi bi-envelope me-1"></i> Correo Electrónico</label>
+                                    {{ form.correo }}
+                                    {% if form.correo.errors %}<div class="text-danger small mt-1">{{ form.correo.errors.0 }}</div>{% endif %}
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold small"><i class="bi bi-telephone me-1"></i> Teléfono</label>
+                                    {{ form.telefono }}
+                                    {% if form.telefono.errors %}<div class="text-danger small mt-1">{{ form.telefono.errors.0 }}</div>{% endif %}
+                                </div>
+
+                                <div class="col-12">
+                                    <label class="form-label fw-bold small"><i class="bi bi-geo-alt me-1"></i> Dirección de Residencia</label>
+                                    {{ form.direccion }}
+                                    {% if form.direccion.errors %}<div class="text-danger small mt-1">{{ form.direccion.errors.0 }}</div>{% endif %}
+                                </div>
+
+                                <div class="col-12">
+                                    <h6 class="section-divider text-uppercase text-muted fw-bold small">Seguridad de la Cuenta</h6>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold small"><i class="bi bi-lock me-1"></i> Nueva Contraseña</label>
+                                    {{ form.nueva_password }}
+                                    <div class="form-text small text-muted">Vacío para no cambiar.</div>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold small"><i class="bi bi-lock-check me-1"></i> Confirmar Contraseña</label>
+                                    {{ form.confirmar_password }}
+                                    {% if form.confirmar_password.errors %}<div class="text-danger small mt-1">{{ form.confirmar_password.errors.0 }}</div>{% endif %}
+                                </div>
+
+                                <div class="col-12 mt-4 text-end">
+                                    <button type="submit" class="btn btn-primary rounded-pill px-5 fw-bold shadow-sm py-2">
+                                        Guardar Cambios
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="tab-pane fade" id="content-historial">
+                        <h3 class="fw-bold mb-4" style="color: var(--primary-color);">Historial Médico</h3>
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Fecha</th>
+                                        <th>Diagnóstico</th>
+                                        <th>Doctor</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for h in historial %}
+                                    <tr>
+                                        <td class="fw-bold small">{{ h.fecha|date:"d/m/Y" }}</td>
+                                        <td class="small">{{ h.diagnostico|truncatechars:40 }}</td>
+                                        <td class="small">{{ h.id_doctor.id_usuario.nombre }}</td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="3" class="text-center py-4 text-muted small">Sin registros médicos.</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

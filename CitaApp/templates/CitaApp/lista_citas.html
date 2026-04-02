@@ -1,0 +1,127 @@
+{% extends 'Webapp/base.html' %}
+
+{% block title %}Agenda de Citas | OdontoClinick{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="text-primary fw-bold mb-0">🗓️ Agenda General de Citas</h2>
+            <p class="text-muted small">Gestión de turnos y facturación inmediata</p>
+        </div>
+        <a href="{% url 'agendar_cita' %}" class="btn btn-primary fw-bold shadow-sm">
+            <i class="bi bi-plus-circle me-1"></i> Agendar Nueva Cita
+        </a>
+    </div>
+
+    <div class="card shadow border-0" style="border-radius: 15px;">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-4">Fecha y Hora</th>
+                            <th>Paciente</th>
+                            <th>Doctor</th>
+                            <th>Estado</th>
+                            <th>Notas</th>
+                            <th class="text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for cita in citas %}
+                        <tr>
+                            <td class="ps-4">
+                                <div class="fw-bold text-dark">{{ cita.fecha_hora|date:"d/m/Y" }}</div>
+                                <small class="text-muted">{{ cita.fecha_hora|time:"H:i" }}</small>
+                            </td>
+
+                            <td>
+                                <span class="fw-semibold text-primary">{{ cita.id_paciente }}</span>
+                            </td>
+
+                            <td>
+                                <span class="text-secondary"><i class="bi bi-person-badge me-1"></i>{{ cita.id_doctor }}</span>
+                            </td>
+
+                            <td>
+                                {% if cita.id_estado_cita.nombre_estado == 'Pendiente' %}
+                                    <span class="badge bg-warning text-dark px-3 py-2">Pendiente</span>
+                                {% elif cita.id_estado_cita.nombre_estado == 'Confirmada' %}
+                                    <span class="badge bg-success px-3 py-2">Confirmada</span>
+                                {% elif cita.id_estado_cita.nombre_estado == 'Cancelada' %}
+                                    <span class="badge bg-danger px-3 py-2">Cancelada</span>
+                                {% else %}
+                                    <span class="badge bg-secondary px-3 py-2">{{ cita.id_estado_cita }}</span>
+                                {% endif %}
+                            </td>
+
+                            <td>
+                                <small class="text-muted text-truncate d-inline-block" style="max-width: 150px;" title="{{ cita.notas_paciente }}">
+                                    {{ cita.notas_paciente|default:"Sin observaciones" }}
+                                </small>
+                            </td>
+
+                            <td class="text-center pe-4">
+                                <div class="btn-group shadow-sm">
+                                    
+                                    {% if cita.pago_set.exists %}
+                                        <button class="btn btn-success btn-sm" title="Cita Pagada" disabled>
+                                            <i class="bi bi-check-all"></i>
+                                        </button>
+                                    {% else %}
+                                        <a href="{% url 'generar_cobro' cita.pk %}" class="btn btn-outline-success btn-sm" title="Registrar Cobro">
+                                            <i class="bi bi-cash-stack"></i>
+                                        </a>
+                                    {% endif %}
+
+                                    <a href="#" class="btn btn-outline-primary btn-sm" title="Editar detalles">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </a>
+
+                                    <a href="{% url 'cancelar_cita' cita.pk %}" 
+                                       class="btn btn-outline-danger btn-sm" 
+                                       onclick="return confirm('¿Estás seguro de que deseas cancelar la cita de {{ cita.id_paciente }}?')"
+                                       title="Cancelar Cita">
+                                        <i class="bi bi-x-circle"></i>
+                                    </a>
+
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center py-5 text-muted">
+                                <div class="mb-3">
+                                    <i class="bi bi-calendar2-x display-4 opacity-25"></i>
+                                </div>
+                                <h5>No hay citas para mostrar</h5>
+                                <p class="small">Usa el botón superior para agendar el primer paciente.</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .table thead th {
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-weight: 700;
+        color: #6c757d;
+        border-top: none;
+    }
+    .btn-group .btn {
+        padding: 0.4rem 0.7rem;
+    }
+    .table-hover tbody tr:hover {
+        background-color: #f8f9ff;
+        transition: background-color 0.2s ease;
+    }
+</style>
+{% endblock %}
