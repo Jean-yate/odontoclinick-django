@@ -8,7 +8,7 @@
         flex-direction: column;
         justify-content: center; /* Centrado Vertical */
         align-items: center;     /* Centrado Horizontal */
-        min-height: calc(100vh - 150px); /* Ajusta restando la altura aproximada de tu navbar/footer */
+        min-height: calc(100vh - 150px);
         width: 100%;
     }
 
@@ -19,11 +19,10 @@
         box-shadow: var(--clay-shadow);
         border: none;
         width: 100%;
-        max-width: 400px; /* Tamaño compacto */
-        margin: auto;     /* Refuerzo de centrado */
+        max-width: 400px;
+        margin: auto;
     }
 
-    /* Estilizamos el icono para que parezca un botón de arcilla hundido */
     .icon-box-clay {
         background: var(--bg-body);
         width: 70px;
@@ -36,7 +35,6 @@
         box-shadow: inset 4px 4px 8px rgba(0,0,0,0.05), 4px 4px 8px rgba(255,255,255,0.8);
     }
 
-    /* Inputs estilo arcilla (Clay) */
     .clay-login-card input {
         border: none !important;
         background-color: #f0f4f9 !important;
@@ -45,6 +43,20 @@
         box-shadow: inset 3px 3px 6px rgba(0,0,0,0.05);
         margin-top: 5px;
         font-weight: 600;
+        width: 100%;
+    }
+
+    /* Estilo para el link de olvidar contraseña */
+    .forgot-link {
+        font-size: 0.8rem;
+        color: var(--secondary-color);
+        text-decoration: none;
+        transition: color 0.3s ease;
+    }
+
+    .forgot-link:hover {
+        color: var(--primary-color);
+        text-decoration: underline;
     }
 </style>
 {% endblock %}
@@ -61,48 +73,54 @@
             </div>
             
             <form method="POST">
-    {% csrf_token %}
-    
-    {% if messages %}
-        {% for message in messages %}
-            <div class="alert alert-danger clay-alert py-2 px-3 mb-3 border-0 shadow-sm" style="border-radius: 15px; font-size: 0.85rem;">
-                <i class="bi bi-exclamation-triangle-fill me-2"></i> {{ message }}
-            </div>
-        {% endfor %}
-    {% endif %}
+                {% csrf_token %}
+                
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-danger py-2 px-3 mb-3 border-0 shadow-sm" style="border-radius: 15px; font-size: 0.85rem;">
+                            <i class="bi bi-exclamation-triangle-fill me-2"></i> {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
 
-    {% if form.non_field_errors %}
-        <div class="alert alert-warning clay-alert py-2 px-3 mb-3 border-0 shadow-sm" style="border-radius: 15px; font-size: 0.85rem;">
-            {% for error in form.non_field_errors %}
-                <i class="bi bi-shield-exclamation me-2"></i> {{ error }}
-            {% endfor %}
-        </div>
-    {% endif %}
+                {% if form.non_field_errors %}
+                    <div class="alert alert-warning py-2 px-3 mb-3 border-0 shadow-sm" style="border-radius: 15px; font-size: 0.85rem;">
+                        {% for error in form.non_field_errors %}
+                            <i class="bi bi-shield-exclamation me-2"></i> {{ error }}
+                        {% endfor %}
+                    </div>
+                {% endif %}
 
-    <div class="mb-3">
-        <label class="fw-bold small ms-2" style="color: var(--secondary-color);">Usuario</label>
-        {{ form.username }}
-        {% if form.username.errors %}
-            <div class="text-danger fw-bold mt-1 ms-2" style="font-size: 0.75rem;">
-                <i class="bi bi-x-circle"></i> {{ form.username.errors.0 }}
-            </div>
-        {% endif %}
-    </div>
-    
-    <div class="mb-4">
-        <label class="fw-bold small ms-2" style="color: var(--secondary-color);">Contraseña</label>
-        {{ form.password }}
-        {% if form.password.errors %}
-            <div class="text-danger fw-bold mt-1 ms-2" style="font-size: 0.75rem;">
-                <i class="bi bi-x-circle"></i> {{ form.password.errors.0 }}
-            </div>
-        {% endif %}
-    </div>
+                <div class="mb-3">
+                    <label class="fw-bold small ms-2" style="color: var(--secondary-color);">Usuario</label>
+                    {{ form.username }}
+                    {% if form.username.errors %}
+                        <div class="text-danger fw-bold mt-1 ms-2" style="font-size: 0.75rem;">
+                            <i class="bi bi-x-circle"></i> {{ form.username.errors.0 }}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="mb-2">
+                    <label class="fw-bold small ms-2" style="color: var(--secondary-color);">Contraseña</label>
+                    {{ form.password }}
+                    {% if form.password.errors %}
+                        <div class="text-danger fw-bold mt-1 ms-2" style="font-size: 0.75rem;">
+                            <i class="bi bi-x-circle"></i> {{ form.password.errors.0 }}
+                        </div>
+                    {% endif %}
+                </div>
 
-    <button type="submit" class="btn btn-primary w-100 py-2 fw-bold shadow-sm" style="border-radius: 15px;">
-        Entrar al Sistema
-    </button>
-</form>
+                <div class="text-end mb-4">
+                    <a href="{% url 'password_reset' %}" class="forgot-link">
+                        ¿Olvidaste tu contraseña?
+                    </a>
+                </div>
+
+                <button type="submit" class="btn btn-primary w-100 py-2 fw-bold shadow-sm" style="border-radius: 15px;">
+                    Entrar al Sistema
+                </button>
+            </form>
 
             <div class="text-center mt-4">
                 <p class="small text-muted mb-0">¿No tienes cuenta?</p>

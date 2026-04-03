@@ -4,22 +4,59 @@ from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
 from django.contrib import messages
+from django.core.mail import send_mail
+from django.conf import settings
 
-# Importaciones correctas desde sus respectivas Apps
+# Importaciones de modelos de otras Apps
 from PacienteApp.models import Paciente
 from CuentasApp.models import Usuario, Rol, Estado
-from CuentasApp.forms import EditarPacienteForm, RegistroForm, RegistroPacienteForm
 from CitaApp.models import Cita 
-from CitaApp.forms import AgendarCitaForm
+
+# Importaciones de formularios
+from .forms import PQRSForm  # Formulario local de Webapp
 from CuentasApp.forms import (
     EditarPacienteForm, 
     RegistroForm, 
     RegistroPacienteForm, 
-    EditarPerfilPacienteForm # Añade este nuevo
+    EditarPerfilPacienteForm
 )
+
+# --- VISTAS PÚBLICAS ---
 
 def home(request):
     return render(request, 'Webapp/index.html')
+
+def contacto_pqrs(request):
+    """Vista para manejar el envío de PQRS por correo electrónico"""
+    if request.method == 'POST':
+        form = PQRSForm(request.POST)
+        if form.is_valid():
+            nombre = form.cleaned_data['nombre']
+            email_usuario = form.cleaned_data['email']
+            tipo = form.cleaned_data['tipo']
+            mensaje = form.cleaned_data['mensaje']
+
+            asunto = f"Nueva {tipo} de {nombre} - OdontoClinick"
+            cuerpo = f"Nombre: {nombre}\nCorreo: {email_usuario}\nTipo: {tipo}\n\nMensaje:\n{mensaje}"
+            
+            try:
+                send_mail(
+                    asunto,
+                    cuerpo,
+                    settings.EMAIL_HOST_USER,
+                    ['odontoclinick77@gmail.com'],
+                    fail_silently=False,
+                )
+                messages.success(request, "¡Tu PQRS ha sido enviada con éxito!")
+                return redirect('home')
+            except Exception as e:
+                messages.error(request, f"Error al enviar el correo: {e}")
+    else:
+        form = PQRSForm()
+
+    return render(request, 'Webapp/pqrs.html', {'form': form})
+
+# --- VISTAS PRIVADAS (GESTIÓN) ---
 
 @login_required
 def panel_secretaria(request):
@@ -37,7 +74,6 @@ def panel_secretaria(request):
     }
     return render(request, 'Webapp/panel_secretaria.html', contexto)
 
-# --- VISTA DE REGISTRO ÚNICO CORREGIDA ---
 @login_required
 def registro_integral_paciente(request):
     if request.user.id_rol.nombre_rol not in ['Secretaria', 'Administrador']:
@@ -50,7 +86,7 @@ def registro_integral_paciente(request):
         if form_user.is_valid() and form_paciente.is_valid():
             try:
                 with transaction.atomic():
-                    # 1. Crear el Usuario en CuentasApp
+                    # 1. Crear el Usuario
                     nuevo_usuario = form_user.save(commit=False)
                     nuevo_usuario.set_password(form_user.cleaned_data['password'])
                     
@@ -59,24 +95,21 @@ def registro_integral_paciente(request):
                     
                     nuevo_usuario.id_rol = rol_paciente
                     nuevo_usuario.id_estado = estado_activo
-                    nuevo_usuario.save() # Aquí la SIGNAL de CuentasApp crea el Paciente en PacienteApp
+                    nuevo_usuario.save() 
 
-                    # 2. Manejar el modelo Paciente de PacienteApp
-                    # Buscamos el paciente que la señal acaba de crear
+                    # 2. Actualizar instancia de Paciente creada por SIGNAL
                     paciente_instancia = Paciente.objects.get(id_usuario=nuevo_usuario)
-                    
-                    # Actualizamos esa instancia con los datos médicos (EPS, RH, etc.)
                     form_p_final = RegistroPacienteForm(request.POST, instance=paciente_instancia)
+                    
                     if form_p_final.is_valid():
                         paciente_data = form_p_final.save(commit=False)
-                        # Asignamos la fecha de registro que tu modelo Paciente requiere
                         paciente_data.fecha_registro = timezone.now()
                         paciente_data.save()
 
                     messages.success(request, f"Paciente {nuevo_usuario.nombre} registrado correctamente.")
                     return redirect('lista_pacientes')
             except Exception as e:
-                messages.error(request, f"Error al guardar en base de datos: {e}")
+                messages.error(request, f"Error en base de datos: {e}")
         else:
             messages.error(request, "Por favor corrige los errores en el formulario.")
     else:
@@ -92,11 +125,15 @@ def registro_integral_paciente(request):
 def lista_pacientes(request):
     if request.user.id_rol.nombre_rol not in ['Secretaria', 'Administrador']:
         return redirect('home')
+    
     query = request.GET.get('q')
     pacientes = Usuario.objects.filter(id_rol__nombre_rol='Paciente')
+    
     if query:
         pacientes = pacientes.filter(
-            Q(nombre_usuario__icontains=query) | Q(nombre__icontains=query) | Q(apellidos__icontains=query)
+            Q(nombre_usuario__icontains=query) | 
+            Q(nombre__icontains=query) | 
+            Q(apellidos__icontains=query)
         )
     return render(request, 'Webapp/lista_pacientes.html', {'pacientes': pacientes, 'query': query})
 
