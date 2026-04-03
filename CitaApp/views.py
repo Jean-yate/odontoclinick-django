@@ -16,30 +16,13 @@ def agendar_cita(request):
         form = AgendarCitaForm(request.POST)
         if form.is_valid():
             try:
-                # 1. Guardamos la Cita (Logística)
+                # 1. Guardamos solo la Cita (Logística básica)
                 cita = form.save(commit=False)
                 cita.fecha_creacion = timezone.now()
                 cita.fecha_actualizacion = timezone.now()
                 cita.save()
-
-                # 2. Recuperamos la nota del formulario (que no está en el modelo Cita)
-                nota_paciente = form.cleaned_data.get('notas_paciente')
-
-                # 3. CREAMOS el Historial Médico vinculado a esta cita
-                # Aquí guardamos la nota para que el médico la vea después
-                # 3. CREAMOS el Historial Médico con los nombres CORRECTOS
-                HistorialMedico.objects.create(
-                    id_cita=cita,
-                    id_tratamento_id=1, # O el ID de un tratamiento por defecto (revisa el nombre id_treatmento)
-                    costo_aplicado=0,    # Campo obligatorio en tu modelo
-                    notas_paciente=nota_paciente,
-                    diagnostico="Pendiente de evaluación",
-                    # CAMBIO AQUÍ: 'observaciones_clinicas' en lugar de 'observaciones_tratamiento'
-                    observaciones_clinicas="Cita agendada desde recepción",
-                    # CAMBIO AQUÍ: No pases 'fecha' ni 'fecha_creacion' 
-                    # porque tu modelo tiene auto_now_add=True (se pone sola)
-                )
-                messages.success(request, f'✅ Cita agendada y registro médico iniciado para {cita.id_paciente}')
+                
+                messages.success(request, f'✅ Cita agendada con éxito para {cita.id_paciente}')
                 return redirect('lista_citas') 
             except Exception as e:
                 messages.error(request, f'❌ Error al procesar el agendamiento: {e}')

@@ -10,6 +10,8 @@ urlpatterns = [
     
     # Agenda de Citas (Rango de tiempo)
     path('mi-agenda/', views.agenda_semanal, name='ver_citas'),
+    path('iniciar-atencion/<int:cita_id>/', views.iniciar_atencion, name='iniciar_atencion'),
+    
     
     # Historial de Tratamientos
     path('historial/', views.historial_tratamientos, name='historial_tratamientos'),

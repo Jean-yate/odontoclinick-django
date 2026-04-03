@@ -20,6 +20,7 @@ def registrar_pago_cita(request, id_cita):
 
     cita = get_object_or_404(Cita, pk=id_cita)
     metodos = MetodoPago.objects.filter(activo=1)
+    pago = Pago.objects.filter(id_cita=cita).first()
 
     if request.method == 'POST':
         monto = request.POST.get('monto')
@@ -30,24 +31,33 @@ def registrar_pago_cita(request, id_cita):
         try:
             metodo_instancia = MetodoPago.objects.get(pk=id_metodo)
             
-            Pago.objects.create(
-                id_cita=cita,
-                fecha_pago=timezone.now(),
-                monto=monto,
-                id_metodo_pago=metodo_instancia,
-                referencia=referencia,
-                notas=notas
-            )
+            if pago:
+                pago.fecha_pago = timezone.now()
+                pago.monto = monto
+                pago.id_metodo_pago = metodo_instancia
+                pago.referencia = referencia
+                pago.notas = notas
+                pago.save()
+            else:
+                Pago.objects.create(
+                    id_cita=cita,
+                    fecha_pago=timezone.now(),
+                    monto=monto,
+                    id_metodo_pago=metodo_instancia,
+                    referencia=referencia,
+                    notas=notas
+                )
             
-            messages.success(request, f"✅ Pago de ${monto} registrado con éxito para {cita.id_paciente}")
-            return redirect('lista_citas')
+            messages.success(request, f"✅ Pago de ${monto} procesado con éxito para {cita.id_paciente}")
+            return redirect('historial_pagos')
             
         except Exception as e:
-            messages.error(request, f"❌ Error al registrar el pago: {e}")
+            messages.error(request, f"❌ Error al procesate el pago: {e}")
 
     return render(request, 'FacturacionApp/generar_cobro.html', {
         'cita': cita,
-        'metodos': metodos
+        'metodos': metodos,
+        'pago': pago 
     })
 
 @login_required

@@ -2,57 +2,96 @@
 
 {% block content %}
 <div class="container mt-5">
-    <div class="card dashboard-card">
+    <div class="card shadow-sm border-0" style="border-radius: 15px;">
         <div class="card-body p-4">
             <div class="d-flex justify-content-between align-items-center mb-4">
-                <h4 class="fw-bold mb-0" style="color: var(--primary-color);">Agenda de Pacientes</h4>
-                <span class="badge bg-primary rounded-pill p-2 px-3">{{ citas.count }} Citas Encontradas</span>
+                <div>
+                    <h4 class="fw-bold mb-0" style="color: #2c3e50;">
+                        <i class="bi bi-calendar3 me-2"></i>Agenda de Pacientes
+                    </h4>
+                    <p class="text-muted small mb-0">Citas programadas para los próximos 7 días</p>
+                </div>
+                <span class="badge bg-primary rounded-pill p-2 px-3 shadow-sm">
+                    {{ citas.count }} Citas Encontradas
+                </span>
             </div>
 
             <div class="table-responsive">
                 <table class="table table-hover align-middle">
-                    <thead class="text-muted small text-uppercase">
+                    <thead class="text-muted small text-uppercase bg-light">
                         <tr>
-                            <th>Hora</th>
+                            <th class="ps-3">Fecha y Hora</th>
                             <th>Paciente</th>
                             <th>Tratamiento</th>
                             <th>Estado</th>
-                            <th>Acciones</th>
+                            <th class="text-center">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for cita in citas %}
                         <tr>
-                            <td class="fw-bold">{{ cita.fecha_hora|date:"H:i" }}</td>
+                            <td class="ps-3">
+                                <div class="fw-bold text-dark">{{ cita.fecha_hora|date:"H:i" }}</div>
+                                <div class="text-muted x-small" style="font-size: 0.75rem;">
+                                    {{ cita.fecha_hora|date:"d M, Y" }}
+                                </div>
+                            </td>
+
                             <td>
                                 <div class="d-flex align-items-center">
                                     <div class="avatar-sm me-3">
-                                        <img src="https://ui-avatars.com/api/?name={{ cita.id_paciente.id_usuario.nombre }}&background=random" 
-                                            class="rounded-circle" width="40">
+                                        <img src="https://ui-avatars.com/api/?name={{ cita.id_paciente.id_usuario.nombre }}+{{ cita.id_paciente.id_usuario.apellidos }}&background=random&color=fff" 
+                                             class="rounded-circle shadow-sm" width="40" alt="Avatar">
                                     </div>
                                     <div>
-                                        <p class="mb-0 fw-bold">{{ cita.id_paciente.id_usuario.nombre }}</p>
-                                        <small class="text-muted">ID: {{ cita.id_paciente.id_paciente }}</small>
+                                        <p class="mb-0 fw-bold text-dark">
+                                            {{ cita.id_paciente.id_usuario.nombre }} {{ cita.id_paciente.id_usuario.apellidos }}
+                                        </p>
+                                        <small class="text-muted">Expediente: #{{ cita.id_paciente.id_paciente }}</small>
                                     </div>
                                 </div>
                             </td>
-                            <td><span class="badge bg-light text-dark border">{{ cita.id_tratamiento.nombre_tratamiento|default:"Consulta" }}</span></td>
+
                             <td>
-                                {% if cita.id_estado_cita.nombre_estado == 'Programada' %}
-                                    <span class="badge bg-success bg-opacity-10 text-success">Confirmada</span>
+                                <span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25 px-2">
+                                    <i class="bi bi-journal-medical me-1"></i>
+                                    {{ cita.id_tratamiento.nombre_tratamiento|default:"Consulta General" }}
+                                </span>
+                            </td>
+
+                            <td>
+                                {% if cita.id_estado_cita.nombre_estado == 'Programada' or cita.id_estado_cita.nombre_estado == 'Confirmada' %}
+                                    <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 w-100">
+                                        <i class="bi bi-check-circle-fill me-1"></i>Confirmada
+                                    </span>
+                                {% elif cita.id_estado_cita.nombre_estado == 'Pendiente' %}
+                                    <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 w-100">
+                                        <i class="bi bi-clock-history me-1"></i>Pendiente
+                                    </span>
+                                {% elif cita.id_estado_cita.nombre_estado == 'Finalizada' %}
+                                    <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 w-100">
+                                        <i class="bi bi-flag-fill me-1"></i>Finalizada
+                                    </span>
                                 {% else %}
-                                    <span class="badge bg-warning bg-opacity-10 text-warning">{{ cita.id_estado_cita.nombre_estado }}</span>
+                                    <span class="badge bg-light text-dark border w-100">{{ cita.id_estado_cita.nombre_estado }}</span>
                                 {% endif %}
                             </td>
-                            <td>
-                                <a href="#" class="btn btn-sm btn-primary rounded-pill">Atender</a>
+
+                            <td class="text-center">
+                                <a href="{% url 'perfil_paciente' cita.id_paciente.id_paciente %}" 
+                                   class="btn btn-sm btn-primary rounded-pill px-4 shadow-sm fw-bold">
+                                    <i class="bi bi-person-plus-fill me-1"></i> Atender
+                                </a>
                             </td>
                         </tr>
                         {% empty %}
                         <tr>
                             <td colspan="5" class="text-center py-5">
-                                <i class="bi bi-calendar-x fs-1 opacity-25"></i>
-                                <p class="mt-2 fw-semibold">No tienes citas programadas para este rango.</p>
+                                <div class="py-4">
+                                    <i class="bi bi-calendar-x fs-1 text-muted opacity-25"></i>
+                                    <p class="mt-3 fw-semibold text-muted">No tienes citas programadas para esta semana.</p>
+                                    <small class="text-muted">Las nuevas citas aparecerán aquí automáticamente.</small>
+                                </div>
                             </td>
                         </tr>
                         {% endfor %}
@@ -62,4 +101,31 @@
         </div>
     </div>
 </div>
+
+<style>
+    .table thead th {
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        border-top: none;
+    }
+    .table tbody tr {
+        transition: all 0.2s;
+    }
+    .table tbody tr:hover {
+        background-color: #f8f9fa;
+        transform: scale(1.002);
+    }
+    .btn-primary {
+        background-color: #0d6efd;
+        border: none;
+    }
+    .btn-primary:hover {
+        background-color: #0b5ed7;
+        transform: translateY(-1px);
+    }
+    .badge {
+        font-weight: 500;
+        padding: 0.5em 0.8em;
+    }
+</style>
 {% endblock %}

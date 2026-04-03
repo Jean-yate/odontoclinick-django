@@ -24,8 +24,7 @@
                             <th>Paciente</th>
                             <th>Doctor</th>
                             <th>Estado</th>
-                            <th>Notas</th>
-                            <th class="text-center">Acciones</th>
+                            <th>Monto (Dr.)</th> <th class="text-center">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -49,6 +48,8 @@
                                     <span class="badge bg-warning text-dark px-3 py-2">Pendiente</span>
                                 {% elif cita.id_estado_cita.nombre_estado == 'Confirmada' %}
                                     <span class="badge bg-success px-3 py-2">Confirmada</span>
+                                {% elif cita.id_estado_cita.nombre_estado == 'Finalizada' %}
+                                    <span class="badge bg-info text-white px-3 py-2">Atendida</span>
                                 {% elif cita.id_estado_cita.nombre_estado == 'Cancelada' %}
                                     <span class="badge bg-danger px-3 py-2">Cancelada</span>
                                 {% else %}
@@ -56,23 +57,35 @@
                                 {% endif %}
                             </td>
 
-                            <td>
-                                <small class="text-muted text-truncate d-inline-block" style="max-width: 150px;" title="{{ cita.notas_paciente }}">
-                                    {{ cita.notas_paciente|default:"Sin observaciones" }}
-                                </small>
+                            <td class="fw-bold text-dark">
+                                {% if cita.historialmedico_set.exists %}
+                                    {% with historial=cita.historialmedico_set.first %}
+                                        <span class="text-success">${{ historial.costo_aplicado }}</span>
+                                    {% endwith %}
+                                {% else %}
+                                    <span class="text-muted small">---</span>
+                                {% endif %}
                             </td>
 
                             <td class="text-center pe-4">
                                 <div class="btn-group shadow-sm">
                                     
+                                    {# Lógica de Cobro Mejorada #}
                                     {% if cita.pago_set.exists %}
+                                        {# Si el pago ya fue procesado por la secretaria (puedes validar por referencia o método real) #}
                                         <button class="btn btn-success btn-sm" title="Cita Pagada" disabled>
                                             <i class="bi bi-check-all"></i>
                                         </button>
-                                    {% else %}
-                                        <a href="{% url 'generar_cobro' cita.pk %}" class="btn btn-outline-success btn-sm" title="Registrar Cobro">
-                                            <i class="bi bi-cash-stack"></i>
+                                    {% elif cita.id_estado_cita.nombre_estado == 'Finalizada' %}
+                                        {# Solo permite cobrar si el doctor ya finalizó y puso un monto #}
+                                        <a href="{% url 'registrar_pago_cita' cita.pk %}" class="btn btn-outline-success btn-sm" title="Registrar Cobro">
+                                            <i class="bi bi-cash-stack"></i> Cobrar
                                         </a>
+                                    {% else %}
+                                        {# Bloqueado si no ha sido atendido aún #}
+                                        <button class="btn btn-outline-secondary btn-sm" title="Esperando atención del médico" disabled>
+                                            <i class="bi bi-hourglass-split"></i>
+                                        </button>
                                     {% endif %}
 
                                     <a href="#" class="btn btn-outline-primary btn-sm" title="Editar detalles">
@@ -85,7 +98,6 @@
                                        title="Cancelar Cita">
                                         <i class="bi bi-x-circle"></i>
                                     </a>
-
                                 </div>
                             </td>
                         </tr>
@@ -122,6 +134,9 @@
     .table-hover tbody tr:hover {
         background-color: #f8f9ff;
         transition: background-color 0.2s ease;
+    }
+    .bg-info {
+        background-color: #0dcaf0 !important;
     }
 </style>
 {% endblock %}

@@ -80,7 +80,8 @@ class HistorialMedico(models.Model):
     # Notas que venían de la cita
     notas_paciente = models.TextField(blank=True, null=True)
     notas_doctor = models.TextField(blank=True, null=True)
-    
+    sintomas = models.TextField(blank=True, null=True)
+    plan_tratamiento = models.TextField(blank=True, null=True)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
 
     class Meta:

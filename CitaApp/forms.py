@@ -7,21 +7,8 @@ from PacienteApp.models import Paciente
 from MedicoApp.models import Medico
 
 class AgendarCitaForm(forms.ModelForm):
-    # Definimos el campo manualmente para que NO intente guardarse en la tabla Cita
-    # pero que aparezca en el HTML para que el paciente escriba.
-    notas_paciente = forms.CharField(
-        widget=forms.Textarea(attrs={
-            'class': 'form-control', 
-            'rows': 3, 
-            'placeholder': 'Describa brevemente el motivo de su consulta o síntomas...'
-        }),
-        required=False,
-        label="Motivo de la consulta"
-    )
-
     class Meta:
         model = Cita
-        # Solo los campos que REALMENTE existen en tu modelo Cita actual
         fields = ['id_paciente', 'id_doctor', 'fecha_hora', 'id_estado_cita']
         widgets = {
             'fecha_hora': forms.DateTimeInput(
