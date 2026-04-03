@@ -1,0 +1,65 @@
+{% extends 'Webapp/base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="card dashboard-card">
+        <div class="card-body p-4">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h4 class="fw-bold mb-0" style="color: var(--primary-color);">Agenda de Pacientes</h4>
+                <span class="badge bg-primary rounded-pill p-2 px-3">{{ citas.count }} Citas Encontradas</span>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="text-muted small text-uppercase">
+                        <tr>
+                            <th>Hora</th>
+                            <th>Paciente</th>
+                            <th>Tratamiento</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for cita in citas %}
+                        <tr>
+                            <td class="fw-bold">{{ cita.fecha_hora|date:"H:i" }}</td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="avatar-sm me-3">
+                                        <img src="https://ui-avatars.com/api/?name={{ cita.id_paciente.id_usuario.nombre }}&background=random" 
+                                            class="rounded-circle" width="40">
+                                    </div>
+                                    <div>
+                                        <p class="mb-0 fw-bold">{{ cita.id_paciente.id_usuario.nombre }}</p>
+                                        <small class="text-muted">ID: {{ cita.id_paciente.id_paciente }}</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td><span class="badge bg-light text-dark border">{{ cita.id_tratamiento.nombre_tratamiento|default:"Consulta" }}</span></td>
+                            <td>
+                                {% if cita.id_estado_cita.nombre_estado == 'Programada' %}
+                                    <span class="badge bg-success bg-opacity-10 text-success">Confirmada</span>
+                                {% else %}
+                                    <span class="badge bg-warning bg-opacity-10 text-warning">{{ cita.id_estado_cita.nombre_estado }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="#" class="btn btn-sm btn-primary rounded-pill">Atender</a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center py-5">
+                                <i class="bi bi-calendar-x fs-1 opacity-25"></i>
+                                <p class="mt-2 fw-semibold">No tienes citas programadas para este rango.</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

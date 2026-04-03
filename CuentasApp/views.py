@@ -27,6 +27,8 @@ def login_view(request):
                 return redirect('panel_secretaria')
             elif rol == 'Paciente':
                 return redirect('perfil_paciente')
+            elif rol == 'Medico':
+                return redirect('dashboard_medico')
             else:
                 return redirect('home')
     else:

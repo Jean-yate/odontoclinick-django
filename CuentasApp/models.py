@@ -26,7 +26,7 @@ class Rol(models.Model):
     descripcion = models.CharField(max_length=255, blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'rol'
 
     def __str__(self):
@@ -37,7 +37,7 @@ class Estado(models.Model):
     nombre_estado = models.CharField(unique=True, max_length=20)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'estado'
 
     def __str__(self):
@@ -66,7 +66,7 @@ class Usuario(AbstractBaseUser):
     REQUIRED_FIELDS = ['correo']
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'usuario'
 
     # --- LÓGICA DE PERMISOS UNIFICADA ---
@@ -103,7 +103,7 @@ class Secretaria(models.Model):
     turno = models.CharField(max_length=8, blank=True, null=True)
 
     class Meta:
-        managed = False # IMPORTANTE: Déjalo en False para que Django no intente borrarla de MariaDB
+        managed = True
         db_table = 'secretaria'
 
     def __str__(self):

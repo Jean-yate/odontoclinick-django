@@ -142,28 +142,33 @@
             <li class="nav-item"><a class="nav-link" href="{% url 'home' %}">Inicio</a></li>
             
             {% if user.is_authenticated %}
-              {% if user.id_rol.nombre_rol == 'Secretaria' or user.id_rol.nombre_rol == 'Administrador' %}
-                <li class="nav-item"><a class="nav-link" href="{% url 'panel_secretaria' %}">Dashboard</a></li>
-                <li class="nav-item"><a class="nav-link" href="{% url 'lista_pacientes' %}">Pacientes</a></li>
-              {% endif %}
+                {% if user.id_rol.nombre_rol == 'Secretaria' or user.id_rol.nombre_rol == 'Administrador' %}
+                    <li class="nav-item"><a class="nav-link" href="{% url 'panel_secretaria' %}">Dashboard</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'lista_pacientes' %}">Pacientes</a></li>
 
-              <li class="nav-item dropdown ms-lg-2">
-                <a class="nav-link dropdown-toggle fw-bold" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" style="color: var(--primary-color) !important;">
-                  {{ user.nombre|upper }}
-                </a>
-                <ul class="dropdown-menu dropdown-menu-end shadow">
-                  <li><a class="dropdown-item" href="{% url 'perfil_paciente' %}">Configuración</a></li>
-                  <li><hr class="dropdown-divider opacity-50"></li>
-                  <li>
-                    <form action="{% url 'logout' %}" method="post" class="px-2">
-                      {% csrf_token %}
-                      <button type="submit" class="btn btn-link text-danger text-decoration-none fw-bold w-100 text-start">Salir</button>
-                    </form>
-                  </li>
-                </ul>
-              </li>
+                {% elif user.id_rol.nombre_rol == 'Doctor' %}
+                    <li class="nav-item"><a class="nav-link" href="{% url 'dashboard_medico' %}">Mi Panel</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'ver_citas' %}">Mi Agenda</a></li>
+                {% endif %}
+
+                <li class="nav-item dropdown ms-lg-2">
+                    <a class="nav-link dropdown-toggle fw-bold" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" style="color: var(--primary-color) !important;">
+                        {{ user.nombre|upper }}
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end shadow">
+                        <li><a class="dropdown-item" href="#">Configuración</a></li>
+                        <li><hr class="dropdown-divider opacity-50"></li>
+                        <li>
+                            <form action="{% url 'logout' %}" method="post" class="px-2">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-link text-danger text-decoration-none fw-bold w-100 text-start">Salir</button>
+                            </form>
+                        </li>
+                    </ul>
+                </li>
+              
             {% else %}
-              <li class="nav-item ms-lg-3"><a class="btn btn-primary" href="{% url 'login' %}">ACCESO</a></li>
+                <li class="nav-item ms-lg-3"><a class="btn btn-primary" href="{% url 'login' %}">ACCESO</a></li>
             {% endif %}
           </ul>
         </div>

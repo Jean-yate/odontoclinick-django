@@ -6,7 +6,7 @@ class CategoriaProducto(models.Model):
     descripcion = models.TextField(blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'categoria_producto'
 
 class Producto(models.Model):
@@ -24,7 +24,7 @@ class Producto(models.Model):
     fecha_creacion = models.DateTimeField()
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'producto'
 
 class MovimientoInventario(models.Model):
@@ -39,6 +39,6 @@ class MovimientoInventario(models.Model):
     fecha_movimiento = models.DateTimeField()
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'movimiento_inventario'
 

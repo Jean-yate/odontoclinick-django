@@ -10,7 +10,7 @@ class Tratamiento(models.Model):
     activo = models.IntegerField(blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'tratamiento'
 
 class TratamientoProducto(models.Model):
@@ -20,7 +20,7 @@ class TratamientoProducto(models.Model):
     cantidad_requerida = models.DecimalField(max_digits=10, decimal_places=2)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'tratamiento_producto'
         unique_together = (('id_tratamiento', 'id_producto'),)
 

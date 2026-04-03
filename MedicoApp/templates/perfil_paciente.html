@@ -1,0 +1,81 @@
+{% extends 'Webapp/base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm p-4 mb-4">
+                <div class="text-center mb-3">
+                    <i class="bi bi-person-badge" style="font-size: 3rem; color: var(--primary-color);"></i>
+                    <h4 class="fw-bold">{{ paciente.id_usuario.nombre }} {{ paciente.id_usuario.apellidos }}</h4>
+                    <span class="badge bg-primary">Paciente Activo</span>
+                </div>
+                <hr>
+                <p><strong>Cédula:</strong> {{ paciente.id_paciente }}</p>
+                <p><strong>Correo:</strong> {{ paciente.id_usuario.correo }}</p>
+                <p><strong>Teléfono:</strong> {{ paciente.id_usuario.telefono|default:"N/A" }}</p>
+                
+                <button class="btn btn-primary w-100 mt-3 rounded-pill" data-bs-toggle="modal" data-bs-target="#modalRegistro">
+                    <i class="bi bi-plus-circle me-2"></i>Nueva Evolución
+                </button>
+            </div>
+        </div>
+
+        <div class="col-md-8">
+            <h5 class="fw-bold mb-4">Evolución Clínica</h5>
+            <div class="timeline">
+                {% for h in historiales %}
+                <div class="card border-0 shadow-sm mb-3">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <span class="text-primary fw-bold">{{ h.fecha_creacion|date:"d M, Y - h:i A" }}</span>
+                            <span class="badge bg-secondary">{{ h.id_tratamiento.nombre_tratamiento }}</span>
+                        </div>
+                        <h6 class="mt-2 fw-bold">Diagnóstico:</h6>
+                        <p>{{ h.diagnostico }}</p>
+                        <h6 class="fw-bold">Observaciones:</h6>
+                        <p class="text-muted small">{{ h.observaciones_clinicas|default:"Sin observaciones adicionales." }}</p>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center py-5">
+                    <p class="text-muted">Este paciente no registra tratamientos previos.</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalRegistro" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form method="POST" action="{% url 'guardar_atencion' %}">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold">Registrar Evolución de la Cita</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Diagnóstico Actual</label>
+                        <textarea name="diagnostico" class="form-control" rows="4" required></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Tratamiento Realizado</label>
+                        <select name="id_tratamiento" class="form-select">
+                            {% for t in tratamientos %}
+                            <option value="{{ t.id_tratamiento }}">{{ t.nombre_tratamiento }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <input type="hidden" name="id_cita" value="{{ cita_actual.id_cita }}">
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary">Guardar en Historial</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

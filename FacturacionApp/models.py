@@ -6,7 +6,7 @@ class MetodoPago(models.Model):
     activo = models.IntegerField(blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'metodo_pago'
 
 class Pago(models.Model):
@@ -19,7 +19,7 @@ class Pago(models.Model):
     notas = models.TextField(blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'pago'
 
 

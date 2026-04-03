@@ -1,0 +1,65 @@
+{% extends 'Webapp/base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="card dashboard-card">
+        <div class="card-body p-4">
+            <div class="d-flex align-items-center mb-4">
+                <div class="icon-shape me-3">
+                    <i class="bi bi-journal-check"></i>
+                </div>
+                <h4 class="fw-bold mb-0" style="color: var(--primary-color);">Registro Histórico</h4>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle" style="border-collapse: separate; border-spacing: 0 10px;">
+                    <thead class="text-muted small text-uppercase">
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Paciente</th>
+                            <th>Procedimiento</th>
+                            <th>Costo</th>
+                            <th class="text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for registro in historial %}
+                        <tr class="bg-white shadow-sm" style="border-radius: 15px;">
+                            <td class="fw-bold ps-3">{{ registro.fecha_creacion|date:"d/m/Y" }}</td>
+
+                            <td>
+                                <span class="fw-bold">{{ registro.id_cita.id_paciente.id_usuario.nombre }} {{ registro.id_cita.id_paciente.id_usuario.apellidos }}</span><br>
+                                <small class="text-muted">Doc: {{ registro.id_cita.id_paciente.id_paciente }}</small>
+                            </td>
+
+                            <td>
+                                <span class="badge bg-secondary bg-opacity-10 text-secondary border-0">
+                                    {{ registro.id_tratamiento.nombre_tratamiento }}
+                                </span>
+                                <br><small class="text-muted">{{ registro.diagnostico|truncatechars:30 }}</small>
+                            </td>
+
+                            <td class="fw-bold text-success">
+                                ${{ registro.costo_aplicado }}
+                            </td>
+
+                            <td class="text-center">
+                                <a href="{% url 'perfil_paciente' registro.id_cita.id_paciente.id_paciente %}"class="btn btn-sm btn-light rounded-pill px-3 fw-bold">
+                                    Ver Detalles
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center py-5">
+                                <p class="text-muted">No tienes registros clínicos todavía.</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

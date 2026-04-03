@@ -1,0 +1,60 @@
+{% extends 'Webapp/base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card dashboard-card border-0 p-4">
+                <div class="card-body text-center">
+                    <div class="mb-4">
+                        <img src="https://ui-avatars.com/api/?name={{ user.nombre }}+{{ user.apellidos }}&background=3f2e23&color=fff&size=120" 
+                             class="user-avatar rounded-circle img-thumbnail" alt="Foto Médico">
+                    </div>
+
+                    <h2 class="fw-bold mb-1" style="color: var(--primary-color);">
+                        Dr. {{ user.nombre }} {{ user.apellidos }}
+                    </h2>
+                    <span class="badge rounded-pill bg-primary bg-opacity-10 text-primary px-3 py-2 fw-bold mb-4">
+                        {{ medico.id_especialidad.nombre_especialidad }}
+                    </span>
+
+                    <hr class="opacity-25 my-4">
+
+                    <div class="row g-4 text-start">
+                        <div class="col-md-6">
+                            <div class="p-3 bg-light rounded-4 shadow-sm" style="border: 2px solid white;">
+                                <small class="text-muted fw-bold text-uppercase" style="font-size: 0.7rem;">Licencia Médica</small>
+                                <p class="mb-0 fw-bold text-dark">{{ medico.licencia_medica|default:"No registrada" }}</p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-3 bg-light rounded-4 shadow-sm" style="border: 2px solid white;">
+                                <small class="text-muted fw-bold text-uppercase" style="font-size: 0.7rem;">Experiencia</small>
+                                <p class="mb-0 fw-bold text-dark">{{ medico.anos_experiencia }} Años</p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-3 bg-light rounded-4 shadow-sm" style="border: 2px solid white;">
+                                <small class="text-muted fw-bold text-uppercase" style="font-size: 0.7rem;">Correo Electrónico</small>
+                                <p class="mb-0 fw-bold text-dark">{{ user.correo }}</p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-3 bg-light rounded-4 shadow-sm" style="border: 2px solid white;">
+                                <small class="text-muted fw-bold text-uppercase" style="font-size: 0.7rem;">Fecha de Ingreso</small>
+                                <p class="mb-0 fw-bold text-dark">{{ medico.fecha_ingreso|date:"d M, Y" }}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-5">
+                        <a href="{% url 'dashboard_medico' %}" class="btn btn-primary rounded-pill px-5">
+                            VOLVER AL PANEL
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

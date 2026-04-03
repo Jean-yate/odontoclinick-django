@@ -19,18 +19,3 @@ class Paciente(models.Model):
 
     def __str__(self):
         return f"{self.id_usuario.nombre} {self.id_usuario.apellidos}"
-
-class HistorialMedico(models.Model):
-    id_historial = models.AutoField(primary_key=True)
-    id_paciente = models.ForeignKey('Paciente', models.DO_NOTHING, db_column='id_paciente')
-    id_cita = models.ForeignKey('CitaApp.Cita', models.DO_NOTHING, db_column='id_cita', blank=True, null=True)
-    id_doctor = models.ForeignKey('MedicoApp.Medico', models.DO_NOTHING, db_column='id_doctor')
-    fecha = models.DateField()
-    diagnostico = models.TextField()
-    tratamiento_realizado = models.TextField()
-    observaciones = models.TextField(blank=True, null=True)
-    fecha_creacion = models.DateTimeField()
-
-    class Meta:
-        managed = False
-        db_table = 'historial_medico'
