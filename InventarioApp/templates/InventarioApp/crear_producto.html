@@ -1,0 +1,61 @@
+{% extends 'Webapp/base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card border-0 shadow-lg" style="border-radius: 30px; background: #f8f9fa;">
+                <div class="card-body p-5">
+                    <h2 class="fw-bold mb-4 text-dark">
+                        {% if editando %} Modificar: {{ producto.nombre_producto }} {% else %} Nuevo Insumo {% endif %}
+                    </h2>
+                    <form method="POST">
+                        {% csrf_token %}
+                        
+                        <div class="row g-3">
+                            <div class="col-md-12">
+                                <label class="form-label fw-bold">Nombre del Producto</label>
+                                {{ form.nombre_producto }}
+                            </div>
+                            <div class="col-md-12">
+                                <label class="form-label fw-bold">Categoría</label>
+                                {{ form.id_categoria }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Stock Inicial</label>
+                                {{ form.stock_actual }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Alerta Stock Mínimo</label>
+                                {{ form.stock_minimo }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Precio de Compra (Costo)</label>
+                                {{ form.precio_compra }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Precio Unitario</label>
+                                {{ form.precio_venta }}
+                            </div>
+                            <div class="col-md-12">
+                                <label class="form-label fw-bold">Notas adicionales</label>
+                                {{ form.descripcion }}
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Código Personalizado (Opcional)</label>
+                                <input type="text" name="codigo_producto" class="form-control input-clay" 
+                                    value="{{ producto.codigo_producto|default:'' }}" placeholder="Ej: BRK-001">
+                            </div>
+                        </div>
+
+                        <div class="mt-5 d-flex gap-3">
+                            <button type="submit" class="btn btn-primary rounded-pill px-5 py-2 shadow">Guardar Producto</button>
+                            <a href="{% url 'lista_inventario' %}" class="btn btn-light rounded-pill px-4 py-2 border">Cancelar</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,71 @@
+{% extends 'Webapp/base.html' %} {% block content %}
+<div class="container mt-4">
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'lista_tratamientos_auxiliar' %}" class="text-decoration-none">Recetas</a></li>
+            <li class="breadcrumb-item active fw-bold text-dark">{{ tratamiento.nombre_tratamiento }}</li>
+        </ol>
+    </nav>
+
+    <div class="row g-4">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm p-3" style="border-radius: 25px; background: #f8f9fa;">
+                <h5 class="fw-bold mb-3 text-primary">Vincular Insumo</h5>
+                <form method="POST">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Material / Producto</label>
+                        <select name="producto" class="form-select rounded-pill border-0 shadow-sm" required>
+                            <option value="">--- Seleccionar ---</option>
+                            {% for p in productos %}
+                            <option value="{{ p.id_producto }}">{{ p.nombre_producto }} ({{ p.stock_actual }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Cantidad por Cita</label>
+                        <input type="number" name="cantidad" step="0.1" class="form-control rounded-pill border-0 shadow-sm" required>
+                    </div>
+                    <button type="submit" class="btn btn-success w-100 rounded-pill fw-bold">
+                        <i class="bi bi-plus-circle me-1"></i> Guardar Insumo
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <div class="col-md-8">
+            <div class="card border-0 shadow-sm p-4" style="border-radius: 25px;">
+                <h5 class="fw-bold mb-4">Materiales Requeridos</h5>
+                <div class="table-responsive">
+                    <table class="table align-middle">
+                        <thead class="text-muted small uppercase">
+                            <tr>
+                                <th>Insumo</th>
+                                <th>Cantidad</th>
+                                <th class="text-end">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in insumos %}
+                            <tr>
+                                <td class="fw-bold text-dark">{{ item.id_producto.nombre_producto }}</td>
+                                <td><span class="badge bg-info bg-opacity-10 text-info px-3">{{ item.cantidad_requerida }}</span></td>
+                                <td class="text-end">
+                                    <a href="{% url 'eliminar_insumo' item.pk %}" class="btn btn-outline-danger btn-sm border-0 rounded-circle">
+                                        <i class="bi bi-trash3"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="3" class="text-center py-4 text-muted">No se han definido insumos para este tratamiento.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

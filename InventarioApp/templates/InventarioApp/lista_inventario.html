@@ -1,0 +1,164 @@
+{% extends 'Webapp/base.html' %}
+
+{% block title %}Inventario - OdontoClinick{% endblock %}
+
+{% block extra_css %}
+<style>
+    .table-container-clay { background: white; border-radius: 30px; box-shadow: var(--clay-shadow); padding: 2rem; border: none; }
+    .table thead th { border-bottom: 2px solid #f0ece9; color: var(--secondary-color); font-weight: 700; text-transform: uppercase; font-size: 0.8rem; letter-spacing: 1px; }
+    .product-name { font-weight: 700; color: var(--primary-color); margin-bottom: 0; }
+    .btn-circle { width: 40px; height: 40px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; transition: all 0.3s; border: none; background: #f8f9fa; text-decoration: none; }
+    .btn-circle:hover { transform: scale(1.1); background: #fff; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+    .badge-stock { padding: 0.6rem 1rem; border-radius: 50px; font-weight: 700; }
+    .modal-content-clay { border-radius: 35px; border: none; box-shadow: var(--clay-shadow); }
+    .input-clay { background-color: #f8f9fa !important; border: none !important; padding: 0.8rem; border-radius: 15px !important; }
+    .text-entrada { color: #28a745 !important; }
+    .text-salida { color: #dc3545 !important; }
+    .text-editar { color: #007bff !important; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="contenedor-notificaciones" class="position-fixed bottom-0 end-0 p-3" style="z-index: 1060;"></div>
+
+<div class="container mt-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold text-dark mb-1">Gestión de Inventario</h2>
+            <p class="text-muted small">Panel de control de insumos médicos.</p>
+        </div>
+        <a href="{% url 'crear_producto' %}" class="btn btn-primary shadow-sm rounded-pill px-4">
+            <i class="bi bi-plus-lg me-2"></i>NUEVO PRODUCTO
+        </a>
+    </div>
+
+    <div class="table-container-clay animate__animated animate__fadeIn">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>CÓDIGO</th>
+                        <th>PRODUCTO</th>
+                        <th>CATEGORÍA</th>
+                        <th class="text-center">STOCK</th>
+                        <th>PRECIO VENTA</th>
+                        <th class="text-center">ACCIONES</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for producto in productos %}
+                    <tr>
+                        <td class="small fw-bold text-muted">#{{ producto.id_producto }}</td>
+                        <td>
+                            <p class="product-name">{{ producto.nombre_producto }}</p>
+                            <span class="text-muted small">{{ producto.unidad_medida }}</span>
+                        </td>
+                        <td>
+                            <span class="badge bg-light text-dark px-3 py-2 rounded-pill">
+                                {{ producto.id_categoria.nombre_categoria }}
+                            </span>
+                        </td>
+                        <td class="text-center">
+                            <span class="badge badge-stock {% if producto.stock_actual <= producto.stock_minimo %}bg-danger text-white{% else %}bg-success bg-opacity-10 text-success{% endif %}">
+                                {{ producto.stock_actual }}
+                            </span>
+                        </td>
+                        <td class="fw-bold text-primary">${{ producto.precio_venta }}</td>
+                        <td class="text-center">
+                            <div class="d-flex justify-content-center align-items-center gap-2">
+                                <button class="btn-circle text-entrada" data-bs-toggle="modal" data-bs-target="#modalEntrada{{ producto.pk }}"><i class="bi bi-box-arrow-in-down fs-5"></i></button>
+                                <button class="btn-circle text-salida" data-bs-toggle="modal" data-bs-target="#modalSalida{{ producto.pk }}"><i class="bi bi-box-arrow-up fs-5"></i></button>
+                                <a href="{% url 'editar_producto' producto.id_producto %}" class="btn-circle text-editar"><i class="bi bi-pencil-square fs-5"></i></a>
+                                <button class="btn-estado badge {% if producto.activo == 1 %}bg-success{% else %}bg-danger{% endif %} border-0 py-2 px-3 rounded-pill shadow-sm text-white" 
+                                        data-id="{{ producto.id_producto }}"
+                                        id="btn-estado-{{ producto.id_producto }}">
+                                    {% if producto.activo == 1 %} Activo {% else %} Inactivo {% endif %}
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% include 'InventarioApp/modales_inventario.html' %}
+                    {% empty %}
+                    <tr><td colspan="6" class="text-center py-5">No hay productos registrados.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const botonesEstado = document.querySelectorAll('.btn-estado');
+
+    botonesEstado.forEach(boton => {
+        boton.addEventListener('click', function() {
+            const productoId = this.getAttribute('data-id');
+            
+            fetch(`/inventario/alternar/${productoId}/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'ok') {
+                    // Si el nuevo estado es 1 (ACTIVO)
+                    if (data.nuevo_estado === 1) {
+                        // Cambiamos el botón a VERDE
+                        this.classList.remove('bg-secondary', 'bg-danger');
+                        this.classList.add('bg-success');
+                        this.innerText = 'Activo';
+                        this.style.color = 'white';
+                        
+                        mostrarNotificacion("Insumo disponible para uso", "success");
+                    } else {
+                        // Si el nuevo estado es 0 (INACTIVO)
+                        // Cambiamos el botón a ROJO
+                        this.classList.remove('bg-secondary', 'bg-success');
+                        this.classList.add('bg-danger');
+                        this.innerText = 'Inactivo';
+                        this.style.color = 'white';
+                        
+                        mostrarNotificacion("Insumo fuera de servicio", "danger");
+                    }
+                }
+            });
+        });
+    });
+});
+
+// Función de notificación con colores dinámicos
+function mostrarNotificacion(mensaje, tipo) {
+    const contenedor = document.getElementById('contenedor-notificaciones');
+    const id = Date.now();
+    
+    // El tipo 'danger' pondrá el fondo rojo y 'success' verde
+    const toastHTML = `
+        <div id="toast-${id}" class="toast show align-items-center text-white bg-${tipo} border-0 shadow-lg animate__animated animate__fadeInRight" role="alert" style="border-radius: 15px; min-width: 250px;">
+            <div class="d-flex">
+                <div class="toast-body fw-bold p-3">
+                    <i class="bi ${tipo === 'success' ? 'bi-check-circle-fill' : 'bi-x-circle-fill'} me-2"></i>
+                    ${mensaje}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    `;
+    
+    contenedor.innerHTML = toastHTML;
+    
+    setTimeout(() => {
+        const toast = document.getElementById(`toast-${id}`);
+        if(toast) {
+            toast.classList.replace('animate__fadeInRight', 'animate__fadeOutRight');
+            setTimeout(() => toast.remove(), 500);
+        }
+    }, 3000);
+}
+</script>
+{% endblock %}

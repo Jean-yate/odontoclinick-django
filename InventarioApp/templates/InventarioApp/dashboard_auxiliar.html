@@ -1,0 +1,187 @@
+{% extends 'Webapp/base.html' %}
+
+{% block title %}Panel de Control - OdontoClinick{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --clay-bg: #f0f2f5;
+        --clay-shadow: 12px 12px 24px #d1d9e6, -12px -12px 24px #ffffff;
+        --clay-shadow-inset: inset 6px 6px 12px #d1d9e6, inset -6px -6px 12px #ffffff;
+    }
+
+    .nav-card {
+        background: var(--clay-bg);
+        border-radius: 35px;
+        padding: 2.5rem 1.5rem;
+        text-align: center;
+        text-decoration: none !important;
+        transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+        border: none;
+        box-shadow: var(--clay-shadow);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        height: 100%;
+    }
+
+    .nav-card:hover {
+        transform: translateY(-12px);
+        box-shadow: 15px 15px 30px #c5ceda, -15px -15px 30px #ffffff;
+    }
+
+    .nav-card i {
+        font-size: 3.5rem;
+        margin-bottom: 1.5rem;
+        filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.1));
+    }
+
+    .nav-card h4 {
+        font-weight: 800;
+        color: #3a3a3a;
+        margin-bottom: 0.5rem;
+    }
+
+    .search-box-clay {
+        background: var(--clay-bg);
+        border-radius: 50px;
+        padding: 15px 50px 15px 30px; 
+        box-shadow: var(--clay-shadow-inset);
+        border: none;
+        width: 100%;
+        font-weight: 600;
+        color: #555;
+        outline: none;
+    }
+
+    .report-card {
+        background: white;
+        border-radius: 20px;
+        padding: 1.5rem;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.03);
+        border: 1px solid rgba(0,0,0,0.05);
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+
+    .report-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 15px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+    }
+
+    .bg-soft-red { background: #fee2e2; color: #ef4444; }
+    .bg-soft-blue { background: #e0f2fe; color: #0ea5e9; }
+    .bg-soft-purple { background: #f3e8ff; color: #a855f7; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-5 animate__animated animate__fadeIn">
+    
+    <div class="text-center mb-5">
+        <span class="badge bg-primary bg-opacity-10 text-primary px-3 py-2 rounded-pill mb-3 fw-bold">CENTRAL DE BODEGA</span>
+        <h1 class="display-5 fw-bold text-dark">
+            ¡Hola, {{ usuario_perfil }}!
+        </h1>
+        <p class="text-muted fs-5">Gestiona los insumos de <strong>OdontoClinick</strong> de forma eficiente.</p>
+    </div>
+
+    <div class="row justify-content-center mb-5">
+        <div class="col-md-7">
+            <div class="position-relative d-flex align-items-center">
+                <input type="text" class="search-box-clay" placeholder="¿Qué insumo necesitas buscar hoy?">
+                <i class="bi bi-search position-absolute end-0 me-4 text-muted fs-5"></i>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-5 justify-content-center">
+        <div class="col-xl col-md-4 col-sm-6">
+            <a href="{% url 'lista_inventario' %}" class="nav-card">
+                <i class="bi bi-box-seam text-primary"></i>
+                <h4>Inventario</h4>
+                <p class="small text-muted">Stock y Materiales</p>
+            </a>
+        </div>
+        <div class="col-xl col-md-4 col-sm-6">
+            <a href="{% url 'kardex' %}" class="nav-card">
+                <i class="bi bi-arrow-left-right text-success"></i>
+                <h4>Movimientos</h4>
+                <p class="small text-muted">Auditoría</p>
+            </a>
+        </div>
+        <div class="col-xl col-md-4 col-sm-6">
+            <a href="{% url 'lista_tratamientos_auxiliar' %}" class="nav-card">
+                <i class="bi bi-capsule text-purple" style="color: #a855f7;"></i>
+                <h4>Recetas</h4>
+                <p class="small text-muted">Insumos por Cita</p>
+            </a>
+        </div>
+        <div class="col-xl col-md-4 col-sm-6">
+            <a href="{% url 'informes' %}" class="nav-card">
+                <i class="bi bi-bar-chart-line text-info"></i>
+                <h4>Informes</h4>
+                <p class="small text-muted">Estadísticas</p>
+            </a>
+        </div>
+        <div class="col-xl col-md-4 col-sm-6">
+            <a href="{% url 'centro_reportes' %}" class="nav-card">
+                <i class="bi bi-file-earmark-pdf text-danger"></i>
+                <h4>Reportes</h4>
+                <p class="small text-muted">Descargas PDF/XLS</p>
+            </a>
+        </div>
+    </div>
+
+    <div class="mt-5">
+        <div class="d-flex align-items-center mb-4">
+            <h4 class="fw-bold mb-0 me-3">Alertas del Sistema</h4>
+            <div class="flex-grow-1 border-bottom opacity-25"></div>
+        </div>
+
+        <div class="row g-3">
+            <div class="col-md-4">
+                <div class="report-card">
+                    <div class="report-icon bg-soft-red">
+                        <i class="bi bi-exclamation-octagon"></i>
+                    </div>
+                    <div>
+                        <h5 class="fw-bold mb-0">{{ bajo_stock.count }}</h5>
+                        <p class="small text-muted mb-0">Stock Crítico</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="report-card">
+                    <div class="report-icon bg-soft-blue">
+                        <i class="bi bi-activity"></i>
+                    </div>
+                    <div>
+                        <h5 class="fw-bold mb-0">{{ ultimos_movimientos.count }}</h5>
+                        <p class="small text-muted mb-0">Movimientos Recientes</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="report-card">
+                    <div class="report-icon bg-soft-purple">
+                        <i class="bi bi-clipboard-check"></i>
+                    </div>
+                    <div>
+                        <h5 class="fw-bold mb-0">Listos</h5>
+                        <p class="small text-muted mb-0">Protocolos Médicos</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

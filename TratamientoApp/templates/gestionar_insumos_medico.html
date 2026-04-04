@@ -1,0 +1,118 @@
+{% extends 'Webapp/base.html' %}
+
+{% block content %}
+<div class="container mt-5 mb-5 animate__animated animate__fadeIn">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="d-flex align-items-center bg-white p-4 shadow-sm" style="border-radius: 30px;">
+                <div class="icon-box me-3" style="width: 50px; height: 50px; background: #fff3cd; border-radius: 15px; display: flex; align-items: center; justify-content: center;">
+                    <i class="bi bi-box-seam-fill text-warning fs-4"></i>
+                </div>
+                <div>
+                    <h3 class="fw-bold mb-0">Receta Médica: <span class="text-primary">{{ tratamiento.nombre_tratamiento }}</span></h3>
+                    <p class="mb-0 text-muted small">Configura los materiales técnicos que se consumirán en este procedimiento.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm p-4 rounded-4 bg-light">
+                <h5 class="fw-bold mb-4">Vincular Producto</h5>
+                <form method="POST" action="{% url 'gestionar_insumos_medico' tratamiento.pk %}">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted">SELECCIONAR MATERIAL</label>
+                        <select name="producto" class="form-select border-0 shadow-sm rounded-pill px-3" required>
+                            <option value="">Buscar en inventario...</option>
+                            {% for p in productos %}
+                                <option value="{{ p.id_producto }}">
+                                    {{ p.nombre_producto }} (Stock: {{ p.stock_actual }} {{ p.unidad_medida }})
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label small fw-bold text-muted">CANTIDAD POR SESIÓN</label>
+                        <input type="number" step="0.01" min="0.01" name="cantidad" class="form-control border-0 shadow-sm rounded-pill px-3" placeholder="Ej: 1.5" required>
+                        <div class="form-text small px-2">Cantidad exacta que se descuenta al finalizar.</div>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100 rounded-pill fw-bold py-2 shadow">
+                        <i class="bi bi-plus-circle me-1"></i> AÑADIR A LA RECETA
+                    </button>
+                </form>
+            </div>
+            <a href="{% url 'lista_tratamiento_medico' %}" class="btn btn-link text-muted mt-3 fw-bold text-decoration-none">
+                <i class="bi bi-arrow-left"></i> Volver a Gestión Clínica
+            </a>
+        </div>
+
+        <div class="col-md-8">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
+                <h6 class="fw-bold text-muted mb-3 text-uppercase small">Materiales de la Receta</h6>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead>
+                            <tr class="text-muted small">
+                                <th>MATERIAL</th>
+                                <th class="text-center">CANTIDAD</th>
+                                <th class="text-end">ACCIONES</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for i in insumos %}
+                            <tr>
+                                <td>
+                                    <div class="fw-bold">{{ i.id_producto.nombre_producto }}</div>
+                                    <small class="badge bg-light text-muted fw-normal">ID: {{ i.id_producto.codigo_producto|default:"N/A" }}</small>
+                                </td>
+                                <td class="text-center fw-bold text-primary">
+                                    <span class="fs-5">{{ i.cantidad_requerida }}</span> 
+                                    <span class="small text-muted fw-normal">{{ i.id_producto.unidad_medida }}</span>
+                                </td>
+                                <td class="text-end">
+                                    <form action="{% url 'eliminar_insumo' i.id_tratamiento_producto %}" method="POST" class="d-inline">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-sm btn-outline-danger rounded-circle shadow-sm p-2" 
+                                                onclick="return confirm('¿Eliminar {{ i.id_producto.nombre_producto }} de esta receta?')">
+                                            <i class="bi bi-trash-fill px-1"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="3" class="text-center py-5">
+                                    <div class="opacity-50">
+                                        <i class="bi bi-clipboard-plus display-4 d-block mb-2"></i>
+                                        <p class="mb-0">No hay materiales configurados.</p>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .form-control:focus, .form-select:focus {
+        background-color: #fff !important;
+        box-shadow: 0 10px 20px rgba(0,0,0,0.05) !important;
+        transform: translateY(-2px);
+    }
+    .btn-primary {
+        background: #0d6efd;
+        border: none;
+        transition: all 0.3s ease;
+    }
+    .btn-primary:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 15px rgba(13, 110, 253, 0.3);
+    }
+</style>
+{% endblock %}

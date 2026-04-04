@@ -102,18 +102,46 @@ def lista_pacientes(request):
 
 @login_required
 def editar_paciente(request, id_usuario):
-    paciente = get_object_or_404(Usuario, id_usuario=id_usuario)
+    if request.user.id_rol.nombre_rol not in ['Secretaria', 'Administrador']:
+        return redirect('home')
+
+    usuario_instancia = get_object_or_404(Usuario, id_usuario=id_usuario)
+    # Obtenemos la instancia de Paciente asociada a ese usuario
+    paciente_instancia = get_object_or_404(Paciente, id_usuario=usuario_instancia)
     
     if request.method == 'POST':
-        form = EditarPacienteForm(request.POST, instance=paciente)
-        if form.is_valid():
-            form.save()
-            messages.success(request, "Datos actualizados correctamente.")
+        form_user = EditarPacienteForm(request.POST, instance=usuario_instancia)
+        form_clinico = EditarPerfilPacienteForm(request.POST, instance=paciente_instancia)
+        
+        if form_user.is_valid() and form_clinico.is_valid():
+            with transaction.atomic():
+                form_user.save()
+                form_clinico.save()
+            messages.success(request, f"¡Paciente {usuario_instancia.nombre} actualizado con éxito!")
             return redirect('lista_pacientes')
     else:
-        form = EditarPacienteForm(instance=paciente)
+        form_user = EditarPacienteForm(instance=usuario_instancia)
+        form_clinico = EditarPerfilPacienteForm(instance=paciente_instancia)
     
     return render(request, 'Webapp/editar_paciente.html', {
-        'form': form, 
-        'paciente': paciente
+        'form_user': form_user,
+        'form_clinico': form_clinico,
+        'paciente': usuario_instancia
+    })
+
+@login_required
+def detalle_paciente(request, id_usuario):
+    if request.user.id_rol.nombre_rol not in ['Secretaria', 'Administrador']:
+        return redirect('home')
+
+    usuario = get_object_or_404(Usuario, id_usuario=id_usuario)
+    paciente_clinico = get_object_or_404(Paciente, id_usuario=usuario)
+    
+    # Traemos las últimas 5 citas para el historial rápido
+    citas_recientes = Cita.objects.filter(id_paciente=paciente_clinico).order_by('-fecha_hora')[:5]
+
+    return render(request, 'Webapp/detalle_paciente.html', {
+        'u': usuario,
+        'p': paciente_clinico,
+        'citas': citas_recientes
     })

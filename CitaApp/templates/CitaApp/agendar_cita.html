@@ -1,12 +1,15 @@
 {% extends 'Webapp/base.html' %}
+
 {% block content %}
 <div class="container mt-5">
     <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="card shadow border-0 p-4">
+        <div class="col-md-9">
+            <div class="card shadow-lg border-0 p-4" style="border-radius: 15px;">
                 <h2 class="fw-bold mb-4 text-primary"><i class="bi bi-calendar-plus"></i> Agendar Nueva Cita</h2>
-                <form method="post">
+                
+                <form method="post" id="formAgendarCita">
                     {% csrf_token %}
+                    
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label fw-bold">Paciente</label>
@@ -17,30 +20,131 @@
                             {{ form.id_doctor }}
                         </div>
                     </div>
+
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label class="form-label fw-bold">Fecha y Hora</label>
-                            {{ form.fecha_hora }}
+                            <label class="form-label fw-bold text-dark">Fecha de la Cita</label>
+                            <input type="date" name="fecha_seleccionada" id="id_fecha" class="form-control" required min="{{ hoy|date:'Y-m-d' }}">
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label class="form-label fw-bold">Estado Inicial</label>
+                            <label class="form-label fw-bold text-dark">Estado Inicial</label>
                             {{ form.id_estado_cita }}
                         </div>
                     </div>
-                    <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
-                        <a href="{% url 'panel_secretaria' %}" class="btn btn-secondary">Cancelar</a>
-                        <button type="submit" class="btn btn-primary">Confirmar Cita</button>
+
+                    <div id="contenedor-slots" class="mt-3 p-3 border rounded bg-light" style="display: none; border-style: dashed !important;">
+                        <label class="form-label fw-bold text-primary">
+                            <i class="bi bi-clock-history"></i> Selecciona una hora disponible
+                        </label>
+                        <div id="lista-slots" class="row g-2">
+                            </div>
                     </div>
-                    {% if form.non_field_errors %}
-    <div class="alert alert-danger shadow-sm border-0">
-        {% for error in form.non_field_errors %}
-            <i class="bi bi-exclamation-triangle-fill me-2"></i> {{ error }}
-        {% endfor %}
-    </div>
-{% endif %}
+
+                    <div class="row mt-4">
+                        <div class="col-md-12 mb-3">
+                            <div class="p-3 border rounded bg-white shadow-sm">
+                                <label class="form-label fw-bold text-success">
+                                    <i class="bi bi-currency-dollar"></i> Costo Estimado del Servicio
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-success text-white">$</span>
+                                    {{ form.monto_estimado }}
+                                </div>
+                                <small class="text-muted small">Este valor permite registrar abonos previos en recepción.</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                        <a href="{% url 'lista_citas' %}" class="btn btn-outline-secondary px-4 rounded-pill">Cancelar</a>
+                        <button type="submit" class="btn btn-primary px-5 fw-bold shadow-sm rounded-pill">
+                            <i class="bi bi-check2-circle me-1"></i> Confirmar y Agendar
+                        </button>
+                    </div>
+
+                    {% if form.errors %}
+                        <div class="alert alert-danger shadow-sm border-0 mt-3">
+                            <i class="bi bi-exclamation-triangle-fill me-2"></i> <strong>Error:</strong> {{ form.errors }}
+                        </div>
+                    {% endif %}
                 </form>
             </div>
         </div>
     </div>
 </div>
+
+<style>
+    /* Diseño de los botones de selección de hora */
+    .btn-check:checked + .btn-outline-primary {
+        background-color: #0d6efd !important;
+        color: white !important;
+        border-color: #0d6efd !important;
+        transform: scale(1.05);
+        box-shadow: 0 4px 10px rgba(13, 110, 253, 0.3);
+    }
+    
+    .form-select, .form-control {
+        border-radius: 8px !important;
+        border: 1px solid #ced4da;
+    }
+
+    #lista-slots .btn {
+        transition: all 0.2s ease;
+        font-weight: 600;
+        border-radius: 10px;
+    }
+
+    #lista-slots .btn:hover {
+        background-color: #f0f7ff;
+    }
+</style>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    $(document).ready(function() {
+        const inputFecha = $('#id_fecha');
+        const selectDoctor = $('#id_doctor');
+
+        function cargarSlots() {
+            const fecha = inputFecha.val();
+            const doctorId = selectDoctor.val();
+
+            if (fecha && doctorId) {
+                $('#lista-slots').html('<div class="col-12 text-center my-3"><div class="spinner-border spinner-border-sm text-primary"></div> Consultando disponibilidad...</div>');
+                $('#contenedor-slots').show();
+
+                $.ajax({
+                    // IMPORTANTE: Asegúrate de que el nombre coincide con el de tu urls.py de CitaApp
+                    url: "{% url 'obtener_slots_ajax' %}", 
+                    data: {
+                        'fecha': fecha,
+                        'doctor_id': doctorId
+                    },
+                    success: function(data) {
+                        let html = '';
+                        if (data.slots && data.slots.length > 0) {
+                            data.slots.forEach(hora => {
+                                html += `
+                                    <div class="col-md-3 col-4">
+                                        <input type="radio" class="btn-check" name="hora_seleccionada" id="hora-${hora}" value="${hora}" required>
+                                        <label class="btn btn-outline-primary w-100 py-2" for="hora-${hora}">${hora}</label>
+                                    </div>`;
+                            });
+                        } else {
+                            html = '<div class="col-12 text-center text-muted p-3"><i class="bi bi-info-circle me-1"></i> El doctor no tiene horarios disponibles para esta fecha.</div>';
+                        }
+                        $('#lista-slots').html(html);
+                    },
+                    error: function() {
+                        $('#lista-slots').html('<div class="col-12 text-danger text-center">No se pudo cargar la disponibilidad. Intente de nuevo.</div>');
+                    }
+                });
+            }
+        }
+
+        // Escuchar cambios para actualizar la lista de horas
+        inputFecha.on('change', cargarSlots);
+        selectDoctor.on('change', cargarSlots);
+    });
+</script>
 {% endblock %}

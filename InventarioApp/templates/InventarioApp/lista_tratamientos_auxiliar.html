@@ -1,0 +1,48 @@
+{% extends 'Webapp/base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex align-items-center mb-4">
+        <h2 class="fw-bold mb-0 me-3">
+            <i class="bi bi-box-seam text-primary"></i> Configuración de Insumos
+        </h2>
+        <div class="flex-grow-1 border-bottom opacity-25"></div>
+    </div>
+    
+    <p class="text-muted">Selecciona un tratamiento para definir qué productos del inventario se descuentan al realizarlo.</p>
+
+    <div class="card shadow-sm border-0" style="border-radius: 20px;">
+        <div class="card-body p-4">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Tratamiento Clínico</th>
+                        <th>Descripción</th>
+                        <th class="text-center">Acción</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for t in tratamientos %}
+                    <tr>
+                        <td class="fw-bold text-dark">{{ t.nombre_tratamiento }}</td>
+                        <td class="text-muted small">{{ t.descripcion|default:"Sin detalles adicionales" }}</td>
+                        <td class="text-center">
+                            <a href="{% url 'gestionar_insumos' t.pk %}" class="btn btn-outline-primary rounded-pill px-4 btn-sm fw-bold">
+                                <i class="bi bi-gear-wide-connected me-1"></i> GESTIONAR RECETA
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="3" class="text-center py-5 text-muted">
+                            <i class="bi bi-exclamation-circle d-block fs-2 mb-2"></i>
+                            No hay tratamientos activos disponibles para configurar.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

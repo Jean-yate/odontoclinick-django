@@ -1,0 +1,202 @@
+{% extends 'Webapp/base.html' %}
+
+{% block title %}Informes y Analítica - OdontoClinick{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --clay-bg: #f0f2f5;
+        --clay-shadow: 12px 12px 24px #d1d9e6, -12px -12px 24px #ffffff;
+    }
+
+    /* Tarjetas de Datos Estilo Informe */
+    .info-card-clay {
+        background: var(--clay-bg);
+        border-radius: 25px;
+        padding: 1.8rem;
+        box-shadow: var(--clay-shadow);
+        border: none;
+        transition: transform 0.3s ease;
+    }
+
+    .info-card-clay:hover {
+        transform: translateY(-5px);
+    }
+
+    /* Contenedor de la Gráfica */
+    .chart-container-main {
+        background: white;
+        border-radius: 30px;
+        padding: 2rem;
+        box-shadow: 0 15px 35px rgba(0,0,0,0.05);
+        border: 1px solid rgba(0,0,0,0.05);
+        position: relative;
+        height: 400px;
+    }
+
+    .stat-title {
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: #8e8e8e;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    .stat-value {
+        font-size: 2rem;
+        font-weight: 800;
+        margin-top: 0.5rem;
+    }
+
+    .critical-table {
+        font-size: 0.9rem;
+    }
+    
+    .critical-table thead th {
+        border-top: none;
+        color: #adb5bd;
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-5 animate__animated animate__fadeIn">
+    
+    <div class="d-flex justify-content-between align-items-center mb-5">
+        <div>
+            <h1 class="fw-bold text-dark mb-0">Informes y Analítica</h1>
+            <p class="text-muted">Monitoreo de rendimiento de bodega en tiempo real.</p>
+        </div>
+        <div class="d-flex gap-2">
+            <span class="badge bg-primary rounded-pill px-3 py-2 shadow-sm">
+                <i class="bi bi-calendar3 me-2"></i>{{ hoy|date:"d M Y" }}
+            </span>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-5 text-center text-md-start">
+        <div class="col-md-4">
+            <div class="info-card-clay border-start border-primary border-5">
+                <span class="stat-title">Valorización de Bodega</span>
+                <div class="stat-value text-primary">${{ valor_total|floatformat:0 }}</div>
+                <small class="text-muted">Costo total de adquisición (Stock)</small>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="info-card-clay border-start border-success border-5">
+                <span class="stat-title">Inversión del Mes</span>
+                <div class="stat-value text-success">${{ inversion_mes|floatformat:0 }}</div>
+                <small class="text-muted">Compras registradas en {{ hoy|date:"F" }}</small>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="info-card-clay border-start border-danger border-5">
+                <span class="stat-title">Alertas de Stock</span>
+                <div class="stat-value text-danger">{{ bajo_stock_count }}</div>
+                <small class="text-muted">Insumos por debajo del mínimo</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8 mb-4">
+            <div class="chart-container-main">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h5 class="fw-bold mb-0">Flujo de Salidas (Últimos 7 días)</h5>
+                    <i class="bi bi-graph-up-arrow text-primary"></i>
+                </div>
+                <canvas id="consumoChart"></canvas>
+            </div>
+        </div>
+
+        <div class="col-lg-4 mb-4">
+            <div class="info-card-clay h-100 d-flex flex-column">
+                <h5 class="fw-bold mb-4 text-danger">
+                    <i class="bi bi-exclamation-octagon me-2"></i>Reponer Urgente
+                </h5>
+                <div class="table-responsive flex-grow-1">
+                    <table class="table table-hover critical-table">
+                        <thead>
+                            <tr>
+                                <th>Producto</th>
+                                <th>Stock</th>
+                                <th>Min.</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in insumos_criticos %}
+                            <tr>
+                                <td class="fw-bold text-dark">{{ item.nombre_producto }}</td>
+                                <td class="text-danger fw-bold">{{ item.stock_actual }}</td>
+                                <td class="text-muted">{{ item.stock_minimo }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="3" class="text-center py-5">
+                                    <i class="bi bi-check-circle-fill text-success fs-2 d-block mb-2"></i>
+                                    <span class="text-muted">Niveles de stock óptimos</span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="mt-3">
+                    <a href="{% url 'lista_inventario' %}" class="btn btn-dark w-100 rounded-pill py-2 shadow">
+                        Ir al Inventario
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const ctx = document.getElementById('consumoChart').getContext('2d');
+        
+        const fillGradient = ctx.createLinearGradient(0, 0, 0, 400);
+        fillGradient.addColorStop(0, 'rgba(13, 110, 253, 0.4)');
+        fillGradient.addColorStop(1, 'rgba(13, 110, 253, 0.0)');
+
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: {{ labels_grafica|safe }},
+                datasets: [{
+                    label: 'Unidades Entregadas',
+                    data: {{ datos_grafica|safe }},
+                    borderColor: '#0d6efd',
+                    borderWidth: 4,
+                    backgroundColor: fillGradient,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 5,
+                    pointBackgroundColor: '#fff',
+                    pointBorderColor: '#0d6efd',
+                    pointBorderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { 
+                        beginAtZero: true,
+                        grid: { borderDash: [5, 5], color: '#e9ecef' }
+                    },
+                    x: { grid: { display: false } }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

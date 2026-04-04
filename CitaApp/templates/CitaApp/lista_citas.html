@@ -2,141 +2,267 @@
 
 {% block title %}Agenda de Citas | OdontoClinick{% endblock %}
 
+{% block extra_css %}
+<style>
+    /* Contenedor de Tabla Clay (Heredado de Pacientes) */
+    .clay-table-card {
+        background: white;
+        border-radius: 40px;
+        padding: 1.5rem;
+        box-shadow: var(--clay-shadow);
+        border: none;
+        overflow: hidden;
+    }
+
+    .table thead th {
+        background-color: transparent;
+        border-bottom: 2px solid var(--bg-body);
+        color: var(--secondary-color);
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        font-weight: 800;
+        padding: 1.5rem 1rem;
+    }
+
+    .table tbody td {
+        padding: 1.2rem 1rem;
+        color: var(--primary-color);
+        border-bottom: 1px solid var(--bg-body);
+        font-weight: 500;
+    }
+
+    .table-hover tbody tr:hover {
+        background-color: var(--bg-body) !important;
+        transform: scale(1.005);
+        transition: all 0.2s ease;
+    }
+
+    /* Badges de Estado Estilo Clay */
+    .status-badge-clay {
+        font-size: 0.7rem;
+        font-weight: 800;
+        padding: 0.5rem 1rem;
+        border-radius: 15px;
+        display: inline-block;
+        text-transform: uppercase;
+    }
+
+    /* Botones de Acción Táctiles */
+    .btn-action-clay {
+        width: 35px;
+        height: 35px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 10px;
+        background: white;
+        color: var(--secondary-color);
+        box-shadow: 4px 4px 8px #d1cdc7, inset 2px 2px 4px rgba(255,255,255,0.8);
+        border: none;
+        transition: all 0.2s;
+        margin: 0 2px;
+        text-decoration: none;
+    }
+
+    .btn-action-clay:hover {
+        transform: translateY(-2px);
+        color: var(--primary-color);
+        box-shadow: 6px 6px 12px #d1cdc7;
+    }
+
+    .btn-action-clay.disabled {
+        opacity: 0.5;
+        box-shadow: none;
+        transform: none;
+    }
+
+    /* Estilo para la barra de progreso de pagos */
+    .progress-clay {
+        height: 6px;
+        border-radius: 10px;
+        background: var(--bg-body);
+        box-shadow: inset 2px 2px 4px rgba(0,0,0,0.05);
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="container mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h2 class="text-primary fw-bold mb-0">🗓️ Agenda General de Citas</h2>
-            <p class="text-muted small">Gestión de turnos y facturación inmediata</p>
+<div class="container mt-5">
+    <div class="row mb-5 align-items-center">
+        <div class="col-md-7">
+            <h2 class="fw-bold mb-1" style="color: var(--primary-color); letter-spacing: -1px;">Agenda de Citas</h2>
+            <p class="text-muted fw-semibold mb-0">Gestión de turnos y seguimiento de pagos.</p>
         </div>
-        <a href="{% url 'agendar_cita' %}" class="btn btn-primary fw-bold shadow-sm">
-            <i class="bi bi-plus-circle me-1"></i> Agendar Nueva Cita
-        </a>
+        <div class="col-md-5 text-md-end mt-3 mt-md-0">
+            <a href="{% url 'agendar_cita' %}" class="btn btn-primary d-inline-flex align-items-center px-4 py-2">
+                <i class="bi bi-calendar-plus me-2 fs-5"></i> AGENDAR CITA
+            </a>
+        </div>
     </div>
 
-    <div class="card shadow border-0" style="border-radius: 15px;">
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th class="ps-4">Fecha y Hora</th>
-                            <th>Paciente</th>
-                            <th>Doctor</th>
-                            <th>Estado</th>
-                            <th>Monto (Dr.)</th> <th class="text-center">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for cita in citas %}
-                        <tr>
-                            <td class="ps-4">
-                                <div class="fw-bold text-dark">{{ cita.fecha_hora|date:"d/m/Y" }}</div>
-                                <small class="text-muted">{{ cita.fecha_hora|time:"H:i" }}</small>
-                            </td>
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <form method="GET" class="d-flex gap-2 p-2 bg-white rounded-pill shadow-sm">
+                <input type="text" name="buscar" class="form-control border-0 bg-transparent ps-4 fw-semibold" 
+                       placeholder="Buscar paciente, doctor o fecha..." value="{{ busqueda|default:'' }}">
+                <button class="btn btn-primary rounded-pill px-4" type="submit">
+                    <i class="bi bi-search"></i>
+                </button>
+            </form>
+        </div>
+    </div>
 
-                            <td>
-                                <span class="fw-semibold text-primary">{{ cita.id_paciente }}</span>
-                            </td>
-
-                            <td>
-                                <span class="text-secondary"><i class="bi bi-person-badge me-1"></i>{{ cita.id_doctor }}</span>
-                            </td>
-
-                            <td>
-                                {% if cita.id_estado_cita.nombre_estado == 'Pendiente' %}
-                                    <span class="badge bg-warning text-dark px-3 py-2">Pendiente</span>
-                                {% elif cita.id_estado_cita.nombre_estado == 'Confirmada' %}
-                                    <span class="badge bg-success px-3 py-2">Confirmada</span>
-                                {% elif cita.id_estado_cita.nombre_estado == 'Finalizada' %}
-                                    <span class="badge bg-info text-white px-3 py-2">Atendida</span>
-                                {% elif cita.id_estado_cita.nombre_estado == 'Cancelada' %}
-                                    <span class="badge bg-danger px-3 py-2">Cancelada</span>
-                                {% else %}
-                                    <span class="badge bg-secondary px-3 py-2">{{ cita.id_estado_cita }}</span>
-                                {% endif %}
-                            </td>
-
-                            <td class="fw-bold text-dark">
-                                {% if cita.historialmedico_set.exists %}
-                                    {% with historial=cita.historialmedico_set.first %}
-                                        <span class="text-success">${{ historial.costo_aplicado }}</span>
-                                    {% endwith %}
-                                {% else %}
-                                    <span class="text-muted small">---</span>
-                                {% endif %}
-                            </td>
-
-                            <td class="text-center pe-4">
-                                <div class="btn-group shadow-sm">
-                                    
-                                    {# Lógica de Cobro Mejorada #}
-                                    {% if cita.pago_set.exists %}
-                                        {# Si el pago ya fue procesado por la secretaria (puedes validar por referencia o método real) #}
-                                        <button class="btn btn-success btn-sm" title="Cita Pagada" disabled>
-                                            <i class="bi bi-check-all"></i>
-                                        </button>
-                                    {% elif cita.id_estado_cita.nombre_estado == 'Finalizada' %}
-                                        {# Solo permite cobrar si el doctor ya finalizó y puso un monto #}
-                                        <a href="{% url 'registrar_pago_cita' cita.pk %}" class="btn btn-outline-success btn-sm" title="Registrar Cobro">
-                                            <i class="bi bi-cash-stack"></i> Cobrar
-                                        </a>
-                                    {% else %}
-                                        {# Bloqueado si no ha sido atendido aún #}
-                                        <button class="btn btn-outline-secondary btn-sm" title="Esperando atención del médico" disabled>
-                                            <i class="bi bi-hourglass-split"></i>
-                                        </button>
-                                    {% endif %}
-
-                                    <a href="#" class="btn btn-outline-primary btn-sm" title="Editar detalles">
-                                        <i class="bi bi-pencil-square"></i>
-                                    </a>
-
-                                    <a href="{% url 'cancelar_cita' cita.pk %}" 
-                                       class="btn btn-outline-danger btn-sm" 
-                                       onclick="return confirm('¿Estás seguro de que deseas cancelar la cita de {{ cita.id_paciente }}?')"
-                                       title="Cancelar Cita">
-                                        <i class="bi bi-x-circle"></i>
-                                    </a>
+    <div class="clay-table-card mb-5">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th class="ps-4">Fecha y Hora</th>
+                        <th>Paciente</th>
+                        <th>Doctor</th>
+                        <th>Estado Cita</th>
+                        <th>Estado Pago</th>
+                        <th>Costo / Abonos</th>
+                        <th class="text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for cita in citas %}
+                    <tr>
+                        <td class="ps-4">
+                            <div class="fw-bold text-primary">{{ cita.fecha_hora|date:"d/m/Y" }}</div>
+                            <div class="text-muted small fw-bold">{{ cita.fecha_hora|time:"H:i" }}</div>
+                        </td>
+                        <td>
+                            <div class="fw-bold" style="color: var(--primary-color);">
+                                {{ cita.id_paciente.id_usuario.nombre }} {{ cita.id_paciente.id_usuario.apellidos }}
+                            </div>
+                        </td>
+                        <td>
+                            <div class="text-secondary small fw-bold">
+                                <i class="bi bi-person-badge me-1"></i>Dr. {{ cita.id_doctor.id_usuario.nombre }}
+                            </div>
+                        </td>
+                        <td>
+                            <span class="status-badge-clay text-white shadow-sm" 
+                                  style="background-color: {{ cita.id_estado_cita.color|default:'#6c757d' }};">
+                                {{ cita.id_estado_cita.nombre_estado }}
+                            </span>
+                        </td>
+                        <td>
+                            {% with pago_info=cita.estado_pago %}
+                            <span class="badge rounded-pill bg-{{ pago_info.color }} px-3 py-2 shadow-sm mb-1" style="font-size: 0.65rem;">
+                                {{ pago_info.texto|upper }}
+                            </span>
+                            {% if cita.saldo_pendiente > 0 and cita.total_abonado > 0 %}
+                                <div class="text-danger fw-extrabold" style="font-size: 0.7rem;">
+                                    RESTA: ${{ cita.saldo_pendiente }}
                                 </div>
-                            </td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="6" class="text-center py-5 text-muted">
-                                <div class="mb-3">
-                                    <i class="bi bi-calendar2-x display-4 opacity-25"></i>
+                            {% endif %}
+                            {% endwith %}
+                        </td>
+                        <td>
+                            <div class="fw-bold text-dark">${{ cita.costo_final }}</div>
+                            {% if cita.total_abonado > 0 %}
+                                <div class="progress progress-clay mt-1" style="width: 80px;">
+                                    <div class="progress-bar bg-success" role="progressbar" 
+                                         style="width: {% widthratio cita.total_abonado cita.costo_final 100 %}%"></div>
                                 </div>
-                                <h5>No hay citas para mostrar</h5>
-                                <p class="small">Usa el botón superior para agendar el primer paciente.</p>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+                                <small class="text-muted" style="font-size: 0.65rem;">Abonado: ${{ cita.total_abonado }}</small>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            <div class="d-flex justify-content-center">
+                                {# COBRO #}
+                                {% if cita.saldo_pendiente <= 0 %}
+                                    <span class="btn-action-clay disabled" title="Pago Completo">
+                                        <i class="bi bi-check-all text-success fs-5"></i>
+                                    </span>
+                                {% else %}
+                                    <a href="{% url 'registrar_pago_cita' cita.id_cita %}" 
+                                       class="btn-action-clay" title="Registrar Abono">
+                                        <i class="bi bi-cash-coin {% if cita.total_abonado > 0 %}text-warning{% else %}text-success{% endif %}"></i>
+                                    </a>
+                                {% endif %}
+
+                                {# IMPRIMIR #}
+                                <a href="{% url 'generar_factura_ticket' cita.id_cita %}" 
+                                   target="_blank" class="btn-action-clay" title="Reimprimir Ticket">
+                                    <i class="bi bi-printer text-info"></i>
+                                </a>
+
+                                {# EDITAR ESTADO #}
+                                <button type="button" class="btn-action-clay" data-bs-toggle="modal" 
+                                        data-bs-target="#modalEstado{{ cita.id_cita }}" title="Cambiar Estado">
+                                    <i class="bi bi-pencil-square text-primary"></i>
+                                </button>
+
+                                {# CANCELAR #}
+                                <a href="{% url 'cancelar_cita' cita.id_cita %}" 
+                                   class="btn-action-clay" title="Cancelar Cita"
+                                   onclick="return confirm('¿Confirmas la cancelación?')">
+                                    <i class="bi bi-trash3 text-danger"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <div class="modal fade" id="modalEstado{{ cita.id_cita }}" tabindex="-1" aria-hidden="true">
+                        <div class="modal-dialog modal-dialog-centered modal-sm">
+                            <div class="modal-content border-0 shadow-lg" style="border-radius: 30px;">
+                                <form action="{% url 'actualizar_estado_gestion' cita.id_cita %}" method="POST">
+                                    {% csrf_token %}
+                                    <div class="modal-header border-0 pt-4 px-4">
+                                        <h6 class="modal-title fw-bold text-primary">Estado de Cita</h6>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body px-4 pb-4">
+                                        <select name="id_estado" class="form-select border-0 bg-light rounded-pill fw-bold shadow-sm">
+                                            {% for estado in estados_disponibles %}
+                                                <option value="{{ estado.id_estado_cita }}" 
+                                                    {% if estado.id_estado_cita == cita.id_estado_cita.id_estado_cita %}selected{% endif %}>
+                                                    {{ estado.nombre_estado }}
+                                                </option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="modal-footer border-0 p-3 bg-light" style="border-radius: 0 0 30px 30px;">
+                                        <button type="submit" class="btn btn-primary rounded-pill w-100 fw-bold">GUARDAR</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center py-5">
+                            <i class="bi bi-calendar-x fs-1 opacity-25 d-block mb-3"></i>
+                            <h5 class="fw-bold text-muted">No hay citas programadas</h5>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
 
-<style>
-    .table thead th {
-        font-size: 0.85rem;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        font-weight: 700;
-        color: #6c757d;
-        border-top: none;
-    }
-    .btn-group .btn {
-        padding: 0.4rem 0.7rem;
-    }
-    .table-hover tbody tr:hover {
-        background-color: #f8f9ff;
-        transition: background-color 0.2s ease;
-    }
-    .bg-info {
-        background-color: #0dcaf0 !important;
-    }
-</style>
+{# SCRIPT DE IMPRESIÓN (Mismo que ya tenías) #}
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const imprimirId = urlParams.get('imprimir_id');
+        if (imprimirId) {
+            let urlFactura = "{% url 'generar_factura_ticket' 0 %}".replace('0', imprimirId);
+            const win = window.open(urlFactura, '_blank');
+            if (win) {
+                win.focus();
+                const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+                window.history.replaceState({path: cleanUrl}, '', cleanUrl);
+            }
+        }
+    });
+</script>
 {% endblock %}

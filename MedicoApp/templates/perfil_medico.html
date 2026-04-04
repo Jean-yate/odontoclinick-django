@@ -1,59 +1,153 @@
-{% extends 'Webapp/base.html' %}
+{{% extends 'Webapp/base.html' %}
+
+{% block extra_css %}
+<style>
+    .clay-profile-card {
+        background: white;
+        border-radius: 40px;
+        padding: 3rem;
+        box-shadow: var(--clay-shadow);
+    }
+    .data-box-clay {
+        background: #f8fafc;
+        border-radius: 20px;
+        padding: 1.2rem;
+        box-shadow: inset 4px 4px 8px rgba(0,0,0,0.03);
+        border: 2px solid white;
+        height: 100%;
+        transition: transform 0.2s;
+    }
+    .data-box-clay:hover {
+        transform: translateY(-5px);
+    }
+    .label-mini {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        font-weight: 800;
+        color: var(--secondary-color);
+        display: block;
+        margin-bottom: 4px;
+    }
+    .value-text {
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--primary-color);
+        margin-bottom: 0;
+    }
+    .avatar-wrapper {
+        position: relative;
+        display: inline-block;
+    }
+    .btn-edit-float {
+        position: absolute;
+        bottom: 5px;
+        right: 5px;
+        background: var(--primary-color);
+        color: white;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 3px solid white;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+</style>
+{% endblock %}
 
 {% block content %}
 <div class="container mt-5">
     <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="card dashboard-card border-0 p-4">
-                <div class="card-body text-center">
-                    <div class="mb-4">
-                        <img src="https://ui-avatars.com/api/?name={{ user.nombre }}+{{ user.apellidos }}&background=3f2e23&color=fff&size=120" 
-                             class="user-avatar rounded-circle img-thumbnail" alt="Foto Médico">
-                    </div>
+        <div class="col-md-9">
+            <div class="clay-profile-card text-center">
+                <div class="avatar-wrapper mb-4">
+                    <img src="https://ui-avatars.com/api/?name={{ user.nombre }}+{{ user.apellidos }}&background=3f2e23&color=fff&size=150" 
+                         class="rounded-circle shadow" alt="Foto Médico">
+                    <button class="btn btn-edit-float" data-bs-toggle="modal" data-bs-target="#modalEditarPerfil">
+                        <i class="bi bi-pencil-fill"></i>
+                    </button>
+                </div>
 
-                    <h2 class="fw-bold mb-1" style="color: var(--primary-color);">
-                        Dr. {{ user.nombre }} {{ user.apellidos }}
-                    </h2>
-                    <span class="badge rounded-pill bg-primary bg-opacity-10 text-primary px-3 py-2 fw-bold mb-4">
-                        {{ medico.id_especialidad.nombre_especialidad }}
-                    </span>
+                <h2 class="fw-bold text-primary mb-1">Dr. {{ user.nombre }} {{ user.apellidos }}</h2>
+                <p class="text-muted fw-bold">Especialidad: 
+                    <span class="text-primary">{{ medico.id_especialidad.nombre_especialidad }}</span>
+                </p>
 
-                    <hr class="opacity-25 my-4">
-
-                    <div class="row g-4 text-start">
-                        <div class="col-md-6">
-                            <div class="p-3 bg-light rounded-4 shadow-sm" style="border: 2px solid white;">
-                                <small class="text-muted fw-bold text-uppercase" style="font-size: 0.7rem;">Licencia Médica</small>
-                                <p class="mb-0 fw-bold text-dark">{{ medico.licencia_medica|default:"No registrada" }}</p>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="p-3 bg-light rounded-4 shadow-sm" style="border: 2px solid white;">
-                                <small class="text-muted fw-bold text-uppercase" style="font-size: 0.7rem;">Experiencia</small>
-                                <p class="mb-0 fw-bold text-dark">{{ medico.anos_experiencia }} Años</p>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="p-3 bg-light rounded-4 shadow-sm" style="border: 2px solid white;">
-                                <small class="text-muted fw-bold text-uppercase" style="font-size: 0.7rem;">Correo Electrónico</small>
-                                <p class="mb-0 fw-bold text-dark">{{ user.correo }}</p>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="p-3 bg-light rounded-4 shadow-sm" style="border: 2px solid white;">
-                                <small class="text-muted fw-bold text-uppercase" style="font-size: 0.7rem;">Fecha de Ingreso</small>
-                                <p class="mb-0 fw-bold text-dark">{{ medico.fecha_ingreso|date:"d M, Y" }}</p>
-                            </div>
+                <div class="row g-4 mt-2 text-start">
+                    <div class="col-md-4">
+                        <div class="data-box-clay">
+                            <span class="label-mini">Licencia Médica</span>
+                            <p class="value-text">{{ medico.licencia_medica|default:"No registrada" }}</p>
                         </div>
                     </div>
-
-                    <div class="mt-5">
-                        <a href="{% url 'dashboard_medico' %}" class="btn btn-primary rounded-pill px-5">
-                            VOLVER AL PANEL
-                        </a>
+                    <div class="col-md-4">
+                        <div class="data-box-clay">
+                            <span class="label-mini">Experiencia</span>
+                            <p class="value-text">{{ medico.anos_experiencia }} Años</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="data-box-clay">
+                            <span class="label-mini">Teléfono</span>
+                            <p class="value-text">{{ user.telefono|default:"No registrado" }}</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="data-box-clay">
+                            <span class="label-mini">Correo Institucional</span>
+                            <p class="value-text">{{ user.correo }}</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="data-box-clay">
+                            <span class="label-mini">Miembro desde</span>
+                            <p class="value-text">{{ medico.fecha_ingreso|date:"d F, Y" }}</p>
+                        </div>
                     </div>
                 </div>
+
+                <div class="mt-5 pt-3">
+                    <a href="{% url 'dashboard_medico' %}" class="btn btn-light rounded-pill px-4 fw-bold text-muted border">
+                        VOLVER AL PANEL
+                    </a>
+                    <button class="btn btn-primary rounded-pill px-5 fw-bold shadow ms-2" data-bs-toggle="modal" data-bs-target="#modalEditarPerfil">
+                        EDITAR INFORMACIÓN
+                    </button>
+                </div>
             </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalEditarPerfil" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 30px;">
+            <form action="{% url 'editar_perfil_medico' %}" method="POST">
+                {% csrf_token %}
+                <div class="modal-header border-0 pt-4 px-4">
+                    <h5 class="modal-title fw-bold text-primary">Actualizar mis Datos</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body px-4">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Teléfono de Contacto</label>
+                        <input type="text" name="telefono" class="form-control rounded-pill bg-light border-0" value="{{ user.telefono }}">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Años de Experiencia</label>
+                        <input type="number" name="experiencia" class="form-control rounded-pill bg-light border-0" value="{{ medico.anos_experiencia }}">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Número de Licencia</label>
+                        <input type="text" name="licencia" class="form-control rounded-pill bg-light border-0" value="{{ medico.licencia_medica }}">
+                    </div>
+                    <p class="text-muted small px-2">Nota: Para cambiar nombre o especialidad, contacte al administrador.</p>
+                </div>
+                <div class="modal-footer border-0 p-4">
+                    <button type="submit" class="btn btn-primary w-100 rounded-pill fw-bold py-2 shadow">GUARDAR CAMBIOS</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>

@@ -7,33 +7,34 @@
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <div>
                     <h4 class="fw-bold mb-0" style="color: #2c3e50;">
-                        <i class="bi bi-calendar3 me-2"></i>Agenda de Pacientes
+                        <i class="bi bi-calendar-check me-2 text-primary"></i>Gestión de Agenda Médica
                     </h4>
-                    <p class="text-muted small mb-0">Citas programadas para los próximos 7 días</p>
+                    <p class="text-muted small mb-0">Control de flujo de atención y estados de cita</p>
                 </div>
-                <span class="badge bg-primary rounded-pill p-2 px-3 shadow-sm">
-                    {{ citas.count }} Citas Encontradas
-                </span>
+                <div class="text-end">
+                    <span class="badge bg-primary rounded-pill p-2 px-3">
+                        {{ citas.count }} Citas esta semana
+                    </span>
+                </div>
             </div>
 
             <div class="table-responsive">
                 <table class="table table-hover align-middle">
                     <thead class="text-muted small text-uppercase bg-light">
                         <tr>
-                            <th class="ps-3">Fecha y Hora</th>
+                            <th class="ps-3">Horario</th>
                             <th>Paciente</th>
-                            <th>Tratamiento</th>
-                            <th>Estado</th>
-                            <th class="text-center">Acciones</th>
+                            <th>Estado Actual</th>
+                            <th class="text-center">Acciones de Control</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for cita in citas %}
-                        <tr>
+                        <tr {% if cita.id_estado_cita.nombre_estado == 'Cancelada' %}style="display:none;"{% endif %}>
                             <td class="ps-3">
                                 <div class="fw-bold text-dark">{{ cita.fecha_hora|date:"H:i" }}</div>
                                 <div class="text-muted x-small" style="font-size: 0.75rem;">
-                                    {{ cita.fecha_hora|date:"d M, Y" }}
+                                    {{ cita.fecha_hora|date:"d/m/Y" }}
                                 </div>
                             </td>
 
@@ -41,57 +42,65 @@
                                 <div class="d-flex align-items-center">
                                     <div class="avatar-sm me-3">
                                         <img src="https://ui-avatars.com/api/?name={{ cita.id_paciente.id_usuario.nombre }}+{{ cita.id_paciente.id_usuario.apellidos }}&background=random&color=fff" 
-                                             class="rounded-circle shadow-sm" width="40" alt="Avatar">
+                                             class="rounded-circle shadow-sm" width="38" alt="Avatar">
                                     </div>
                                     <div>
                                         <p class="mb-0 fw-bold text-dark">
                                             {{ cita.id_paciente.id_usuario.nombre }} {{ cita.id_paciente.id_usuario.apellidos }}
                                         </p>
-                                        <small class="text-muted">Expediente: #{{ cita.id_paciente.id_paciente }}</small>
+                                        <small class="text-muted">ID: {{ cita.id_paciente.id_paciente }}</small>
                                     </div>
                                 </div>
                             </td>
 
                             <td>
-                                <span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25 px-2">
-                                    <i class="bi bi-journal-medical me-1"></i>
-                                    {{ cita.id_tratamiento.nombre_tratamiento|default:"Consulta General" }}
-                                </span>
-                            </td>
-
-                            <td>
-                                {% if cita.id_estado_cita.nombre_estado == 'Programada' or cita.id_estado_cita.nombre_estado == 'Confirmada' %}
-                                    <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 w-100">
-                                        <i class="bi bi-check-circle-fill me-1"></i>Confirmada
+                                {% if cita.id_estado_cita.nombre_estado == 'Programada' %}
+                                    <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 w-75">
+                                        <i class="bi bi-hourglass me-1"></i>Programada
                                     </span>
-                                {% elif cita.id_estado_cita.nombre_estado == 'Pendiente' %}
-                                    <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 w-100">
-                                        <i class="bi bi-clock-history me-1"></i>Pendiente
+                                {% elif cita.id_estado_cita.nombre_estado == 'Confirmada' %}
+                                    <span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25 w-75">
+                                        <i class="bi bi-person-check me-1"></i>En Espera
+                                    </span>
+                                {% elif cita.id_estado_cita.nombre_estado == 'En Proceso' %}
+                                    <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 w-75 pulse-animation">
+                                        <i class="bi bi-Stethoscope me-1"></i>En Consultorio
                                     </span>
                                 {% elif cita.id_estado_cita.nombre_estado == 'Finalizada' %}
-                                    <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 w-100">
-                                        <i class="bi bi-flag-fill me-1"></i>Finalizada
+                                    <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 w-75">
+                                        <i class="bi bi-check-all me-1"></i>Atendido
                                     </span>
-                                {% else %}
-                                    <span class="badge bg-light text-dark border w-100">{{ cita.id_estado_cita.nombre_estado }}</span>
                                 {% endif %}
                             </td>
 
                             <td class="text-center">
-                                <a href="{% url 'perfil_paciente' cita.id_paciente.id_paciente %}" 
-                                   class="btn btn-sm btn-primary rounded-pill px-4 shadow-sm fw-bold">
-                                    <i class="bi bi-person-plus-fill me-1"></i> Atender
-                                </a>
+                                {% if cita.id_estado_cita.nombre_estado == 'Programada' %}
+                                    <button class="btn btn-sm btn-outline-secondary rounded-pill px-3" disabled title="El paciente no ha llegado">
+                                        <i class="bi bi-lock-fill"></i> Esperando...
+                                    </button>
+
+                                {% elif cita.id_estado_cita.nombre_estado == 'Confirmada' %}
+                                    <a href="{% url 'iniciar_atencion' cita.id_cita %}" class="btn btn-sm btn-primary rounded-pill px-4 shadow-sm fw-bold">
+                                        <i class="bi bi-play-fill"></i> Llamar Paciente
+                                    </a>
+
+                                {% elif cita.id_estado_cita.nombre_estado == 'En Proceso' %}
+                                    <a href="{% url 'perfil_paciente' cita.id_paciente.id_paciente %}" class="btn btn-sm btn-warning rounded-pill px-4 shadow-sm fw-bold">
+                                        <i class="bi bi-pencil-square"></i> Realizar Historia
+                                    </a>
+
+                                {% elif cita.id_estado_cita.nombre_estado == 'Finalizada' %}
+                                    <a href="{% url 'perfil_paciente' cita.id_paciente.id_paciente %}" class="btn btn-sm btn-outline-success rounded-pill px-4 fw-bold">
+                                        <i class="bi bi-eye"></i> Ver/Editar Nota
+                                    </a>
+                                {% endif %}
                             </td>
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="5" class="text-center py-5">
-                                <div class="py-4">
-                                    <i class="bi bi-calendar-x fs-1 text-muted opacity-25"></i>
-                                    <p class="mt-3 fw-semibold text-muted">No tienes citas programadas para esta semana.</p>
-                                    <small class="text-muted">Las nuevas citas aparecerán aquí automáticamente.</small>
-                                </div>
+                            <td colspan="4" class="text-center py-5 text-muted">
+                                <i class="bi bi-calendar-x fs-1 opacity-25"></i>
+                                <p class="mt-2">No hay citas registradas para este periodo.</p>
                             </td>
                         </tr>
                         {% endfor %}
@@ -103,29 +112,16 @@
 </div>
 
 <style>
-    .table thead th {
-        font-weight: 600;
-        letter-spacing: 0.5px;
-        border-top: none;
+    /* Animación para citas en proceso */
+    .pulse-animation {
+        animation: pulse-red 2s infinite;
     }
-    .table tbody tr {
-        transition: all 0.2s;
+    @keyframes pulse-red {
+        0% { box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.4); }
+        70% { box-shadow: 0 0 0 10px rgba(255, 193, 7, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(255, 193, 7, 0); }
     }
-    .table tbody tr:hover {
-        background-color: #f8f9fa;
-        transform: scale(1.002);
-    }
-    .btn-primary {
-        background-color: #0d6efd;
-        border: none;
-    }
-    .btn-primary:hover {
-        background-color: #0b5ed7;
-        transform: translateY(-1px);
-    }
-    .badge {
-        font-weight: 500;
-        padding: 0.5em 0.8em;
-    }
+    .table tbody tr:hover { background-color: #fcfcfc; }
+    .badge { font-size: 0.85rem; padding: 0.6em 1em; }
 </style>
 {% endblock %}

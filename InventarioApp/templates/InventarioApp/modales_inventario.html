@@ -1,0 +1,57 @@
+<div class="modal fade" id="modalEntrada{{ producto.pk }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content modal-content-clay p-3">
+            <div class="modal-header border-0">
+                <h5 class="fw-bold text-dark mb-0">Abastecer Inventario</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{% url 'entrada_stock' producto.pk %}" method="POST">
+                {% csrf_token %}
+                <div class="modal-body text-center">
+                    <div class="badge bg-success bg-opacity-10 text-success p-3 rounded-circle mb-3">
+                        <i class="bi bi-box-seam fs-3"></i>
+                    </div>
+                    <h6 class="fw-bold mb-1">{{ producto.nombre_producto }}</h6>
+                    <p class="text-muted small">Stock actual: {{ producto.stock_actual }}</p>
+                    <div class="mb-3 text-start">
+                        <label class="form-label small fw-bold text-muted">CANTIDAD A INGRESAR</label>
+                        <input type="number" name="cantidad" class="form-control input-clay" placeholder="0" required min="1">
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success rounded-pill px-4 shadow text-white">Confirmar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalSalida{{ producto.pk }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content modal-content-clay p-3">
+            <div class="modal-header border-0">
+                <h5 class="fw-bold text-dark mb-0">Registrar Salida</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{% url 'salida_stock' producto.pk %}" method="POST">
+                {% csrf_token %}
+                <div class="modal-body text-center">
+                    <div class="badge bg-danger bg-opacity-10 text-danger p-3 rounded-circle mb-3">
+                        <i class="bi bi-cart-dash fs-3"></i>
+                    </div>
+                    <h6 class="fw-bold mb-1">{{ producto.nombre_producto }}</h6>
+                    <p class="text-muted small">Disponible: {{ producto.stock_actual }}</p>
+                    <div class="mb-3 text-start">
+                        <label class="form-label small fw-bold text-muted">CANTIDAD A RETIRAR</label>
+                        <input type="number" name="cantidad" class="form-control input-clay" required min="1" max="{{ producto.stock_actual }}">
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger rounded-pill px-4 shadow">Confirmar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

@@ -70,7 +70,7 @@ class HistorialMedico(models.Model):
     )
     
     # --- AQUÍ MOVEMOS LO DE CITA_TRATAMIENTO ---
-    costo_aplicado = models.DecimalField(max_digits=10, decimal_places=2)
+    costo_aplicado = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     completado = models.BooleanField(default=True)
     
     # --- INFORMACIÓN CLÍNICA ---

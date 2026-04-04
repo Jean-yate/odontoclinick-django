@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Ticket_{{ cita.id_cita }}</title>
+    <style>
+        @media print { .no-print { display: none; } }
+        
+        body { 
+            font-family: 'Courier New', Courier, monospace; 
+            width: 80mm; /* Ancho estándar POS */
+            margin: 0;
+            padding: 5mm;
+            font-size: 12px;
+            color: #000;
+        }
+
+        .text-center { text-align: center; }
+        .text-right { text-align: right; }
+        .fw-bold { font-weight: bold; }
+        
+        .header-logo { font-size: 18px; margin-bottom: 2px; }
+        .info-clinica { font-size: 10px; margin-bottom: 10px; line-height: 1.2; }
+        
+        .divider { 
+            border-top: 1px dashed #000; 
+            margin: 8px 0; 
+        }
+
+        .tabla-datos { width: 100%; margin-bottom: 10px; }
+        .tabla-datos td { vertical-align: top; padding: 2px 0; }
+
+        .item-row { display: flex; justify-content: space-between; margin: 3px 0; }
+        .total-section { margin-top: 10px; }
+        
+        .footer { font-size: 10px; margin-top: 15px; line-height: 1.3; }
+    </style>
+</head>
+<body onload="window.print(); setTimeout(function(){ window.close(); }, 3000);">
+
+    <div class="text-center">
+        <div class="header-logo fw-bold">ODONTOCLINICK</div>
+        <div class="info-clinica">
+            NIT: 901.234.567-8<br>
+            Calle 10 #43E-20, El Chicó<br>
+            Bogota D.C, Colombia<br>
+            Tel: (604) 444-5566<br>
+            Res. DIAN No. 18760000001
+        </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <table class="tabla-datos">
+        <tr>
+            <td class="fw-bold">TICKET:</td>
+            <td class="text-right">#000{{ cita.id_cita }}</td>
+        </tr>
+        <tr>
+            <td>FECHA:</td>
+            <td class="text-right">{{ hoy|date:"d/m/Y H:i" }}</td>
+        </tr>
+        <tr>
+            <td>PACIENTE:</td>
+            <td class="text-right">{{ cita.id_paciente.id_usuario.nombre|upper }}</td>
+        </tr>
+        <tr>
+            <td>DOCTOR:</td>
+            <td class="text-right">Dr. {{ cita.id_doctor.id_usuario.nombre }}</td>
+        </tr>
+    </table>
+
+    <div class="divider"></div>
+
+    <div class="fw-bold">CONCEPTO:</div>
+    <div class="item-row">
+        <span>Servicio Odontológico</span>
+        <span class="fw-bold">${{ cita.costo_final }}</span>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="fw-bold">DETALLE DE ABONOS:</div>
+    {% for pago in pagos %}
+    <div class="item-row" style="font-size: 11px;">
+        <span>{{ pago.fecha_pago|date:"d/m" }} - {{ pago.id_metodo_pago.nombre_metodo }}</span>
+        <span>${{ pago.monto }}</span>
+    </div>
+    {% empty %}
+    <div class="text-center">Sin abonos registrados</div>
+    {% endfor %}
+
+    <div class="divider"></div>
+    
+    <div class="total-section">
+        <div class="item-row fw-bold" style="font-size: 14px;">
+            <span>TOTAL PAGADO:</span>
+            <span>${{ total_abonado_calculado }}</span>
+        </div>
+        <div class="item-row" style="color: #333;">
+            <span>SALDO RESTANTE:</span>
+            <span class="fw-bold">${{ saldo_pendiente_calculado }}</span>
+        </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="footer text-center">
+        <p class="fw-bold">¡GRACIAS POR TU CONFIANZA!</p>
+        <p>Este ticket es un comprobante de abono.<br>
+        Conserva este documento para tu historial.<br>
+        Software por: OdontoClinick System v4.0</p>
+    </div>
+
+</body>
+</html>

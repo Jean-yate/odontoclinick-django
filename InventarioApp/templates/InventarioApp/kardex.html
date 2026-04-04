@@ -1,0 +1,76 @@
+{% extends 'Webapp/base.html' %}
+
+{% block title %}Kardex - Historial de Inventario{% endblock %}
+
+{% block content %}
+<div class="container mt-5 animate__animated animate__fadeIn">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold text-dark">Movimientos de Inventario</h2>
+            <p class="text-muted small">Registro detallado de todos los movimientos de stock.</p>
+        </div>
+        <button onclick="window.print()" class="btn btn-outline-primary rounded-pill">
+            <i class="bi bi-printer me-2"></i>Imprimir Reporte
+        </button>
+    </div>
+
+    <div class="card-clay p-4">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>FECHA / HORA</th>
+                        <th>PRODUCTO</th>
+                        <th>TIPO</th>
+                        <th class="text-center">CANTIDAD</th>
+                        <th class="text-center">STOCK RESULTANTE</th>
+                        <th>RESPONSABLE</th>
+                        <th>MOTIVO</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for mov in movimientos %}
+                    <tr>
+                        <td class="small text-muted">{{ mov.fecha_movimiento|date:"d/m/Y H:i" }}</td>
+                        <td>
+                            <span class="fw-bold">{{ mov.producto.nombre_producto }}</span>
+                        </td>
+                        <td>
+                            {% if mov.tipo_movimiento == 'ENTRADA' %}
+                                <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-3">
+                                    <i class="bi bi-arrow-down-left me-1"></i> ENTRADA
+                                </span>
+                            {% else %}
+                                <span class="badge bg-warning bg-opacity-10 text-warning rounded-pill px-3">
+                                    <i class="bi bi-arrow-up-right me-1"></i> SALIDA
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center fw-bold">
+                            {% if mov.tipo_movimiento == 'ENTRADA' %}+{% else %}-{% endif %}{{ mov.cantidad }}
+                        </td>
+                        <td class="text-center">
+                            <span class="badge bg-light text-dark">{{ mov.stock_nuevo }}</span>
+                        </td>
+                        <td class="small">
+                            <i class="bi bi-person-circle me-1"></i> 
+                            {% if mov.id_usuario %}
+                                {# Probamos con el objeto directo o el campo que use tu modelo #}
+                                {{ mov.id_usuario }} 
+                            {% else %}
+                                <span class="text-muted">Sistema</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-muted small italic">{{ mov.motivo }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center py-5 text-muted">No hay movimientos registrados aún.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,16 +1,23 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
-from decimal import Decimal
+from django.http import JsonResponse
+from django.contrib import messages
 from django.utils import timezone
+from decimal import Decimal
+from datetime import datetime, timedelta
+
+# Importación de modelos propios y de otras Apps
 from .models import Medico, Disponibilidad, HistorialMedico
-from FacturacionApp.models import Pago, MetodoPago
 from CitaApp.models import Cita, EstadoCita
 from PacienteApp.models import Paciente
-from TratamientoApp.models import Tratamiento
-from django.contrib import messages
+from TratamientoApp.models import Tratamiento, TratamientoProducto
+from InventarioApp.models import Producto, MovimientoInventario
+
+# --- VISTAS DE PANEL Y GESTIÓN ---
 
 @login_required
 def dashboard_medico(request):
+    """Visualiza el resumen diario del médico y sus citas próximas."""
     medico = get_object_or_404(Medico, id_usuario=request.user)
     hoy = timezone.now().date()
     
@@ -28,21 +35,40 @@ def dashboard_medico(request):
 
 @login_required
 def mis_horarios(request):
+    """Gestiona la visualización y creación de jornadas de disponibilidad."""
     medico = get_object_or_404(Medico, id_usuario=request.user)
-    horarios = Disponibilidad.objects.filter(id_doctor=medico).order_by('dia_semana')
-    
+
+    if request.method == 'POST':
+        Disponibilidad.objects.create(
+            id_medico=medico,
+            dia_semana=request.POST.get('dia_semana'),
+            hora_inicio=request.POST.get('hora_inicio'),
+            hora_fin=request.POST.get('hora_fin'),
+            duracion_cita=request.POST.get('duracion_cita')
+        )
+        messages.success(request, "✅ Jornada de atención agregada correctamente.")
+        return redirect('mis_horarios')
+
+    horarios = Disponibilidad.objects.filter(id_medico=medico).order_by('dia_semana', 'hora_inicio')
     return render(request, 'mi_horario.html', {'horarios': horarios})
 
 @login_required
+def eliminar_horario(request, horario_id):
+    """Elimina una franja de disponibilidad específica."""
+    horario = get_object_or_404(Disponibilidad, id_disponibilidad=horario_id, id_medico__id_usuario=request.user)
+    horario.delete()
+    messages.warning(request, "Jornada eliminada del sistema.")
+    return redirect('mis_horarios')
+
+# --- VISTAS DE AGENDA Y PACIENTES ---
+
+@login_required
 def agenda_semanal(request):
-    # 1. Buscamos al médico (usando el OneToOneField que definimos)
+    """Muestra las citas programadas para los próximos 7 días."""
     medico = get_object_or_404(Medico, id_usuario=request.user)
-    
-    # 2. Definimos el rango: Desde el inicio de hoy hasta dentro de 7 días
     hoy_inicio = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
     fin = hoy_inicio + timezone.timedelta(days=7)
     
-    # 3. Filtramos y usamos select_related para que la base de datos no sufra
     citas_semana = Cita.objects.filter(
         id_doctor=medico,
         fecha_hora__range=(hoy_inicio, fin)
@@ -51,30 +77,14 @@ def agenda_semanal(request):
     return render(request, 'mis_citas.html', {'citas': citas_semana})
 
 @login_required
-def historial_tratamientos(request):
-    medico = get_object_or_404(Medico, id_usuario=request.user)
-    
-    # Ahora buscamos directamente en la tabla HistorialMedico
-    # que es la que tiene la información real de lo que se hizo
-    historial = HistorialMedico.objects.filter(
-        id_cita__id_doctor=medico
-    ).select_related('id_cita__id_paciente').order_by('-fecha_creacion')
-
-    return render(request, 'mi_historial.html', {'historial': historial})
-
-@login_required
-def perfil_medico(request):
-    medico = get_object_or_404(Medico, id_usuario=request.user)
-    return render(request, 'perfil_medico.html', {'medico': medico})
-
-@login_required
 def perfil_paciente(request, paciente_id):
+    """Muestra el expediente del paciente, historial de citas y atención actual."""
     paciente = get_object_or_404(Paciente, id_paciente=paciente_id)
-    # Usamos select_related para que el perfil cargue rápido sin muchas consultas a la DB
-    citas = Cita.objects.filter(id_paciente=paciente).select_related('id_doctor__id_usuario', 'id_estado_cita').order_by('-fecha_hora')
-    tratamientos = Tratamiento.objects.all()
+    citas = Cita.objects.filter(id_paciente=paciente).select_related(
+        'id_doctor__id_usuario', 'id_estado_cita'
+    ).prefetch_related('historial').order_by('-fecha_hora')
 
-    # Detectar si hay una cita para atender HOY con este doctor
+    tratamientos = Tratamiento.objects.filter(activo=1)
     cita_actual = citas.filter(
         id_doctor__id_usuario=request.user,
         id_estado_cita__nombre_estado__in=['Confirmada', 'En Proceso']
@@ -88,75 +98,158 @@ def perfil_paciente(request, paciente_id):
         'hoy': timezone.now().date()
     })
 
+# --- LÓGICA DE ATENCIÓN CLÍNICA E INVENTARIO ---
+
+@login_required
+def iniciar_atencion(request, cita_id):
+    """Cambia el estado de la cita a 'En Proceso' para comenzar la consulta."""
+    cita = get_object_or_404(Cita, id_cita=cita_id)
+    estado_en_proceso = EstadoCita.objects.filter(nombre_estado__iexact='En Proceso').first()
+    
+    if estado_en_proceso:
+        cita.id_estado_cita = estado_en_proceso
+        cita.save()
+        messages.info(request, f"🚀 La consulta con {cita.id_paciente} ha iniciado.")
+    
+    return redirect('perfil_paciente', paciente_id=cita.id_paciente.id_paciente)
+
 @login_required
 def guardar_atencion(request):
+    """Registra el historial médico, finaliza la cita y descuenta insumos del inventario."""
     if request.method == 'POST':
         id_cita = request.POST.get('id_cita')
         id_tratamiento_val = request.POST.get('id_tratamiento')
-        diagnostico = request.POST.get('diagnostico')
-        sintomas = request.POST.get('sintomas')
-        plan_tratamiento = request.POST.get('plan_tratamiento')
-        observaciones = request.POST.get('observaciones_clinicas')
-        costo_raw = request.POST.get('costo_aplicado', '0')
-        try:
-            costo = Decimal(costo_raw.strip()) if costo_raw and costo_raw.strip() else Decimal('0.00')
-        except (ValueError, TypeError, Exception):
-            costo = Decimal('0.00')
-
+        
         cita = get_object_or_404(Cita, id_cita=id_cita)
         tratamiento = get_object_or_404(Tratamiento, id_tratamiento=id_tratamiento_val)
-        historial, created_h = HistorialMedico.objects.update_or_create(
+
+        # 1. Registrar en Historial Médico
+        try:
+            costo = Decimal(request.POST.get('costo_aplicado', '0').strip().replace(',', '.'))
+        except:
+            costo = Decimal('0.00')
+
+        HistorialMedico.objects.update_or_create(
             id_cita=cita,
             defaults={
                 'id_tratamiento': tratamiento,
-                'diagnostico': diagnostico,
-                'sintomas': sintomas,
-                'plan_tratamiento': plan_tratamiento,
-                'observaciones_clinicas': observaciones,
+                'diagnostico': request.POST.get('diagnostico'),
+                'sintomas': request.POST.get('sintomas'),
+                'plan_tratamiento': request.POST.get('plan_tratamiento'),
+                'observaciones_clinicas': request.POST.get('observaciones_clinicas'),
                 'costo_aplicado': costo,
                 'completado': True
             }
         )
 
+        # 2. Lógica de Descuento de Inventario Automático
+        insumos_receta = TratamientoProducto.objects.filter(id_tratamiento=tratamiento)
+        for item in insumos_receta:
+            producto = item.id_producto
+            cantidad_a_descontar = item.cantidad_requerida
+            
+            # Ajuste de stock físico
+            stock_anterior = producto.stock_actual
+            producto.stock_actual -= cantidad_a_descontar
+            producto.save()
+            
+            # Registro del movimiento de salida
+            MovimientoInventario.objects.create(
+                producto=producto,
+                id_usuario=request.user,
+                tipo_movimiento='SALIDA',
+                cantidad=int(cantidad_a_descontar),
+                stock_anterior=stock_anterior,
+                stock_nuevo=producto.stock_actual,
+                motivo=f"Consumo automático: Cita #{cita.id_cita} ({tratamiento.nombre_tratamiento})"
+            )
+
+        # 3. Finalizar estado de la cita
         estado_fin = EstadoCita.objects.filter(nombre_estado__iexact='Finalizada').first()
         if estado_fin:
             cita.id_estado_cita = estado_fin
             cita.save()
-        metodo_defecto = MetodoPago.objects.first()
 
-        if not metodo_defecto:
-            metodo_defecto, _ = MetodoPago.objects.get_or_create(nombre_metodo="Pendiente", activo=1)
-
-        pago, created_p = Pago.objects.update_or_create(
-            id_cita=cita,
-            defaults={
-                'monto': historial.costo_aplicado, 
-                'fecha_pago': timezone.now(),
-                'id_metodo_pago': metodo_defecto,
-                'referencia': f"PENDIENTE-CITA-{cita.id_cita}",
-                'notas': f"Orden generada tras consulta médica. Dr: {request.user.nombre}"
-            }
-        )
-
-        tipo_accion = "registrada" if created_h else "actualizada"
-        messages.success(request, f"¡Atención {tipo_accion}! Se ha generado/sincronizado el cobro por ${historial.costo_aplicado}.")
-        
+        messages.success(request, "✅ Atención guardada e inventario actualizado.")
         return redirect('perfil_paciente', paciente_id=cita.id_paciente.id_paciente)
     
     return redirect('dashboard_medico')
 
-@login_required
-def iniciar_atencion(request, cita_id):
-    cita = get_object_or_404(Cita, id_cita=cita_id)
-    
+# --- MOTOR DE DISPONIBILIDAD (AJAX) ---
+
+def obtener_slots_ajax(request):
+    """Genera slots de tiempo disponibles para reserva de citas vía AJAX."""
     try:
-        # Buscamos el objeto del estado 'En Proceso'
-        estado_en_proceso = EstadoCita.objects.get(nombre_estado='En Proceso')
-        cita.id_estado_cita = estado_en_proceso
-        cita.save()
-        messages.info(request, f"La consulta con {cita.id_paciente} ha iniciado.")
-    except EstadoCita.DoesNotExist:
-        messages.error(request, "Error: El estado 'En Proceso' no está creado en la base de datos.")
-    
-    # Regresamos al perfil del paciente
-    return redirect('perfil_paciente', paciente_id=cita.id_paciente.id_paciente)
+        fecha_str = request.GET.get('fecha')
+        doctor_id = request.GET.get('doctor_id')
+        
+        if not fecha_str or not doctor_id:
+            return JsonResponse({'slots': []})
+
+        fecha_obj = datetime.strptime(fecha_str, '%Y-%m-%d').date()
+        dia_bd = fecha_obj.weekday() + 1
+
+        horario = Disponibilidad.objects.filter(
+            id_medico_id=doctor_id, 
+            dia_semana=dia_bd, 
+            activo=True
+        ).first()
+        
+        if not horario:
+            return JsonResponse({'slots': []})
+
+        citas_ocupadas = Cita.objects.filter(
+            id_doctor_id=doctor_id, 
+            fecha_hora__date=fecha_obj
+        ).values_list('fecha_hora', flat=True)
+
+        horas_bloqueadas = [cita.strftime('%H:%M') for cita in citas_ocupadas]
+
+        slots = []
+        inicio = datetime.combine(fecha_obj, horario.hora_inicio)
+        fin = datetime.combine(fecha_obj, horario.hora_fin)
+        intervalo = horario.duracion_cita
+
+        while inicio + timedelta(minutes=intervalo) <= fin:
+            slot_str = inicio.strftime('%H:%M')
+            if slot_str not in horas_bloqueadas:
+                slots.append(slot_str)
+            inicio += timedelta(minutes=intervalo)
+
+        return JsonResponse({'slots': slots})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+# --- PERFIL Y OTROS ---
+
+@login_required
+def historial_tratamientos(request):
+    """Muestra el histórico de todos los tratamientos realizados por el médico."""
+    medico = get_object_or_404(Medico, id_usuario=request.user)
+    historial = HistorialMedico.objects.filter(
+        id_cita__id_doctor=medico
+    ).select_related('id_cita__id_paciente').order_by('-fecha_creacion')
+    return render(request, 'mi_historial.html', {'historial': historial})
+
+@login_required
+def perfil_medico(request):
+    """Visualiza la información profesional del médico logueado."""
+    medico = get_object_or_404(Medico, id_usuario=request.user)
+    return render(request, 'perfil_medico.html', {'medico': medico})
+
+@login_required
+def editar_perfil_medico(request):
+    """Permite actualizar datos de contacto y profesionales del médico."""
+    medico = get_object_or_404(Medico, id_usuario=request.user)
+    if request.method == 'POST':
+        user = request.user
+        user.telefono = request.POST.get('telefono')
+        user.save()
+        
+        medico.anos_experiencia = request.POST.get('experiencia')
+        medico.licencia_medica = request.POST.get('licencia')
+        medico.save()
+        
+        messages.success(request, "¡Perfil actualizado correctamente!")
+        return redirect('perfil_medico')
+    return render(request, 'editar_perfil_medico.html', {'medico': medico})
