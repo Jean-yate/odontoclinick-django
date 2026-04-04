@@ -41,9 +41,13 @@ class RegistroPacienteForm(forms.ModelForm):
         widgets = {
             'fecha_nacimiento': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'direccion': forms.TextInput(attrs={'class': 'form-control'}),
+            'eps': forms.TextInput(attrs={'class': 'form-control'}),
+            'rh': forms.TextInput(attrs={'class': 'form-control'}),
+            'contacto_emergencia_nombre': forms.TextInput(attrs={'class': 'form-control'}),
+            'contacto_emergencia_telefono': forms.TextInput(attrs={'class': 'form-control'}),
         }
 
-# 4. Formulario de Edición (Administrativo) - ESTE ES EL QUE DABA EL ERROR DE IMPORTACIÓN
+# 4. Formulario de Edición (Administrativo)
 class EditarPacienteForm(forms.ModelForm):
     class Meta:
         model = Usuario
@@ -56,36 +60,61 @@ class EditarPacienteForm(forms.ModelForm):
             'id_estado': forms.Select(attrs={'class': 'form-select'}),
         }
 
-# 5. Formulario de Perfil (El que usamos para el paciente mismo)
+# 5. Formulario de Edición de Perfil (Propio del Paciente)
 class EditarPerfilPacienteForm(forms.ModelForm):
-    direccion = forms.CharField(
-        required=False,
-        widget=forms.TextInput(attrs={'class': 'form-control'})
-    )
-    nueva_password = forms.CharField(
+    nombre = forms.CharField(widget=forms.TextInput(attrs={'class': 'form-control'}))
+    apellidos = forms.CharField(widget=forms.TextInput(attrs={'class': 'form-control'}))
+    correo = forms.EmailField(widget=forms.EmailInput(attrs={'class': 'form-control'}))
+    telefono = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-control'}))
+
+    # FECHA CORREGIDA: Se añade format='%Y-%m-%d' para asegurar compatibilidad
+    fecha_nacimiento = forms.DateField(
         required=False, 
-        widget=forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Vacío para no cambiar'})
+        widget=forms.DateInput(
+            format='%Y-%m-%d', 
+            attrs={'class': 'form-control', 'type': 'date'}
+        )
     )
-    confirmar_password = forms.CharField(
-        required=False, 
-        widget=forms.PasswordInput(attrs={'class': 'form-control'})
-    )
+    
+    direccion = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-control'}))
+    eps = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-control'}))
+    rh = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: O+'}))
+    alergias = forms.CharField(required=False, widget=forms.Textarea(attrs={'class': 'form-control', 'rows': '2'}))
+    enfermedades_preexistentes = forms.CharField(required=False, widget=forms.Textarea(attrs={'class': 'form-control', 'rows': '2'}))
+    contacto_emergencia_nombre = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-control'}))
+    contacto_emergencia_telefono = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-control'}))
+
+    nueva_password = forms.CharField(required=False, widget=forms.PasswordInput(attrs={'class': 'form-control'}))
+    confirmar_password = forms.CharField(required=False, widget=forms.PasswordInput(attrs={'class': 'form-control'}))
 
     class Meta:
         model = Usuario
         fields = ['nombre', 'apellidos', 'correo', 'telefono']
-        widgets = {
-            'nombre': forms.TextInput(attrs={'class': 'form-control'}),
-            'apellidos': forms.TextInput(attrs={'class': 'form-control'}),
-            'correo': forms.EmailInput(attrs={'class': 'form-control'}),
-            'telefono': forms.TextInput(attrs={'class': 'form-control'}),
-        }
 
     def __init__(self, *args, **kwargs):
         self.paciente_instance = kwargs.pop('paciente_instance', None)
         super().__init__(*args, **kwargs)
+        
         if self.paciente_instance:
+            # CORRECCIÓN DE FECHA: Formatear el valor inicial a string YYYY-MM-DD
+            if self.paciente_instance.fecha_nacimiento:
+                self.fields['fecha_nacimiento'].initial = self.paciente_instance.fecha_nacimiento.strftime('%Y-%m-%d')
+            
             self.fields['direccion'].initial = self.paciente_instance.direccion
+            self.fields['eps'].initial = self.paciente_instance.eps
+            self.fields['rh'].initial = self.paciente_instance.rh
+            self.fields['alergias'].initial = self.paciente_instance.alergias
+            self.fields['enfermedades_preexistentes'].initial = self.paciente_instance.enfermedades_preexistentes
+            self.fields['contacto_emergencia_nombre'].initial = self.paciente_instance.contacto_emergencia_nombre
+            self.fields['contacto_emergencia_telefono'].initial = self.paciente_instance.contacto_emergencia_telefono
+
+    def clean(self):
+        cleaned_data = super().clean()
+        p1 = cleaned_data.get("nueva_password")
+        p2 = cleaned_data.get("confirmar_password")
+        if p1 and p1 != p2:
+            raise forms.ValidationError("Las nuevas contraseñas no coinciden.")
+        return cleaned_data
 
     def save(self, request, commit=True): 
         user = super().save(commit=False)
@@ -100,8 +129,15 @@ class EditarPerfilPacienteForm(forms.ModelForm):
                 update_session_auth_hash(request, user)
                 
             if self.paciente_instance:
-                nueva_dir = self.cleaned_data.get('direccion')
-                if nueva_dir is not None:
-                    self.paciente_instance.direccion = nueva_dir
-                    self.paciente_instance.save(update_fields=['direccion'])
+                p = self.paciente_instance
+                p.direccion = self.cleaned_data.get('direccion')
+                p.fecha_nacimiento = self.cleaned_data.get('fecha_nacimiento')
+                p.eps = self.cleaned_data.get('eps')
+                p.rh = self.cleaned_data.get('rh')
+                p.alergias = self.cleaned_data.get('alergias')
+                p.enfermedades_preexistentes = self.cleaned_data.get('enfermedades_preexistentes')
+                p.contacto_emergencia_nombre = self.cleaned_data.get('contacto_emergencia_nombre')
+                p.contacto_emergencia_telefono = self.cleaned_data.get('contacto_emergencia_telefono')
+                p.save()
+                
         return user

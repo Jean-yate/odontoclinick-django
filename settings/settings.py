@@ -36,6 +36,7 @@ INSTALLED_APPS = [
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
+    'django.contrib.sites',
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'Webapp',            # La página principal
@@ -136,6 +137,8 @@ USE_I18N = True
 
 USE_TZ = False
 
+SITE_ID = 1
+
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
@@ -153,9 +156,10 @@ EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = ''  # Tu correo de Gmail
-EMAIL_HOST_PASSWORD = ''  # NO tu contraseña habitual
+EMAIL_HOST_USER = 'odontoclinick77@gmail.com'  # Tu correo de Gmail
+EMAIL_HOST_PASSWORD = 'kppu szrz zmrr hiwm'  # NO tu contraseña habitual
 
 AUTH_USER_MODEL = 'CuentasApp.Usuario'
+LOGIN_URL = '/cuentas/login/'
 LOGIN_REDIRECT_URL = 'home'
 LOGOUT_REDIRECT_URL = 'home'

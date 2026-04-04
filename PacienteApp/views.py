@@ -9,11 +9,15 @@ from CuentasApp.forms import EditarPerfilPacienteForm
 
 @login_required
 def perfil_paciente(request):
+    # Seguridad: Solo pacientes pueden entrar a esta vista de perfil
     if request.user.id_rol.nombre_rol != 'Paciente':
+        messages.warning(request, "No tienes permisos para acceder a esta sección.")
         return redirect('home')
 
+    # Obtenemos los datos del paciente asociados al usuario logueado
     paciente = get_object_or_404(Paciente, id_usuario=request.user)
     
+    # Consultas para el Dashboard del Perfil
     citas_proximas = Cita.objects.filter(
         id_paciente=paciente, 
         fecha_hora__gte=timezone.now()
@@ -23,6 +27,7 @@ def perfil_paciente(request):
         id_cita__id_paciente=paciente
     ).order_by('-fecha_creacion')
 
+    # Lógica del Formulario de Edición
     if request.method == 'POST':
         form = EditarPerfilPacienteForm(
             request.POST, 
@@ -30,13 +35,18 @@ def perfil_paciente(request):
             paciente_instance=paciente
         )
         if form.is_valid():
+            # Guardamos ambos modelos (Usuario y Paciente)
             form.save(request=request) 
-            messages.success(request, "Tus datos han sido actualizados con éxito.")
+            messages.success(request, "¡Perfil actualizado! Tus cambios se guardaron correctamente.")
             return redirect('perfil_paciente')
         else:
-            messages.error(request, "Hubo un error al validar tus datos. Revisa el formulario.")
+            messages.error(request, "Por favor, corrige los errores en el formulario.")
     else:
-        form = EditarPerfilPacienteForm(instance=request.user, paciente_instance=paciente)
+        # Carga inicial con los datos actuales
+        form = EditarPerfilPacienteForm(
+            instance=request.user, 
+            paciente_instance=paciente
+        )
 
     return render(request, 'PacienteApp/perfil.html', {
         'form': form,
