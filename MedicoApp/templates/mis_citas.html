@@ -13,7 +13,8 @@
                 </div>
                 <div class="text-end">
                     <span class="badge bg-primary rounded-pill p-2 px-3">
-                        {{ citas.count }} Citas esta semana
+                        {# Ahora el contador reflejará solo las citas no canceladas #}
+                        {{ citas.count }} Citas activas esta semana
                     </span>
                 </div>
             </div>
@@ -30,7 +31,8 @@
                     </thead>
                     <tbody>
                         {% for cita in citas %}
-                        <tr {% if cita.id_estado_cita.nombre_estado == 'Cancelada' %}style="display:none;"{% endif %}>
+                        {# Eliminamos el style="display:none" ya que la vista se encarga de no enviar las canceladas #}
+                        <tr>
                             <td class="ps-3">
                                 <div class="fw-bold text-dark">{{ cita.fecha_hora|date:"H:i" }}</div>
                                 <div class="text-muted x-small" style="font-size: 0.75rem;">
@@ -78,17 +80,14 @@
                                     <button class="btn btn-sm btn-outline-secondary rounded-pill px-3" disabled title="El paciente no ha llegado">
                                         <i class="bi bi-lock-fill"></i> Esperando...
                                     </button>
-
                                 {% elif cita.id_estado_cita.nombre_estado == 'Confirmada' %}
                                     <a href="{% url 'iniciar_atencion' cita.id_cita %}" class="btn btn-sm btn-primary rounded-pill px-4 shadow-sm fw-bold">
                                         <i class="bi bi-play-fill"></i> Llamar Paciente
                                     </a>
-
                                 {% elif cita.id_estado_cita.nombre_estado == 'En Proceso' %}
                                     <a href="{% url 'perfil_paciente' cita.id_paciente.id_paciente %}" class="btn btn-sm btn-warning rounded-pill px-4 shadow-sm fw-bold">
                                         <i class="bi bi-pencil-square"></i> Realizar Historia
                                     </a>
-
                                 {% elif cita.id_estado_cita.nombre_estado == 'Finalizada' %}
                                     <a href="{% url 'perfil_paciente' cita.id_paciente.id_paciente %}" class="btn btn-sm btn-outline-success rounded-pill px-4 fw-bold">
                                         <i class="bi bi-eye"></i> Ver/Editar Nota
@@ -100,7 +99,7 @@
                         <tr>
                             <td colspan="4" class="text-center py-5 text-muted">
                                 <i class="bi bi-calendar-x fs-1 opacity-25"></i>
-                                <p class="mt-2">No hay citas registradas para este periodo.</p>
+                                <p class="mt-2">No hay citas activas registradas para esta semana.</p>
                             </td>
                         </tr>
                         {% endfor %}
@@ -112,7 +111,6 @@
 </div>
 
 <style>
-    /* Animación para citas en proceso */
     .pulse-animation {
         animation: pulse-red 2s infinite;
     }

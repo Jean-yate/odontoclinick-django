@@ -17,15 +17,18 @@
     <div class="row g-4">
         {% for h in horarios %}
         <div class="col-md-4">
-            <div class="card border-0 shadow-sm" style="border-radius: 15px;">
+            <div class="card border-0 shadow-sm position-relative" style="border-radius: 15px;">
+                <button class="btn btn-light btn-sm rounded-circle position-absolute shadow-sm border" 
+                        onclick="abrirModalEditar('{{ h.id_disponibilidad }}', '{{ h.dia_semana }}', '{{ h.hora_inicio|time:'H:i' }}', '{{ h.hora_fin|time:'H:i' }}', '{{ h.duracion_cita }}')"
+                        style="top: 15px; right: 15px; z-index: 10; width: 32px; height: 32px;">
+                    <i class="bi bi-pencil-fill text-primary"></i>
+                </button>
+
                 <div class="card-body p-4">
                     <div class="d-flex justify-content-between align-items-start mb-3">
                         <span class="badge rounded-pill bg-primary bg-opacity-10 text-primary px-3 py-2 fw-bold">
                             {{ h.get_dia_semana_display|upper }}
                         </span>
-                        <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" {% if h.activo %}checked{% endif %} id="switch{{ h.id_disponibilidad }}">
-                        </div>
                     </div>
                     
                     <div class="my-3">
@@ -39,10 +42,14 @@
                         <i class="bi bi-stopwatch text-secondary me-2 fs-5"></i>
                         <span class="small fw-bold">{{ h.duracion_cita }} min por paciente</span>
                     </div>
-                    
-                    <div class="mt-3 text-end">
-                        <a href="#" class="text-danger small fw-bold text-decoration-none"><i class="bi bi-trash me-1"></i>Eliminar</a>
-                    </div>
+
+                    <form action="{% url 'eliminar_horario' h.id_disponibilidad %}" method="POST" class="mt-3">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-link btn-sm text-danger p-0 text-decoration-none fw-bold" 
+                                onclick="return confirm('¿Estás seguro de eliminar esta jornada?')">
+                            <i class="bi bi-trash3 me-1"></i> Eliminar jornada
+                        </button>
+                    </form>
                 </div>
             </div>
         </div>
@@ -102,4 +109,94 @@
         </div>
     </div>
 </div>
+
+<div class="modal fade" id="modalEditarJornada" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
+            <div class="modal-header bg-dark text-white border-0 py-3">
+                <h5 class="modal-title fw-bold">Editar Jornada</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" id="formEditarJornada">
+                {% csrf_token %}
+                <div class="modal-body p-4">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label fw-bold">Día de la semana</label>
+                            <select name="dia_semana" id="edit_dia" class="form-select" required>
+                                <option value="1">Lunes</option>
+                                <option value="2">Martes</option>
+                                <option value="3">Miércoles</option>
+                                <option value="4">Jueves</option>
+                                <option value="5">Viernes</option>
+                                <option value="6">Sábado</option>
+                                <option value="7">Domingo</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Hora Inicio</label>
+                            <input type="time" name="hora_inicio" id="edit_inicio" class="form-control" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Hora Fin</label>
+                            <input type="time" name="hora_fin" id="edit_fin" class="form-control" required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-bold">Duración de cita (minutos)</label>
+                            <input type="number" name="duracion_cita" id="edit_duracion" class="form-control" min="10" max="120" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 p-4">
+                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-dark rounded-pill px-4">Actualizar Cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function abrirModalEditar(id, dia, inicio, fin, duracion) {
+    // 1. Llenar los campos del formulario
+    document.getElementById('edit_dia').value = dia;
+    document.getElementById('edit_inicio').value = inicio;
+    document.getElementById('edit_fin').value = fin;
+    document.getElementById('edit_duracion').value = duracion;
+    
+    // 2. Construir la URL dinámicamente
+    // Usamos el id que viene por parámetro para actualizar el action del form
+    const form = document.getElementById('formEditarJornada');
+    form.action = `/medico/mis-horarios/editar/${id}/`; // <--- ASEGÚRATE QUE ESTA RUTA SEA IGUAL A TU URLS.PY
+    
+    // 3. Mostrar el modal
+    const modalElement = document.getElementById('modalEditarJornada');
+    const modal = new bootstrap.Modal(modalElement);
+    modal.show();
+}
+
+function toggleEstado(id) {
+    const url = `/mis-horarios/toggle/${id}/`; // Ajusta esta URL según tu urls.py
+    fetch(url, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status !== 'success') {
+            const sw = document.getElementById(`switch${id}`);
+            sw.checked = !sw.checked;
+        }
+    })
+    .catch(error => {
+        const sw = document.getElementById(`switch${id}`);
+        sw.checked = !sw.checked;
+    });
+}
+</script>
 {% endblock %}

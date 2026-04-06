@@ -12,7 +12,6 @@
     
     <style>
         :root {
-            /* PALETA UNIFICADA */
             --primary-color: #3f2e23; 
             --secondary-color: #786b5e;
             --accent-color: #d2b48c;
@@ -28,25 +27,25 @@
             color: #4a4a4a;
         }
 
-        /* NAVBAR FLOTANTE */
+        /* Navbar Estilo Claymorphic */
         .navbar { padding: 1.5rem 0; background: transparent !important; }
         
         .nav-main-wrapper {
             background: var(--clay-white);
             border-radius: 100px;
-            padding: 0.5rem 2rem;
+            padding: 0.5rem 2.5rem;
             box-shadow: var(--clay-shadow), var(--clay-inset);
             display: flex;
             align-items: center;
             width: 100%;
         }
 
-        .navbar-brand { font-weight: 700; color: var(--primary-color) !important; font-size: 1.4rem; }
+        .navbar-brand { font-weight: 700; color: var(--primary-color) !important; font-size: 1.4rem; letter-spacing: -0.5px; }
 
         .nav-link { 
             color: #6c757d !important; 
             font-weight: 600;
-            padding: 0.5rem 1rem !important;
+            padding: 0.5rem 1.2rem !important;
             border-radius: 50px;
             transition: 0.3s;
         }
@@ -54,30 +53,55 @@
         .nav-link:hover, .nav-link.active {
             color: var(--primary-color) !important;
             background: #f8f9fa;
+            transform: translateY(-1px);
         }
 
-        /* BOTONES Y ALERTAS */
+        /* Avatares y Dropdowns */
+        .user-avatar-circle {
+            width: 35px; height: 35px;
+            background: var(--accent-color);
+            color: var(--primary-color);
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 700; font-size: 0.9rem;
+        }
+
+        .dropdown-menu {
+            border: none;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            padding: 0.8rem;
+            margin-top: 10px !important;
+        }
+
+        /* Alertas y Botones */
+        .alert-clay {
+            background: white;
+            border-radius: 20px;
+            border: none;
+            box-shadow: var(--clay-shadow);
+            border-left: 5px solid var(--accent-color);
+        }
+
         .btn-clay {
             background: var(--primary-color);
             color: white !important;
             border: none;
             border-radius: 50px;
-            padding: 0.6rem 1.5rem;
+            padding: 0.7rem 1.8rem;
             font-weight: 700;
-            box-shadow: 5px 5px 10px rgba(0,0,0,0.1);
-            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             text-decoration: none;
         }
 
-        .alert { border-radius: 20px; border: none; box-shadow: var(--clay-shadow); background: white; }
+        .btn-clay:hover { transform: scale(1.05); filter: brightness(1.2); }
 
-        /* FOOTER */
         footer { margin-top: 5rem; padding-bottom: 2rem; }
         .footer-card { background: white; border-radius: 40px; padding: 2.5rem; box-shadow: var(--clay-shadow); }
 
         .pqrs-btn {
             background: white;
-            padding: 0.8rem 1.5rem;
+            padding: 0.8rem 1.8rem;
             border-radius: 50px;
             box-shadow: var(--clay-shadow);
             color: var(--accent-color) !important;
@@ -88,6 +112,8 @@
             transition: 0.3s;
         }
 
+        .pqrs-btn:hover { transform: translateY(-3px); }
+
         {% block extra_css %} {% endblock %}
     </style>
 </head>
@@ -96,10 +122,10 @@
     <nav class="navbar navbar-expand-lg sticky-top">
         <div class="container">
             <div class="nav-main-wrapper">
-                <a class="navbar-brand" href="{% url 'home' %}">OdontoClinick</a>
+                <a class="navbar-brand" href="{% url 'home' %}">ODONTOCLINICK</a>
                 
                 <button class="navbar-toggler border-0 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                    <span class="navbar-toggler-icon"></span>
+                    <i class="bi bi-list fs-3"></i>
                 </button>
 
                 <div class="collapse navbar-collapse" id="navbarNav">
@@ -118,6 +144,7 @@
                             {% elif "Auxiliar" in user.id_rol.nombre_rol %}
                                 <li class="nav-item"><a class="nav-link" href="{% url 'dashboard_auxiliar' %}">Bodega</a></li>
                                 <li class="nav-item"><a class="nav-link" href="{% url 'lista_inventario' %}">Inventario</a></li>
+                                <li class="nav-item"><a class="nav-link" href="{% url 'kardex' %}">Movimientos</a></li>
                             {% endif %}
                         {% endif %}
                     </ul>
@@ -125,16 +152,30 @@
                     <div class="d-flex align-items-center">
                         {% if user.is_authenticated %}
                             <div class="dropdown">
-                                <a class="nav-link dropdown-toggle fw-bold" href="#" data-bs-toggle="dropdown" style="color: var(--primary-color) !important;">
-                                    {{ user.nombre|upper }}
+                                <a class="nav-link dropdown-toggle fw-bold d-flex align-items-center gap-2" href="#" data-bs-toggle="dropdown" style="color: var(--primary-color) !important;">
+                                    <div class="user-avatar-circle">{{ user.nombre|slice:":1"|upper }}</div>
+                                    <span class="d-none d-md-inline">{{ user.nombre|upper }}</span>
                                 </a>
-                                <ul class="dropdown-menu border-0 shadow-sm p-2" style="border-radius: 15px;">
-                                    <li><a class="dropdown-item rounded-3" href="#"><i class="bi bi-person-circle me-2"></i>Perfil</a></li>
-                                    <li><hr class="dropdown-divider opacity-50"></li>
+                                <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0">
+                                    <li class="px-3 py-2 text-center">
+                                        <p class="mb-0 small text-muted">Sesión iniciada como:</p>
+                                        <p class="mb-0 fw-bold text-primary small">{{ user.id_rol.nombre_rol }}</p>
+                                    </li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    
+                                    {# Enlaces de Perfil Dinámicos #}
+                                    {% if user.id_rol.nombre_rol == 'Doctor' %}
+                                        <li><a class="dropdown-item" href="{% url 'perfil_medico' %}"><i class="bi bi-person-badge me-2"></i>Perfil Médico</a></li>
+                                    {% elif user.id_rol.nombre_rol == 'Paciente' %}
+                                        <li><a class="dropdown-item" href="{% url 'perfil_paciente' %}"><i class="bi bi-person-circle me-2"></i>Mi Perfil</a></li>
+                                    {% elif user.id_rol.nombre_rol == 'Secretaria' %}
+                                        <li><a class="dropdown-item" href="{% url 'perfil_secretaria' %}"><i class="bi bi-shield-lock me-2"></i>Mi Perfil</a></li>
+                                    {% endif %}
+
                                     <li>
-                                        <form action="{% url 'logout' %}" method="post">
+                                        <form action="{% url 'logout' %}" method="post" class="m-0">
                                             {% csrf_token %}
-                                            <button type="submit" class="dropdown-item text-danger fw-bold rounded-3">Cerrar Sesión</button>
+                                            <button type="submit" class="dropdown-item text-danger fw-bold"><i class="bi bi-door-open me-2"></i>Cerrar Sesión</button>
                                         </form>
                                     </li>
                                 </ul>
@@ -148,15 +189,17 @@
         </div>
     </nav>
 
-    <main class="container mt-4">
+    <main class="container">
         {% if messages %}
-            {% for message in messages %}
-                <div class="alert alert-dismissible fade show d-flex align-items-center mb-4" role="alert">
-                    <i class="bi bi-info-circle-fill me-3 fs-5 text-primary"></i>
-                    <div class="fw-600">{{ message }}</div>
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                </div>
-            {% endfor %}
+            <div class="mt-3">
+                {% for message in messages %}
+                    <div class="alert alert-clay alert-dismissible fade show d-flex align-items-center p-3 mb-4" role="alert">
+                        <i class="bi bi-info-circle-fill me-3 fs-5 text-primary"></i>
+                        <div class="fw-bold small">{{ message }}</div>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            </div>
         {% endif %}
 
         {% block content %}{% endblock %}
@@ -167,9 +210,9 @@
             <i class="bi bi-pencil-square me-2"></i>Radicar PQRS
         </a>
         <div class="footer-card">
-            <p class="mb-1 fw-bold text-uppercase opacity-75" style="letter-spacing: 2px;">OdontoClinick</p>
+            <p class="mb-1 fw-bold text-uppercase opacity-75" style="letter-spacing: 2px; color: var(--primary-color);">OdontoClinick</p>
             <p class="small text-muted mb-0">© 2026 · Gestión Dental Profesional</p>
-            <p class="small text-muted mt-1">Medellín, Colombia</p>
+            <p class="small text-muted">Medellín, Colombia</p>
         </div>
     </footer>
 
@@ -177,345 +220,3 @@
     {% block extra_js %}{% endblock %}
 </body>
 </html>
-
-<!-- {% load static %}
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>{% block title %}OdontoClinick{% endblock %}</title>
-    
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
-    
-    <style>
-        :root {
-<<<<<<< HEAD
-            --primary-color: #3f2e23; 
-            --secondary-color: #786b5e;
-            --accent-color: #d2b48c;
-            --bg-body: #f0ece9;
-            --clay-shadow: 12px 12px 24px #d1cdc7, -12px -12px 24px #ffffff;
-            --clay-inset: inset 6px 6px 12px rgba(0,0,0,0.03), inset -6px -6px 12px rgba(255,255,255,0.7);
-=======
-            /* PALETA CLAYMORFICA PULIDA */
-            --bg-body: #f0f2f5;
-            --clay-white: #ffffff;
-            --primary-color: #3f2e23;
-            --accent-soft: #d2b48c;
-            
-            /* Sombras de "Arcilla" más suaves */
-            --clay-shadow: 8px 8px 16px #d1d9e6, -8px -8px 16px #ffffff;
-            --clay-inset: inset 4px 4px 8px rgba(0,0,0,0.02), inset -4px -4px 8px #ffffff;
->>>>>>> dee25f66e2e01734d174a1faf8b53a5511642947
-        }
-
-        body { 
-            font-family: 'Quicksand', sans-serif; 
-            background-color: var(--bg-body);
-<<<<<<< HEAD
-            color: var(--secondary-color);
-        }
-
-        /* Contenedor Navegación Arcilla */
-        .nav-container-clay {
-            background: white;
-            border-radius: 50px;
-=======
-            color: #4a4a4a;
-        }
-
-        /* NAVBAR UNIFICADA Y FLOTANTE */
-        .navbar {
-            padding: 1.5rem 0;
-            background: transparent !important;
-        }
-        
-        .nav-main-wrapper {
-            background: var(--clay-white);
-            border-radius: 100px;
->>>>>>> dee25f66e2e01734d174a1faf8b53a5511642947
-            padding: 0.5rem 2rem;
-            box-shadow: var(--clay-shadow), var(--clay-inset);
-            display: flex;
-            align-items: center;
-            width: 100%;
-        }
-
-<<<<<<< HEAD
-        .navbar { background: var(--bg-body) !important; padding: 1.5rem 0; border: none; }
-        .navbar-brand { font-weight: 700; color: var(--primary-color) !important; }
-        .nav-link { font-weight: 600; transition: all 0.3s ease; color: var(--secondary-color) !important; }
-        .nav-link:hover { transform: scale(1.05); color: var(--primary-color) !important; }
-
-        /* Alertas Estilo Gomita */
-        .alert-clay {
-            border: none;
-            border-radius: 25px;
-            box-shadow: 8px 8px 16px #d1cdc7;
-            font-weight: 600;
-        }
-
-        .btn-primary {
-            background-color: var(--primary-color);
-            border: none;
-            border-radius: 20px;
-            padding: 0.8rem 1.8rem;
-            font-weight: 700;
-            box-shadow: 6px 6px 12px rgba(63, 46, 35, 0.2);
-            transition: all 0.3s ease;
-        }
-
-        .btn-primary:hover { transform: translateY(-2px); background-color: #2d2119; }
-
-        .dropdown-menu { border: none; border-radius: 20px; box-shadow: var(--clay-shadow); padding: 1rem; }
-        footer { margin-top: 5rem; }
-        .footer-clay { background: white; border-radius: 40px 40px 0 0; padding: 3rem 0; box-shadow: 0 -12px 24px #d1cdc7; }
-=======
-        .navbar-brand { 
-            font-weight: 700; 
-            color: var(--primary-color) !important;
-            letter-spacing: -0.5px;
-            font-size: 1.4rem;
-        }
-
-        .nav-link { 
-            color: #6c757d !important; 
-            font-weight: 600;
-            padding: 0.5rem 1rem !important;
-            border-radius: 50px;
-            transition: 0.3s;
-        }
-
-        .nav-link:hover, .nav-link.active {
-            color: var(--primary-color) !important;
-            background: #f8f9fa;
-        }
-
-        /* BOTÓN PRINCIPAL "SQUISHY" */
-        .btn-clay {
-            background: var(--primary-color);
-            color: white !important;
-            border: none;
-            border-radius: 50px;
-            padding: 0.6rem 1.5rem;
-            font-weight: 700;
-            box-shadow: 5px 5px 10px rgba(0,0,0,0.1);
-            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-
-        .btn-clay:hover {
-            transform: scale(1.05);
-            box-shadow: 8px 8px 15px rgba(0,0,0,0.15);
-        }
-
-        /* ALERTAS REDONDEADAS */
-        .alert {
-            border-radius: 20px;
-            border: none;
-            box-shadow: var(--clay-shadow);
-            background: white;
-        }
->>>>>>> dee25f66e2e01734d174a1faf8b53a5511642947
-
-        /* FOOTER */
-        footer { margin-top: 5rem; padding-bottom: 2rem; }
-        
-        .footer-card {
-            background: white;
-            border-radius: 40px;
-            padding: 2.5rem;
-            box-shadow: var(--clay-shadow);
-        }
-
-        .pqrs-btn {
-            background: white;
-            padding: 0.8rem 1.5rem;
-            border-radius: 50px;
-            box-shadow: var(--clay-shadow);
-            color: var(--accent-soft) !important;
-            font-weight: 700;
-            text-decoration: none;
-            display: inline-block;
-            margin-bottom: 2rem;
-            transition: 0.3s;
-        }
-        
-        .pqrs-btn:hover { transform: translateY(-3px); }
-
-        {% block extra_css %} {% endblock %}
-    </style>
-</head>
-<body>
-
-<<<<<<< HEAD
-  <nav class="navbar navbar-expand-lg sticky-top">
-    <div class="container">
-      <div class="nav-container-clay">
-        <a class="navbar-brand" href="{% url 'home' %}">ODONTOCLINICK</a>
-        
-        <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-          <i class="bi bi-list fs-3"></i>
-        </button>
-
-        <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
-          <ul class="navbar-nav align-items-center">
-            <li class="nav-item"><a class="nav-link" href="{% url 'home' %}">Inicio</a></li>
-            
-            {% if user.is_authenticated %}
-                <li class="nav-item d-none d-lg-block">
-                    <span class="badge bg-light text-dark border rounded-pill px-3 py-2 ms-2 small">
-                        <i class="bi bi-person-badge me-1"></i> {{ user.id_rol.nombre_rol }}
-                    </span>
-                </li>
-
-                {% if user.id_rol.nombre_rol == 'Secretaria' or user.id_rol.nombre_rol == 'Administrador' %}
-                    <li class="nav-item"><a class="nav-link" href="{% url 'panel_secretaria' %}">Dashboard</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{% url 'lista_pacientes' %}">Pacientes</a></li>
-
-                {% elif user.id_rol.nombre_rol == 'Doctor' %}
-                    <li class="nav-item"><a class="nav-link" href="{% url 'dashboard_medico' %}">Mi Panel</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{% url 'ver_citas' %}">Mi Agenda</a></li>
-
-                {% elif "Auxiliar" in user.id_rol.nombre_rol %}
-                    <li class="nav-item"><a class="nav-link" href="{% url 'dashboard_auxiliar' %}">Bodega</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{% url 'lista_inventario' %}">Inventario</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{% url 'kardex' %}">Movimientos</a></li>
-                {% endif %}
-
-                <li class="nav-item dropdown ms-lg-2">
-                    <a class="nav-link dropdown-toggle fw-bold" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
-                        {{ user.nombre|upper }}
-                    </a>
-                    <ul class="dropdown-menu dropdown-menu-end shadow border-0">
-                        <li><a class="dropdown-item" href="#"><i class="bi bi-person-circle me-2"></i>Mi Perfil</a></li>
-                        <li><a class="dropdown-item" href="#"><i class="bi bi-gear me-2"></i>Ajustes</a></li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li>
-                            <form action="{% url 'logout' %}" method="post" class="px-2">
-                                {% csrf_token %}
-                                <button type="submit" class="btn btn-link text-danger text-decoration-none fw-bold w-100 text-start p-2">
-                                    <i class="bi bi-door-open me-2"></i>Cerrar Sesión
-                                </button>
-                            </form>
-                        </li>
-                    </ul>
-                </li>
-              
-            {% else %}
-                <li class="nav-item ms-lg-3"><a class="btn btn-primary text-white" href="{% url 'login' %}">ACCESO</a></li>
-            {% endif %}
-          </ul>
-        </div>
-      </div>
-    </div>
-  </nav>
-
-  <div class="container mt-3">
-    {% if messages %}
-        {% for message in messages %}
-            <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show alert-clay animate__animated animate__bounceIn" role="alert">
-                <i class="bi {% if message.tags == 'success' %}bi-check-circle-fill{% else %}bi-info-circle-fill{% endif %} me-2"></i>
-                {{ message }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        {% endfor %}
-    {% endif %}
-  </div>
-
-  <main>
-    {% block content %}{% endblock %}
-  </main>
-
-  <footer>
-    <div class="footer-clay text-center">
-        <div class="container">
-            <p class="mb-1 fw-bold" style="color: var(--primary-color);">ODONTOCLINICK</p>
-            <p class="mb-0 small opacity-50">© 2026 Gestión de Salud Dental | Medellín, Colombia</p>
-        </div>
-    </div>
-  </footer>
-
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-  {% block extra_js %}{% endblock %}
-=======
-    <nav class="navbar navbar-expand-lg sticky-top">
-        <div class="container">
-            <div class="nav-main-wrapper">
-                <a class="navbar-brand" href="{% url 'home' %}">OdontoClinick</a>
-                
-                <button class="navbar-toggler border-0 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-
-                <div class="collapse navbar-collapse" id="navbarNav">
-                    <ul class="navbar-nav mx-auto align-items-center">
-                        <li class="nav-item"><a class="nav-link" href="{% url 'home' %}">Inicio</a></li>
-                        
-                        {% if user.is_authenticated %}
-                            {% if user.id_rol.nombre_rol in 'Secretaria Administrador' %}
-                                <li class="nav-item"><a class="nav-link" href="{% url 'panel_secretaria' %}">Dashboard</a></li>
-                                <li class="nav-item"><a class="nav-link" href="{% url 'lista_pacientes' %}">Pacientes</a></li>
-                            {% elif user.id_rol.nombre_rol == 'Doctor' %}
-                                <li class="nav-item"><a class="nav-link" href="{% url 'dashboard_medico' %}">Agenda</a></li>
-                            {% endif %}
-                        {% endif %}
-                    </ul>
-
-                    <div class="d-flex align-items-center">
-                        {% if user.is_authenticated %}
-                            <div class="dropdown">
-                                <a class="nav-link dropdown-toggle fw-bold" href="#" data-bs-toggle="dropdown" style="color: var(--primary-color) !important;">
-                                    {{ user.nombre }}
-                                </a>
-                                <ul class="dropdown-menu border-0 shadow-sm p-2" style="border-radius: 15px;">
-                                    <li><a class="dropdown-item rounded-3" href="#">Mi Perfil</a></li>
-                                    <li><hr class="dropdown-divider opacity-50"></li>
-                                    <li>
-                                        <form action="{% url 'logout' %}" method="post">
-                                            {% csrf_token %}
-                                            <button type="submit" class="dropdown-item text-danger fw-bold rounded-3">Cerrar Sesión</button>
-                                        </form>
-                                    </li>
-                                </ul>
-                            </div>
-                        {% else %}
-                            <a href="{% url 'login' %}" class="btn-clay">Acceso</a>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-        </div>
-    </nav>
-
-    <main class="container mt-4">
-        {% if messages %}
-            {% for message in messages %}
-                <div class="alert alert-dismissible fade show d-flex align-items-center mb-4" role="alert">
-                    <i class="bi bi-info-circle-fill me-3 fs-5 text-primary"></i>
-                    <div class="fw-600">{{ message }}</div>
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                </div>
-            {% endfor %}
-        {% endif %}
-
-        {% block content %}{% endblock %}
-    </main>
-
-    <footer class="text-center container">
-        <a href="{% url 'pqrs' %}" class="pqrs-btn">
-            <i class="bi bi-pencil-square me-2"></i>Radicar PQRS
-        </a>
-        <div class="footer-card">
-            <p class="mb-1 fw-bold text-uppercase opacity-75" style="letter-spacing: 2px;">OdontoClinick</p>
-            <p class="small text-muted mb-0">© 2026 · Gestión Dental Profesional</p>
-            <p class="small text-muted mt-1">Bogotá, Colombia</p>
-        </div>
-    </footer>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
->>>>>>> dee25f66e2e01734d174a1faf8b53a5511642947
-</body>
-</html> -->

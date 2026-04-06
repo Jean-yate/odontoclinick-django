@@ -4,7 +4,7 @@
 
 {% block extra_css %}
 <style>
-    /* Contenedor de Tabla Clay (Heredado de Pacientes) */
+    /* Contenedor de Tabla Clay */
     .clay-table-card {
         background: white;
         border-radius: 40px;
@@ -73,11 +73,10 @@
 
     .btn-action-clay.disabled {
         opacity: 0.5;
+        pointer-events: none;
         box-shadow: none;
-        transform: none;
     }
 
-    /* Estilo para la barra de progreso de pagos */
     .progress-clay {
         height: 6px;
         border-radius: 10px;
@@ -95,11 +94,20 @@
             <p class="text-muted fw-semibold mb-0">Gestión de turnos y seguimiento de pagos.</p>
         </div>
         <div class="col-md-5 text-md-end mt-3 mt-md-0">
-            <a href="{% url 'agendar_cita' %}" class="btn btn-primary d-inline-flex align-items-center px-4 py-2">
+            <a href="{% url 'agendar_cita' %}" class="btn btn-primary d-inline-flex align-items-center px-4 py-2 rounded-pill">
                 <i class="bi bi-calendar-plus me-2 fs-5"></i> AGENDAR CITA
             </a>
         </div>
     </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show rounded-pill shadow-sm mb-4 border-0" role="alert">
+                <i class="bi bi-info-circle-fill me-2"></i> {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
 
     <div class="row mb-4">
         <div class="col-md-6">
@@ -156,7 +164,7 @@
                                 {{ pago_info.texto|upper }}
                             </span>
                             {% if cita.saldo_pendiente > 0 and cita.total_abonado > 0 %}
-                                <div class="text-danger fw-extrabold" style="font-size: 0.7rem;">
+                                <div class="text-danger fw-bold" style="font-size: 0.7rem;">
                                     RESTA: ${{ cita.saldo_pendiente }}
                                 </div>
                             {% endif %}
@@ -174,7 +182,11 @@
                         </td>
                         <td class="text-center">
                             <div class="d-flex justify-content-center">
-                                {# COBRO #}
+                                <a href="{% url 'enviar_recordatorio_manual' cita.id_cita %}" 
+                                   class="btn-action-clay" title="Enviar Recordatorio">
+                                    <i class="bi bi-envelope-at text-primary"></i>
+                                </a>
+
                                 {% if cita.saldo_pendiente <= 0 %}
                                     <span class="btn-action-clay disabled" title="Pago Completo">
                                         <i class="bi bi-check-all text-success fs-5"></i>
@@ -186,22 +198,19 @@
                                     </a>
                                 {% endif %}
 
-                                {# IMPRIMIR #}
                                 <a href="{% url 'generar_factura_ticket' cita.id_cita %}" 
                                    target="_blank" class="btn-action-clay" title="Reimprimir Ticket">
                                     <i class="bi bi-printer text-info"></i>
                                 </a>
 
-                                {# EDITAR ESTADO #}
                                 <button type="button" class="btn-action-clay" data-bs-toggle="modal" 
-                                        data-bs-target="#modalEstado{{ cita.id_cita }}" title="Cambiar Estado">
+                                        data-bs-target="#modalEstado{{ cita.id_cita }}" title="Gestionar Cita">
                                     <i class="bi bi-pencil-square text-primary"></i>
                                 </button>
 
-                                {# CANCELAR #}
                                 <a href="{% url 'cancelar_cita' cita.id_cita %}" 
                                    class="btn-action-clay" title="Cancelar Cita"
-                                   onclick="return confirm('¿Confirmas la cancelación?')">
+                                   onclick="return confirm('¿Estás seguro de que deseas cancelar esta cita?')">
                                     <i class="bi bi-trash3 text-danger"></i>
                                 </a>
                             </div>
@@ -209,37 +218,45 @@
                     </tr>
 
                     <div class="modal fade" id="modalEstado{{ cita.id_cita }}" tabindex="-1" aria-hidden="true">
-                        <div class="modal-dialog modal-dialog-centered modal-sm">
+                        <div class="modal-dialog modal-dialog-centered">
                             <div class="modal-content border-0 shadow-lg" style="border-radius: 30px;">
                                 <form action="{% url 'actualizar_estado_gestion' cita.id_cita %}" method="POST">
                                     {% csrf_token %}
                                     <div class="modal-header border-0 pt-4 px-4">
-                                        <h6 class="modal-title fw-bold text-primary">Estado de Cita</h6>
-                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                        <h5 class="modal-title fw-bold text-primary">Gestión de Cita</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                     </div>
                                     <div class="modal-body px-4 pb-4">
-                                        <select name="id_estado" class="form-select border-0 bg-light rounded-pill fw-bold shadow-sm">
-                                            {% for estado in estados_disponibles %}
-                                                <option value="{{ estado.id_estado_cita }}" 
-                                                    {% if estado.id_estado_cita == cita.id_estado_cita.id_estado_cita %}selected{% endif %}>
-                                                    {{ estado.nombre_estado }}
-                                                </option>
-                                            {% endfor %}
-                                        </select>
+                                        <div class="mb-3 text-start">
+                                            <label class="small fw-bold text-muted mb-2">Cambiar Estado</label>
+                                            <select name="id_estado" class="form-select border-0 bg-light rounded-pill fw-bold shadow-sm">
+                                                {% for estado in estados_disponibles %}
+                                                    <option value="{{ estado.id_estado_cita }}" 
+                                                        {% if estado.id_estado_cita == cita.id_estado_cita.id_estado_cita %}selected{% endif %}>
+                                                        {{ estado.nombre_estado }}
+                                                    </option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        
+                                        <div class="text-start">
+                                            <label class="small fw-bold text-muted mb-2">Reprogramar Fecha (Opcional)</label>
+                                            <input type="date" name="nueva_fecha" class="form-control border-0 bg-light rounded-pill fw-bold shadow-sm fecha-cita" 
+                                                   value="{{ cita.fecha_hora|date:'Y-m-d' }}">
+                                        </div>
                                     </div>
                                     <div class="modal-footer border-0 p-3 bg-light" style="border-radius: 0 0 30px 30px;">
-                                        <button type="submit" class="btn btn-primary rounded-pill w-100 fw-bold">GUARDAR</button>
+                                        <button type="submit" class="btn btn-primary rounded-pill w-100 fw-bold py-2">GUARDAR CAMBIOS</button>
                                     </div>
                                 </form>
                             </div>
                         </div>
                     </div>
-
                     {% empty %}
                     <tr>
                         <td colspan="7" class="text-center py-5">
                             <i class="bi bi-calendar-x fs-1 opacity-25 d-block mb-3"></i>
-                            <h5 class="fw-bold text-muted">No hay citas programadas</h5>
+                            <h5 class="fw-bold text-muted">No se encontraron citas</h5>
                         </td>
                     </tr>
                     {% endfor %}
@@ -249,20 +266,37 @@
     </div>
 </div>
 
-{# SCRIPT DE IMPRESIÓN (Mismo que ya tenías) #}
 <script>
     document.addEventListener("DOMContentLoaded", function() {
+        // --- 1. Lógica de Impresión Automática ---
         const urlParams = new URLSearchParams(window.location.search);
         const imprimirId = urlParams.get('imprimir_id');
+        
         if (imprimirId) {
-            let urlFactura = "{% url 'generar_factura_ticket' 0 %}".replace('0', imprimirId);
-            const win = window.open(urlFactura, '_blank');
+            // Creamos la URL base de Django y reemplazamos el '999999' ficticio
+            const basePrintUrl = "{% url 'generar_factura_ticket' 999999 %}";
+            const finalPrintUrl = basePrintUrl.replace('999999', imprimirId);
+            
+            const win = window.open(finalPrintUrl, '_blank');
             if (win) {
                 win.focus();
-                const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
-                window.history.replaceState({path: cleanUrl}, '', cleanUrl);
+                // Limpiar la URL para evitar re-impresiones al recargar
+                const cleanUrl = window.location.origin + window.location.pathname;
+                window.history.replaceState({}, document.title, cleanUrl);
             }
         }
+
+        // --- 2. Restricción de Fechas Pasadas ---
+        const hoy = new Date().toISOString().split('T')[0];
+        document.querySelectorAll('.fecha-cita').forEach(input => {
+            input.setAttribute('min', hoy);
+            input.addEventListener('change', function() {
+                if (this.value < hoy) {
+                    alert("La fecha seleccionada no puede ser anterior a hoy.");
+                    this.value = hoy;
+                }
+            });
+        });
     });
 </script>
 {% endblock %}

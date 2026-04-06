@@ -5,6 +5,7 @@ from django.contrib import messages
 from django.utils import timezone
 from decimal import Decimal
 from datetime import datetime, timedelta
+from django.views.decorators.http import require_POST
 
 # Importación de modelos propios y de otras Apps
 from .models import Medico, Disponibilidad, HistorialMedico
@@ -64,14 +65,19 @@ def eliminar_horario(request, horario_id):
 
 @login_required
 def agenda_semanal(request):
-    """Muestra las citas programadas para los próximos 7 días."""
+    """Muestra las citas programadas para los próximos 7 días, excluyendo canceladas."""
     medico = get_object_or_404(Medico, id_usuario=request.user)
+    
+    # Definimos el rango de tiempo
     hoy_inicio = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
     fin = hoy_inicio + timezone.timedelta(days=7)
     
+    # Filtramos y EXCLUIMOS las citas canceladas
     citas_semana = Cita.objects.filter(
         id_doctor=medico,
         fecha_hora__range=(hoy_inicio, fin)
+    ).exclude(
+        id_estado_cita__nombre_estado__icontains='Cancelada'  # <--- Filtro de exclusión
     ).select_related('id_paciente__id_usuario', 'id_estado_cita').order_by('fecha_hora')
     
     return render(request, 'mis_citas.html', {'citas': citas_semana})
@@ -79,7 +85,14 @@ def agenda_semanal(request):
 @login_required
 def perfil_paciente(request, paciente_id):
     """Muestra el expediente del paciente, historial de citas y atención actual."""
-    paciente = get_object_or_404(Paciente, id_paciente=paciente_id)
+    
+    # CAMBIO AQUÍ: Agregamos select_related('id_usuario')
+    paciente = get_object_or_404(
+        Paciente.objects.select_related('id_usuario'), 
+        id_paciente=paciente_id
+    )
+    
+    # El resto del código se mantiene igual...
     citas = Cita.objects.filter(id_paciente=paciente).select_related(
         'id_doctor__id_usuario', 'id_estado_cita'
     ).prefetch_related('historial').order_by('-fecha_hora')
@@ -109,7 +122,7 @@ def iniciar_atencion(request, cita_id):
     if estado_en_proceso:
         cita.id_estado_cita = estado_en_proceso
         cita.save()
-        messages.info(request, f"🚀 La consulta con {cita.id_paciente} ha iniciado.")
+        messages.info(request, f" La consulta con {cita.id_paciente} ha iniciado.")
     
     return redirect('perfil_paciente', paciente_id=cita.id_paciente.id_paciente)
 
@@ -187,7 +200,8 @@ def obtener_slots_ajax(request):
             return JsonResponse({'slots': []})
 
         fecha_obj = datetime.strptime(fecha_str, '%Y-%m-%d').date()
-        dia_bd = fecha_obj.weekday() + 1
+        # Django weekday: 0=Lunes, 6=Domingo. Si tu BD usa 1=Lunes, esto está bien:
+        dia_bd = fecha_obj.weekday() + 1 
 
         horario = Disponibilidad.objects.filter(
             id_medico_id=doctor_id, 
@@ -198,18 +212,25 @@ def obtener_slots_ajax(request):
         if not horario:
             return JsonResponse({'slots': []})
 
+        # --- CAMBIO CRÍTICO AQUÍ ---
+        # Filtramos las citas ocupadas EXCLUYENDO las que tengan estado "Cancelada"
         citas_ocupadas = Cita.objects.filter(
             id_doctor_id=doctor_id, 
             fecha_hora__date=fecha_obj
+        ).exclude(
+            id_estado_cita__nombre_estado__icontains='Cancelada'
         ).values_list('fecha_hora', flat=True)
+        # ---------------------------
 
         horas_bloqueadas = [cita.strftime('%H:%M') for cita in citas_ocupadas]
 
         slots = []
+        # Combinamos la fecha seleccionada con las horas de la jornada del médico
         inicio = datetime.combine(fecha_obj, horario.hora_inicio)
         fin = datetime.combine(fecha_obj, horario.hora_fin)
         intervalo = horario.duracion_cita
 
+        # Generar los slots basados en la duración configurada (ej. 20, 30 o 45 min)
         while inicio + timedelta(minutes=intervalo) <= fin:
             slot_str = inicio.strftime('%H:%M')
             if slot_str not in horas_bloqueadas:
@@ -253,3 +274,62 @@ def editar_perfil_medico(request):
         messages.success(request, "¡Perfil actualizado correctamente!")
         return redirect('perfil_medico')
     return render(request, 'editar_perfil_medico.html', {'medico': medico})
+
+@login_required
+def editar_horario(request, horario_id):
+    """Actualiza una jornada de disponibilidad existente."""
+    horario = get_object_or_404(
+        Disponibilidad, 
+        id_disponibilidad=horario_id, 
+        id_medico__id_usuario=request.user
+    )
+    
+    if request.method == 'POST':
+        try:
+            # Actualizamos los campos desde el POST
+            horario.dia_semana = request.POST.get('dia_semana')
+            horario.hora_inicio = request.POST.get('hora_inicio')
+            horario.hora_fin = request.POST.get('hora_fin')
+            horario.duracion_cita = request.POST.get('duracion_cita')
+            horario.save()
+            messages.success(request, "✅ Jornada actualizada con éxito.")
+        except Exception as e:
+            messages.error(request, f"❌ Error al actualizar: {str(e)}")
+            
+    return redirect('mis_horarios')
+
+@login_required
+def eliminar_horario(request, horario_id):
+    """Elimina una franja de disponibilidad con validación de seguridad."""
+    horario = get_object_or_404(
+        Disponibilidad, 
+        id_disponibilidad=horario_id, 
+        id_medico__id_usuario=request.user
+    )
+    
+    if request.method == 'POST':
+        dia_nombre = horario.get_dia_semana_display()
+        horario.delete()
+        messages.warning(request, f"🗑️ Se ha eliminado la jornada del día {dia_nombre}.")
+    
+    return redirect('mis_horarios')
+
+
+@login_required
+@require_POST
+def toggle_disponibilidad(request, horario_id):
+    """Cambia el estado activo/inactivo vía AJAX."""
+    horario = get_object_or_404(
+        Disponibilidad, 
+        id_disponibilidad=horario_id, 
+        id_medico__id_usuario=request.user
+    )
+    
+    horario.activo = not horario.activo
+    horario.save()
+    
+    return JsonResponse({
+        'status': 'success', 
+        'nuevo_estado': horario.activo,
+        'mensaje': f"Jornada {'activada' if horario.activo else 'desactivada'}."
+    })

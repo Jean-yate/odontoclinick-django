@@ -8,4 +8,5 @@ urlpatterns = [
     path('cancelar/<int:id_cita>/', views.cancelar_cita, name='cancelar_cita'),
     path('actualizar-estado/<int:id_cita>/', views.actualizar_estado_gestion, name='actualizar_estado_gestion'),
     path('ajax/obtener-slots/', medico_views.obtener_slots_ajax, name='obtener_slots_ajax'),
+    path('enviar-recordatorio/<int:cita_id>/', views.enviar_recordatorio_manual, name='enviar_recordatorio_manual'),
 ]

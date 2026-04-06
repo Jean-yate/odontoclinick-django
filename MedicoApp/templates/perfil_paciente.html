@@ -19,14 +19,26 @@
                     <div class="text-start bg-light p-3 rounded-3 mb-3 border-start border-3 border-danger">
                         <h6 class="fw-bold small text-uppercase text-danger mb-2"><i class="bi bi-exclamation-triangle-fill"></i> Alerta Médica</h6>
                         <p class="small mb-1"><strong>Alergias:</strong> <span class="text-danger">{{ paciente.alergias|default:"Ninguna registrada" }}</span></p>
-                        <p class="small mb-0"><strong>G. Sanguíneo:</strong> {{ paciente.grupo_sanguineo|default:"No reg." }}</p>
+                        <p class="small mb-0"><strong>G. Sanguíneo:</strong> {{ paciente.rh|default:"No reg." }}</p>
                     </div>
 
                     <div class="text-start small px-2">
                         <p class="mb-2 text-muted text-uppercase fw-bold" style="font-size: 0.65rem;">Información de contacto</p>
-                        <p class="mb-2"><strong><i class="bi bi-card-text me-2"></i>Doc:</strong> {{ paciente.id_usuario.id_usuario }}</p>
-                        <p class="mb-2"><strong><i class="bi bi-telephone me-2"></i>Tel:</strong> {{ paciente.telefono|default:"N/A" }}</p>
-                        <p class="mb-0 text-truncate"><strong><i class="bi bi-envelope me-2"></i>Email:</strong> <br>{{ paciente.id_usuario.email }}</p>
+
+                        <p class="mb-2">
+                            <strong><i class="bi bi-droplet me-2"></i>RH:</strong> 
+                            {{ paciente.rh|upper|default:"No reg." }}
+                        </p>
+                        
+                        <p class="mb-2">
+                            <strong><i class="bi bi-telephone me-2"></i>Tel:</strong> 
+                            {{ paciente.id_usuario.telefono|default:"N/A" }}
+                        </p>
+                        
+                        <p class="mb-0 text-truncate">
+                            <strong><i class="bi bi-envelope me-2"></i>Email:</strong><br>
+                            {{ paciente.id_usuario.correo|default:"Sin registrar" }}
+                        </p>
                     </div>
                 </div>
             </div>

@@ -4,6 +4,9 @@ from .forms import LoginForm, RegistroForm
 from .models import Usuario, Rol, Estado
 from django.contrib import messages
 from PacienteApp.models import Paciente
+from .models import Secretaria
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth import update_session_auth_hash
 
 def login_view(request):
     if request.method == 'POST':
@@ -63,3 +66,29 @@ def registro_view(request):
         form = RegistroForm()
     
     return render(request, 'CuentasApp/registro.html', {'form': form})
+
+@login_required
+def perfil_secretaria(request):
+    if request.user.id_rol.nombre_rol != 'Secretaria':
+        return redirect('home')
+
+    secretaria = Secretaria.objects.filter(id_usuario=request.user).first()
+
+    if request.method == 'POST':
+        nuevo_password = request.POST.get('password')
+        
+        # 1. Si el usuario escribió algo en el campo de contraseña
+        if nuevo_password and nuevo_password.strip():
+            request.user.set_password(nuevo_password)
+            request.user.save()
+            # Esto evita que se cierre la sesión al cambiar la clave
+            update_session_auth_hash(request, request.user)
+            messages.success(request, "Contraseña actualizada correctamente.")
+        
+        # Aquí podrías guardar otros cambios (como el email si lo permites)
+        messages.info(request, "Perfil visualizado/actualizado.")
+        return redirect('perfil_secretaria')
+
+    return render(request, 'CuentasApp/Administracion/perfil_secretaria.html', {
+        'secretaria': secretaria
+    })

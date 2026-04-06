@@ -7,6 +7,17 @@
         --clay-shadow-out: 12px 12px 24px #d1d9e6;
         --clay-shadow-in: inset 6px 6px 12px rgba(0,0,0,0.05), inset -6px -6px 12px rgba(255,255,255,0.8);
         --clay-primary: #00b894; 
+        --clay-secondary: #6c5ce7;
+    }
+
+    /* Contenedor de Bienvenida con Glassmorphism */
+    .welcome-banner {
+        background: rgba(255, 255, 255, 0.7);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 35px;
+        box-shadow: var(--clay-shadow-out);
+        padding: 2rem;
     }
 
     /* Tarjetas estilo Arcilla */
@@ -16,36 +27,35 @@
         border-radius: 30px !important;
         box-shadow: var(--clay-shadow-out), var(--clay-shadow-in);
         transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        padding: 1rem;
         text-decoration: none !important;
+        overflow: hidden;
     }
     
     .dashboard-card:hover {
-        transform: translateY(-10px) scale(1.02);
-        box-shadow: 20px 20px 40px #c2cad6, var(--clay-shadow-in);
+        transform: translateY(-8px);
+        box-shadow: 18px 18px 35px #c2cad6, var(--clay-shadow-in);
     }
     
     .icon-shape {
-        width: 60px;
-        height: 60px;
+        width: 55px;
+        height: 55px;
         background: #f0f4f9;
-        border-radius: 20px;
+        border-radius: 18px;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 1.5rem;
-        color: var(--clay-primary);
-        box-shadow: inset 4px 4px 8px rgba(0,0,0,0.05);
+        font-size: 1.4rem;
+        box-shadow: inset 3px 3px 6px rgba(0,0,0,0.05);
     }
 
-    /* Botones de Acción (Estilo Gomita) */
+    /* Botones de Acción "Gomitas" */
     .action-btn {
-        border-radius: 25px;
-        padding: 2rem 1rem;
+        border-radius: 28px;
+        padding: 2.2rem 1rem;
         transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         border: none;
         background: var(--clay-white);
-        box-shadow: 8px 8px 16px #d1d9e6, inset 4px 4px 8px rgba(255,255,255,0.9);
+        box-shadow: 8px 8px 16px #d1d9e6, inset 2px 2px 5px rgba(255,255,255,0.9);
         height: 100%;
         display: flex;
         flex-direction: column;
@@ -54,8 +64,9 @@
     }
     
     .action-btn:hover {
-        transform: scale(1.1);
+        transform: scale(1.08);
         background-color: var(--clay-primary);
+        box-shadow: 0 15px 30px rgba(0, 184, 148, 0.3);
     }
 
     .action-btn:hover i, .action-btn:hover span {
@@ -64,51 +75,57 @@
 
     .action-btn i {
         color: var(--clay-primary);
-        margin-bottom: 10px;
-        transition: all 0.3s ease;
+        margin-bottom: 12px;
+        transition: 0.3s;
     }
 
     .action-btn span {
-        font-size: 0.8rem;
+        font-size: 0.85rem;
         font-weight: 700;
-        text-transform: uppercase;
-        color: #444;
+        color: #555;
     }
 
+    /* Animación Pulso Online */
     .pulse-online {
-        display: inline-block;
-        width: 10px;
-        height: 10px;
+        width: 10px; height: 10px;
         background-color: #2ecc71;
         border-radius: 50%;
-        margin-right: 5px;
-        animation: pulse 2s infinite;
+        margin-right: 8px;
+        animation: pulse-green 2s infinite;
     }
 
-    @keyframes pulse {
-        0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(46, 204, 113, 0.7); }
-        70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(46, 204, 113, 0); }
-        100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(46, 204, 113, 0); }
+    @keyframes pulse-green {
+        0% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0.7); }
+        70% { box-shadow: 0 0 0 8px rgba(46, 204, 113, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0); }
+    }
+
+    .table-container {
+        background: white;
+        border-radius: 30px;
+        padding: 1.5rem;
+        box-shadow: var(--clay-shadow-out);
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container mt-5">
+<div class="container mt-4">
     <div class="row mb-5">
-        <div class="col-md-12">
-            <div class="d-flex align-items-center bg-white p-4" style="border-radius: 30px; box-shadow: var(--clay-shadow-out);">
-                <div class="me-4">
-                    <img src="https://ui-avatars.com/api/?name={{ request.user.nombre }}+{{ request.user.apellidos }}&background=00b894&color=fff&size=80" alt="Doctor" class="user-avatar rounded-circle border border-4 border-white shadow">
+        <div class="col-12">
+            <div class="welcome-banner d-flex align-items-center">
+                <div class="me-4 position-relative">
+                    <img src="https://ui-avatars.com/api/?name={{ request.user.nombre }}+{{ request.user.apellidos }}&background=00b894&color=fff&size=100" 
+                         alt="Doctor" class="rounded-circle border border-4 border-white shadow-sm">
+                    <span class="position-absolute bottom-0 end-0 pulse-online border border-2 border-white" style="width: 18px; height: 18px; margin: 5px;"></span>
                 </div>
                 <div>
-                    <h2 class="fw-bold mb-0" style="color: #2d3436;">Panel Médico</h2>
-                    <p class="mb-0 text-muted fw-semibold">
-                        Buen día, Dr. {{ request.user.nombre }}. 
+                    <h1 class="fw-bold mb-1" style="color: #2d3436;">¡Hola, Dr. {{ request.user.nombre }}!</h1>
+                    <p class="mb-0 text-muted fs-5">
                         {% if total_hoy > 0 %}
-                            Tienes {{ total_hoy }} cita{{ total_hoy|pluralize }} programada{{ total_hoy|pluralize }} para hoy.
+                            Tienes <span class="badge rounded-pill bg-primary px-3">{{ total_hoy }}</span> cita{{ total_hoy|pluralize }} para atender hoy.
                         {% else %}
-                            No tienes citas pendientes para hoy.
+                            No hay citas pendientes en tu agenda para hoy.
                         {% endif %}
                     </p>
                 </div>
@@ -116,49 +133,48 @@
         </div>
     </div>
 
-    <div class="row g-4">
+    <div class="row g-4 mb-5">
         <div class="col-md-4">
-            <div class="card dashboard-card h-100">
+            <div class="card dashboard-card h-100 p-3">
                 <div class="card-body d-flex align-items-center">
-                    <div class="me-4 icon-shape">
-                        <i class="bi bi-calendar2-check-fill"></i>
+                    <div class="me-3 icon-shape text-success">
+                        <i class="bi bi-calendar-check"></i>
                     </div>
                     <div>
-                        <h1 class="mb-0 fw-bold" style="letter-spacing: -1px; color: var(--clay-primary);">{{ total_hoy|default:"0" }}</h1>
-                        <h6 class="text-uppercase mb-1 small fw-bold text-muted">Citas Hoy</h6>
-                        <a href="{% url 'ver_citas' %}" class="btn btn-sm p-0 fw-bold" style="color: var(--clay-primary); font-size: 0.75rem;">REVISAR LISTA →</a>
+                        <h2 class="mb-0 fw-bold text-dark">{{ total_hoy|default:"0" }}</h2>
+                        <p class="text-uppercase small fw-bold text-muted mb-1">Citas Hoy</p>
+                        <a href="{% url 'ver_citas' %}" class="text-decoration-none fw-bold" style="color: var(--clay-primary); font-size: 0.8rem;">VER AGENDA <i class="bi bi-arrow-right"></i></a>
                     </div>
                 </div>
             </div>
         </div>
         
         <div class="col-md-4">
-            <a href="{% url 'perfil_medico' %}" class="card dashboard-card h-100 text-decoration-none">
+            <a href="{% url 'perfil_medico' %}" class="card dashboard-card h-100 p-3">
                 <div class="card-body d-flex align-items-center">
-                    <div class="me-4 icon-shape" style="color: #6c5ce7;">
-                        <i class="bi bi-person-bounding-box"></i>
+                    <div class="me-3 icon-shape text-primary">
+                        <i class="bi bi-shield-check"></i>
                     </div>
                     <div>
-                        <h3 class="mb-0 fw-bold" style="color: #6c5ce7;">Mi Perfil</h3>
-                        <h6 class="text-uppercase mb-1 small fw-bold text-muted">Especialista</h6>
-                        <span class="small fw-bold text-primary">GESTIONAR DATOS →</span>
+                        <h2 class="mb-0 fw-bold text-dark">Perfil</h2>
+                        <p class="text-uppercase small fw-bold text-muted mb-1">Datos Médicos</p>
+                        <span class="fw-bold text-primary" style="font-size: 0.8rem;">EDITAR INFO <i class="bi bi-gear"></i></span>
                     </div>
                 </div>
             </a>
         </div>
 
         <div class="col-md-4">
-            <div class="card dashboard-card h-100">
+            <div class="card dashboard-card h-100 p-3">
                 <div class="card-body d-flex align-items-center">
-                    <div class="me-4 icon-shape" style="color: #2ecc71;">
+                    <div class="me-3 icon-shape text-info">
                         <i class="bi bi-activity"></i>
                     </div>
                     <div>
-                        <h4 class="mb-0 fw-bold" style="color: #2ecc71;">En Línea</h4>
-                        <h6 class="text-uppercase mb-1 small fw-bold text-muted">Estado Actual</h6>
+                        <h2 class="mb-0 fw-bold text-dark">Activo</h2>
+                        <p class="text-uppercase small fw-bold text-muted mb-1">Estado de Sesión</p>
                         <div class="d-flex align-items-center">
-                            <span class="pulse-online"></span>
-                            <small class="text-success fw-bold">Consultorio Activo</small>
+                            <span class="text-success fw-bold" style="font-size: 0.85rem;">Consultorio en Línea</span>
                         </div>
                     </div>
                 </div>
@@ -166,39 +182,38 @@
         </div>
     </div>
 
-    <div class="row mt-5">
-        <div class="col-md-12">
-            <h5 class="fw-bold mb-4 ms-2" style="color: #444;">Gestión Profesional</h5>
+    <div class="row mb-5">
+        <div class="col-12">
+            <h4 class="fw-bold mb-4 px-2" style="color: #444;">Centro de Gestión</h4>
             <div class="row g-4 text-center">
                 <div class="col-6 col-md-3">
                     <a href="{% url 'ver_citas' %}" class="text-decoration-none">
                         <div class="action-btn">
-                            <i class="bi bi-calendar-week fs-2"></i>
-                            <span>Mi Agenda</span>
+                            <i class="bi bi-calendar2-week fs-1"></i>
+                            <span>MI AGENDA</span>
                         </div>
                     </a>
                 </div>
                 <div class="col-6 col-md-3">
                     <a href="{% url 'historial_tratamientos' %}" class="text-decoration-none">
                         <div class="action-btn">
-                            <i class="bi bi-file-earmark-medical fs-2"></i>
-                            <span>Historiales</span>
+                            <i class="bi bi-folder2-open fs-1"></i>
+                            <span>HISTORIALES</span>
                         </div>
                     </a>
                 </div>
                 <div class="col-6 col-md-3">
                     <a href="{% url 'mis_horarios' %}" class="text-decoration-none">
                         <div class="action-btn">
-                            <i class="bi bi-clock-history fs-2"></i>
-                            <span>Mis Horarios</span>
+                            <i class="bi bi-clock-history fs-1"></i>
+                            <span>MIS HORARIOS</span>
                         </div>
                     </a>
                 </div>
                 <div class="col-6 col-md-3">
-                    <a href="{% url 'lista_tratamiento_medico' %}" class="text-decoration-none">
-                        <div class="action-btn">
-                            <i class="bi bi-capsule-pill fs-2"></i>
-                            <span>Tratamientos</span>
+                    <a href="#" class="text-decoration-none"> <div class="action-btn">
+                            <i class="bi bi-clipboard2-pulse fs-1"></i>
+                            <span>ESTADÍSTICAS</span>
                         </div>
                     </a>
                 </div>
@@ -207,37 +222,45 @@
     </div>
 
     {% if citas_hoy %}
-    <div class="row mt-5 mb-5">
-        <div class="col-md-12">
-            <h5 class="fw-bold mb-4 ms-2" style="color: #444;">Pacientes de Hoy</h5>
-            <div class="bg-white p-2 shadow-sm" style="border-radius: 25px;">
+    <div class="row mb-5">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4 px-2">
+                <h4 class="fw-bold mb-0" style="color: #444;">Pacientes del Día</h4>
+                <span class="text-muted small fw-bold">{{ "now"|date:"D, d M" }}</span>
+            </div>
+            <div class="table-container">
                 <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0">
-                        <thead class="bg-light">
+                        <thead>
                             <tr>
-                                <th class="border-0 px-4 py-3">Hora</th>
-                                <th class="border-0">Paciente</th>
-                                <th class="border-0">Estado</th>
-                                <th class="border-0 text-end px-4">Acción</th>
+                                <th class="border-0 text-muted small text-uppercase px-4">Hora</th>
+                                <th class="border-0 text-muted small text-uppercase">Paciente</th>
+                                <th class="border-0 text-muted small text-uppercase">Estado</th>
+                                <th class="border-0 text-muted small text-uppercase text-end px-4">Acción</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for cita in citas_hoy %}
-                            <tr>
-                                <td class="px-4 fw-bold text-primary">{{ cita.fecha_hora|date:"h:i A" }}</td>
-                                <td>
-                                    <div class="d-flex align-items-center">
-                                        <div class="fw-bold">{{ cita.id_paciente.id_usuario.get_full_name }}</div>
+                            <tr style="border-bottom: 1px solid #f0f2f5;">
+                                <td class="px-4">
+                                    <div class="fw-bold text-primary bg-light d-inline-block px-3 py-1 rounded-pill">
+                                        {{ cita.fecha_hora|date:"h:i A" }}
                                     </div>
                                 </td>
                                 <td>
-                                    <span class="badge rounded-pill {% if cita.id_estado_cita.nombre_estado == 'Confirmada' %}bg-info{% else %}bg-warning{% endif %}">
-                                        {{ cita.id_estado_cita.nombre_estado }}
-                                    </span>
+                                    <div class="fw-bold text-dark">{{ cita.id_paciente.id_usuario.get_full_name }}</div>
+                                    <small class="text-muted">ID: {{ cita.id_paciente.id_usuario.numero_documento }}</small>
+                                </td>
+                                <td>
+                                    {% if cita.id_estado_cita.nombre_estado == 'Confirmada' %}
+                                        <span class="badge bg-soft-info text-info rounded-pill px-3 py-2" style="background: #e0f7fa;">Confirmada</span>
+                                    {% else %}
+                                        <span class="badge bg-soft-warning text-warning rounded-pill px-3 py-2" style="background: #fff3e0;">{{ cita.id_estado_cita.nombre_estado }}</span>
+                                    {% endif %}
                                 </td>
                                 <td class="text-end px-4">
-                                    <a href="{% url 'perfil_paciente' cita.id_paciente.id_paciente %}" class="btn btn-sm btn-outline-primary rounded-pill px-3">
-                                        Atender <i class="bi bi-arrow-right"></i>
+                                    <a href="{% url 'perfil_paciente' cita.id_paciente.id_paciente %}" class="btn btn-primary rounded-pill px-4 shadow-sm fw-bold">
+                                        Atender <i class="bi bi-chevron-right ms-1"></i>
                                     </a>
                                 </td>
                             </tr>
@@ -247,6 +270,13 @@
                 </div>
             </div>
         </div>
+    </div>
+    {% else %}
+    <div class="text-center py-5">
+        <div class="icon-shape mx-auto mb-3" style="width: 80px; height: 80px; font-size: 2rem;">
+            <i class="bi bi-emoji-smile"></i>
+        </div>
+        <h5 class="text-muted">No tienes pacientes agendados para hoy. ¡Disfruta tu día!</h5>
     </div>
     {% endif %}
 </div>

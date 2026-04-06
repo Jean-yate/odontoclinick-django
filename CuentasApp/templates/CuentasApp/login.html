@@ -2,12 +2,11 @@
 
 {% block extra_css %}
 <style>
-    /* Forzamos que el cuerpo no tenga scroll innecesario y permita el centrado */
     .main-login-container {
         display: flex;
         flex-direction: column;
-        justify-content: center; /* Centrado Vertical */
-        align-items: center;     /* Centrado Horizontal */
+        justify-content: center; 
+        align-items: center;    
         min-height: calc(100vh - 150px);
         width: 100%;
     }
@@ -35,18 +34,19 @@
         box-shadow: inset 4px 4px 8px rgba(0,0,0,0.05), 4px 4px 8px rgba(255,255,255,0.8);
     }
 
+    /* Estilo para los inputs reales y los fakes (que estarán ocultos) */
     .clay-login-card input {
         border: none !important;
         background-color: #f0f4f9 !important;
         border-radius: 15px !important;
         padding: 0.75rem 1rem !important;
+        padding-right: 2.5rem !important; 
         box-shadow: inset 3px 3px 6px rgba(0,0,0,0.05);
         margin-top: 5px;
         font-weight: 600;
         width: 100%;
     }
 
-    /* Estilo para el link de olvidar contraseña */
     .forgot-link {
         font-size: 0.8rem;
         color: var(--secondary-color);
@@ -57,6 +57,22 @@
     .forgot-link:hover {
         color: var(--primary-color);
         text-decoration: underline;
+    }
+
+    .cursor-pointer {
+        cursor: pointer;
+    }
+
+    /* Ocultar campos señuelo de forma absoluta para que no ocupen espacio */
+    .hidden-fake-field {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        border: 0;
     }
 </style>
 {% endblock %}
@@ -72,8 +88,11 @@
                 <h2 class="fw-bold mb-4" style="color: var(--primary-color); letter-spacing: -1px;">Acceder</h2>
             </div>
             
-            <form method="POST">
+            <form method="POST" autocomplete="off">
                 {% csrf_token %}
+
+                <input type="text" name="fake_user_name" class="hidden-fake-field" tabindex="-1">
+                <input type="password" name="fake_password_field" class="hidden-fake-field" tabindex="-1">
                 
                 {% if messages %}
                     {% for message in messages %}
@@ -103,7 +122,12 @@
                 
                 <div class="mb-2">
                     <label class="fw-bold small ms-2" style="color: var(--secondary-color);">Contraseña</label>
-                    {{ form.password }}
+                    <div class="position-relative">
+                        {{ form.password }}
+                        <i class="bi bi-eye-slash position-absolute top-50 end-0 translate-middle-y me-3 cursor-pointer text-muted" 
+                           id="togglePassword" 
+                           style="z-index: 10;"></i>
+                    </div>
                     {% if form.password.errors %}
                         <div class="text-danger fw-bold mt-1 ms-2" style="font-size: 0.75rem;">
                             <i class="bi bi-x-circle"></i> {{ form.password.errors.0 }}
@@ -117,7 +141,8 @@
                     </a>
                 </div>
 
-                <button type="submit" class="btn btn-primary w-100 py-2 fw-bold shadow-sm" style="border-radius: 15px;">
+                <button type="submit" class="btn w-100 py-2 fw-bold shadow-sm text-white" 
+                        style="border-radius: 15px; background-color: var(--primary-color);">
                     Entrar al Sistema
                 </button>
             </form>
@@ -131,4 +156,36 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const togglePassword = document.querySelector('#togglePassword');
+        const passwordField = document.querySelector('#id_password');
+        const usernameField = document.querySelector('#id_username');
+
+        // 2. REFUERZO JS: Limpia los campos tras un pequeño retardo para borrar lo que el navegador forzó
+        if (passwordField && usernameField) {
+            setTimeout(() => {
+                passwordField.value = '';
+                usernameField.value = '';
+                // Deshabilitar temporalmente el autocompletado en el DOM
+                passwordField.setAttribute('autocomplete', 'new-password');
+                usernameField.setAttribute('autocomplete', 'one-time-code');
+            }, 50);
+        }
+
+        // Lógica para mostrar/ocultar contraseña
+        if (togglePassword && passwordField) {
+            togglePassword.addEventListener('click', function () {
+                const type = passwordField.getAttribute('type') === 'password' ? 'text' : 'password';
+                passwordField.setAttribute('type', type);
+                
+                this.classList.toggle('bi-eye');
+                this.classList.toggle('bi-eye-slash');
+            });
+        }
+    });
+</script>
 {% endblock %}

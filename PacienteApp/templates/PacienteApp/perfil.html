@@ -4,92 +4,184 @@
 
 {% block extra_css %}
 <style>
-    :root {
-        --clay-shadow: 0 10px 30px rgba(0,0,0,0.08);
-    }
     .clay-card-profile {
         background: white;
-        border-radius: 30px;
+        border-radius: 35px;
         box-shadow: var(--clay-shadow);
         border: none;
-        padding: 2rem;
+        padding: 2.5rem;
+        transition: transform 0.3s ease;
     }
+    
+    .profile-avatar-container {
+        position: relative;
+        width: 120px;
+        height: 120px;
+        margin: 0 auto 1.5rem;
+    }
+
     .profile-avatar {
-        width: 100px;
-        height: 100px;
-        background: #f8f9fa;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
-        margin: 0 auto 1.5rem;
         color: var(--primary-color);
-        font-size: 3rem;
+        font-size: 3.5rem;
+        box-shadow: inset 5px 5px 10px rgba(0,0,0,0.05);
+        border: 4px solid white;
     }
+
+    .role-badge {
+        background: var(--accent-color);
+        color: var(--primary-color);
+        font-weight: 700;
+        font-size: 0.7rem;
+        padding: 0.4rem 1rem;
+        border-radius: 50px;
+        text-uppercase;
+        letter-spacing: 1px;
+    }
+
+    /* Navegación lateral */
     .nav-pills-clay .nav-link {
-        border-radius: 15px;
+        border-radius: 20px;
         color: var(--secondary-color);
         font-weight: 700;
-        margin-bottom: 0.5rem;
+        margin-bottom: 0.8rem;
+        padding: 1rem 1.5rem;
+        text-align: left;
+        transition: 0.3s;
+        border: 2px solid transparent;
     }
+
+    .nav-pills-clay .nav-link:hover {
+        background: #f8f9fa;
+        color: var(--primary-color);
+    }
+
     .nav-pills-clay .nav-link.active {
-        background-color: var(--primary-color) !important;
-        color: white !important;
-    }
-    .clay-form-inner .form-control, .clay-form-inner .form-select {
-        border: 2px solid #f1f3f5;
-        border-radius: 12px;
-        padding: 0.70rem 1rem;
-        background-color: #fcfcfc;
-    }
-    .section-divider {
-        border-bottom: 2px solid #f8f9fa;
-        margin: 2rem 0 1rem;
-        padding-bottom: 0.5rem;
+        background-color: white !important;
         color: var(--primary-color) !important;
+        border-color: var(--accent-color);
+        box-shadow: 5px 5px 15px rgba(0,0,0,0.05);
+    }
+
+    /* Estilo de Citas */
+    .cita-item {
+        background: #fcfcfc;
+        border-radius: 20px;
+        transition: 0.3s;
+        border: 1px solid #eee;
+    }
+    .cita-item:hover {
+        transform: translateX(5px);
+        background: white;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+    }
+
+    /* Inputs */
+    .clay-form-inner label {
+        color: var(--primary-color);
+        margin-left: 5px;
+        margin-bottom: 5px;
+    }
+    .clay-form-inner .form-control {
+        border: 2px solid #f1f3f5;
+        border-radius: 15px;
+        padding: 0.8rem 1.2rem;
+        background-color: #fcfcfc;
+        transition: 0.3s;
+    }
+    .clay-form-inner .form-control:focus {
+        border-color: var(--accent-color);
+        box-shadow: none;
+        background: white;
+    }
+
+    .section-divider {
+        display: flex;
+        align-items: center;
+        color: var(--secondary-color);
+        font-size: 0.8rem;
+        margin: 2.5rem 0 1.5rem;
+    }
+    .section-divider::after {
+        content: "";
+        flex: 1;
+        height: 2px;
+        background: #f1f3f5;
+        margin-left: 15px;
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container mt-5 mb-5">
-    {% if messages %}
-        {% for message in messages %}
-            <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm mb-4" style="border-radius: 15px;">
-                {{ message }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        {% endfor %}
-    {% endif %}
+<div class="container mt-4 mb-5">
+    <div class="row g-4">
+        <div class="col-lg-4">
+            <div class="clay-card-profile text-center sticky-top" style="top: 100px; z-index: 10;">
+                <div class="profile-avatar-container">
+                    <div class="profile-avatar">
+                        <i class="bi bi-person-circle"></i>
+                    </div>
+                </div>
+                <h4 class="fw-bold mb-1">{{ request.user.nombre }}</h4>
+                <div class="mb-4">
+                    <span class="role-badge">{{ request.user.id_rol.nombre_rol }}</span>
+                </div>
 
-    <div class="row">
-        <div class="col-lg-4 mb-4">
-            <div class="clay-card-profile text-center shadow-sm">
-                <div class="profile-avatar"><i class="bi bi-person-circle"></i></div>
-                <h4 class="fw-bold mb-1">{{ request.user.nombre }} {{ request.user.apellidos }}</h4>
-                <p class="text-muted mb-4 small">Paciente de OdontoClinick</p>
-                <div class="nav flex-column nav-pills nav-pills-clay" role="tablist">
-                    <button class="nav-link {% if not form.errors %}active{% endif %}" data-bs-toggle="pill" data-bs-target="#content-citas" type="button">Mis Citas</button>
-                    <button class="nav-link {% if form.errors %}active{% endif %}" data-bs-toggle="pill" data-bs-target="#content-datos" type="button">Editar Mis Datos</button>
+                <div class="nav flex-column nav-pills nav-pills-clay" id="v-pills-tab" role="tablist">
+                    <button class="nav-link {% if not form.errors %}active{% endif %}" data-bs-toggle="pill" data-bs-target="#content-citas" type="button">
+                        <i class="bi bi-calendar-event me-2"></i> Mis Citas
+                    </button>
+                    <button class="nav-link {% if form.errors %}active{% endif %}" data-bs-toggle="pill" data-bs-target="#content-datos" type="button">
+                        <i class="bi bi-gear me-2"></i> Editar Perfil
+                    </button>
                 </div>
             </div>
         </div>
 
         <div class="col-lg-8">
-            <div class="clay-card-profile h-100 shadow-sm">
+            <div class="clay-card-profile h-100">
                 <div class="tab-content">
                     
                     <div class="tab-pane fade {% if not form.errors %}show active{% endif %}" id="content-citas">
-                        <h3 class="fw-bold mb-4" style="color: var(--primary-color);">Mis Próximas Citas</h3>
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h3 class="fw-bold m-0" style="color: var(--primary-color);">Mis Próximas Citas</h3>
+                            <i class="bi bi-calendar-check fs-2 opacity-25"></i>
+                        </div>
+
                         {% if citas_proximas %}
+                            <div class="row g-3">
                             {% for cita in citas_proximas %}
-                            <div class="p-3 mb-3 border-start border-4 border-primary bg-light rounded-3">
-                                <h6 class="fw-bold text-uppercase">{{ cita.id_servicio.nombre_servicio }}</h6>
-                                <p class="small text-muted mb-0">{{ cita.fecha_hora|date:"d M Y - h:i A" }}</p>
-                            </div>
+                                <div class="col-12">
+                                    <div class="cita-item p-3 d-flex align-items-center">
+                                        <div class="icon-box bg-white shadow-sm rounded-4 p-3 me-3 text-center" style="min-width: 80px;">
+                                            <span class="d-block fw-bold text-primary">{{ cita.fecha_hora|date:"d" }}</span>
+                                            <span class="small text-uppercase text-muted">{{ cita.fecha_hora|date:"M" }}</span>
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <h6 class="fw-bold mb-1">{{ cita.id_servicio.nombre_servicio }}</h6>
+                                            <p class="small text-muted mb-0">
+                                                <i class="bi bi-clock me-1"></i> {{ cita.fecha_hora|date:"h:i A" }}
+                                            </p>
+                                        </div>
+                                        <div class="text-end">
+                                            <span class="badge rounded-pill bg-light text-primary px-3">Confirmada</span>
+                                        </div>
+                                    </div>
+                                </div>
                             {% endfor %}
+                            </div>
                         {% else %}
-                            <p class="text-muted">No tienes citas pendientes.</p>
+                            <div class="text-center py-5">
+                                <i class="bi bi-calendar-x fs-1 text-muted opacity-25"></i>
+                                <p class="text-muted mt-3">No tienes citas pendientes en este momento.</p>
+                                <a href="#" class="btn btn-outline-primary btn-sm rounded-pill px-4">Agendar Cita</a>
+                            </div>
                         {% endif %}
                     </div>
 
@@ -97,34 +189,60 @@
                         <h3 class="fw-bold mb-4" style="color: var(--primary-color);">Configuración de Perfil</h3>
                         <form method="post" class="clay-form-inner">
                             {% csrf_token %}
+                            
+                            <div class="section-divider text-uppercase fw-bold">Información Básica</div>
                             <div class="row g-3">
-                                <div class="col-12"><h6 class="section-divider text-uppercase fw-bold small">Información Personal</h6></div>
-                                <div class="col-md-6"><label class="fw-bold small">Nombre(s)</label>{{ form.nombre }}</div>
-                                <div class="col-md-6"><label class="fw-bold small">Apellidos</label>{{ form.apellidos }}</div>
-                                <div class="col-md-4"><label class="fw-bold small">Nacimiento</label>{{ form.fecha_nacimiento }}</div>
-                                <div class="col-md-4"><label class="fw-bold small">RH</label>{{ form.rh }}</div>
-                                <div class="col-md-4"><label class="fw-bold small">EPS</label>{{ form.eps }}</div>
-
-                                <div class="col-12"><h6 class="section-divider text-uppercase fw-bold small">Información Médica</h6></div>
-                                <div class="col-md-6"><label class="fw-bold small">Alergias</label>{{ form.alergias }}</div>
-                                <div class="col-md-6"><label class="fw-bold small">Enfermedades Preexistentes</label>{{ form.enfermedades_preexistentes }}</div>
-
-                                <div class="col-12"><h6 class="section-divider text-uppercase fw-bold small">Datos de Contacto</h6></div>
-                                <div class="col-md-6"><label class="fw-bold small">Correo</label>{{ form.correo }}</div>
-                                <div class="col-md-6"><label class="fw-bold small">Teléfono</label>{{ form.telefono }}</div>
-                                <div class="col-12"><label class="fw-bold small">Dirección</label>{{ form.direccion }}</div>
-
-                                <div class="col-12"><h6 class="section-divider text-uppercase fw-bold small">En Caso de Emergencia</h6></div>
-                                <div class="col-md-6"><label class="fw-bold small">Nombre de Contacto</label>{{ form.contacto_emergencia_nombre }}</div>
-                                <div class="col-md-6"><label class="fw-bold small">Teléfono de Contacto</label>{{ form.contacto_emergencia_telefono }}</div>
-
-                                <div class="col-12"><h6 class="section-divider text-uppercase fw-bold small">Seguridad</h6></div>
-                                <div class="col-md-6"><label class="fw-bold small">Nueva Contraseña</label>{{ form.nueva_password }}</div>
-                                <div class="col-md-6"><label class="fw-bold small">Confirmar</label>{{ form.confirmar_password }}</div>
-
-                                <div class="col-12 mt-4 text-end">
-                                    <button type="submit" class="btn btn-primary rounded-pill px-5 fw-bold py-2 shadow-sm">Guardar Todos los Cambios</button>
+                                <div class="col-md-6">
+                                    <label class="small fw-bold"><i class="bi bi-info-circle me-1"></i> Nombre(s)</label>
+                                    {{ form.nombre }}
                                 </div>
+                                <div class="col-md-6">
+                                    <label class="small fw-bold">Apellidos</label>
+                                    {{ form.apellidos }}
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="small fw-bold"><i class="bi bi-envelope me-1"></i> Correo Electrónico</label>
+                                    {{ form.correo }}
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="small fw-bold"><i class="bi bi-telephone me-1"></i> Teléfono</label>
+                                    {{ form.telefono }}
+                                </div>
+                            </div>
+
+                            <div class="section-divider text-uppercase fw-bold">Datos Médicos</div>
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label class="small fw-bold">RH</label>
+                                    {{ form.rh }}
+                                </div>
+                                <div class="col-md-8">
+                                    <label class="small fw-bold">EPS</label>
+                                    {{ form.eps }}
+                                </div>
+                                <div class="col-12">
+                                    <label class="small fw-bold"><i class="bi bi-exclamation-triangle me-1"></i> Alergias Conocidas</label>
+                                    {{ form.alergias }}
+                                </div>
+                            </div>
+
+                            <div class="section-divider text-uppercase fw-bold">Seguridad</div>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="small fw-bold">Nueva Contraseña</label>
+                                    {{ form.nueva_password }}
+                                    <div class="form-text small">Dejar en blanco para no cambiar.</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="small fw-bold">Confirmar Contraseña</label>
+                                    {{ form.confirmar_password }}
+                                </div>
+                            </div>
+
+                            <div class="mt-5 text-end">
+                                <button type="submit" class="btn btn-clay py-3 px-5">
+                                    Actualizar Perfil
+                                </button>
                             </div>
                         </form>
                     </div>

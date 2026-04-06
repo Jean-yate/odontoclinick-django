@@ -53,3 +53,4 @@ def perfil_paciente(request):
         'citas_proximas': citas_proximas,
         'historial': historial
     })
+

@@ -8,7 +8,7 @@
         padding: 3rem;
         box-shadow: var(--clay-shadow);
         border: none;
-        max-width: 850px; /* Un poco más ancho para dos columnas */
+        max-width: 900px;
         margin: 0 auto;
     }
 
@@ -19,15 +19,27 @@
         letter-spacing: 1px;
         font-weight: 800;
         margin-top: 2rem;
-        margin-bottom: 1rem;
+        margin-bottom: 1.5rem;
         border-bottom: 2px solid var(--bg-body);
-        padding-bottom: 5px;
+        padding-bottom: 8px;
     }
 
-    /* Estilo para los inputs renderizados por Django */
-    .form-body p { margin-bottom: 1.5rem; }
-    
-    .form-body input, .form-body select, .form-body textarea {
+    .form-group-clay {
+        margin-bottom: 1.5rem;
+    }
+
+    .form-group-clay label {
+        display: block;
+        font-weight: 700;
+        color: var(--primary-color);
+        margin-left: 10px;
+        margin-bottom: 8px;
+        font-size: 0.9rem;
+    }
+
+    .form-group-clay input, 
+    .form-group-clay select, 
+    .form-group-clay textarea {
         display: block;
         width: 100%;
         padding: 0.8rem 1.2rem;
@@ -36,13 +48,19 @@
         border: none;
         box-shadow: inset 4px 4px 8px rgba(0,0,0,0.08), inset -4px -4px 8px rgba(255,255,255,0.8);
         outline: none;
+        transition: all 0.3s ease;
     }
 
-    .form-body label {
-        font-weight: 700;
-        color: var(--primary-color);
-        margin-left: 10px;
-        margin-bottom: 5px;
+    .form-group-clay input:focus {
+        box-shadow: inset 2px 2px 4px rgba(0,0,0,0.1), 0 0 10px rgba(var(--primary-rgb), 0.1);
+        background-color: #e8eff7;
+    }
+    
+    .error-text {
+        font-size: 0.8rem;
+        font-weight: 600;
+        margin-top: 5px;
+        display: block;
     }
 </style>
 {% endblock %}
@@ -50,37 +68,77 @@
 {% block content %}
 <div class="container mt-5 mb-5">
     <div class="clay-form-card">
-        <div class="text-center mb-4">
-            <h3 class="fw-bold text-primary"><i class="bi bi-pencil-square me-2"></i>Editar Expediente</h3>
-            <span class="badge rounded-pill px-4 py-2" style="background: var(--bg-body); color: var(--primary-color); font-size: 1rem;">
-                {{ paciente.nombre }} {{ paciente.apellidos }}
+        <div class="text-center mb-5">
+            <h3 class="fw-bold text-primary mb-3"><i class="bi bi-pencil-square me-2"></i>Editar Expediente</h3>
+            <span class="badge rounded-pill px-4 py-2 shadow-sm" style="background: var(--bg-body); color: var(--primary-color); font-size: 1.1rem; border: 1px solid rgba(0,0,0,0.05);">
+                <i class="bi bi-person-fill me-2"></i>{{ paciente.nombre }} {{ paciente.apellidos }}
             </span>
         </div>
 
-        <form method="post">
+        <form method="post" novalidate>
             {% csrf_token %}
             
             <div class="form-body">
+                {# ALERTA GLOBAL DE ERRORES #}
+                {% if form_user.errors or form_clinico.errors %}
+                <div class="alert alert-danger shadow-sm border-0 mb-4" style="border-radius: 20px;">
+                    <div class="d-flex align-items-center mb-2">
+                        <i class="bi bi-exclamation-triangle-fill me-2 fs-4"></i>
+                        <strong>Hay errores en el formulario:</strong>
+                    </div>
+                    <ul class="mb-0">
+                        {% for field in form_user %}{% for error in field.errors %}<li>{{ field.label }}: {{ error }}</li>{% endfor %}{% endfor %}
+                        {% for field in form_clinico %}{% for error in field.errors %}<li>{{ field.label }}: {{ error }}</li>{% endfor %}{% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+
+                {# SECCIÓN 1: DATOS PERSONALES #}
                 <div class="section-title"><i class="bi bi-person-circle me-2"></i>Información Personal</div>
                 <div class="row">
-                    <div class="col-md-12">
-                        {{ form_user.as_p }}
-                    </div>
+                    {% for field in form_user %}
+                        {% if field.name != 'id_rol' and field.name != 'id_estado' and field.name != 'password' %}
+                        <div class="col-md-6">
+                            <div class="form-group-clay">
+                                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                {{ field }}
+                                {% if field.errors %}
+                                    <span class="text-danger error-text ms-2">
+                                        <i class="bi bi-x-circle me-1"></i>{{ field.errors|striptags }}
+                                    </span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endif %}
+                    {% endfor %}
                 </div>
 
-                <div class="section-title"><i class="bi bi-medical-checklist me-2"></i>Datos Médicos (PacienteApp)</div>
+                {# SECCIÓN 2: DATOS CLÍNICOS #}
+                <div class="section-title"><i class="bi bi-medical-checklist me-2"></i>Datos Médicos y de Contacto</div>
                 <div class="row">
-                    <div class="col-md-12">
-                        {{ form_clinico.as_p }}
-                    </div>
+                    {% for field in form_clinico %}
+                        {% if field.name != 'id_usuario' %}
+                        <div class="{% if field.name == 'alergias' or field.name == 'enfermedades_preexistentes' or field.name == 'direccion' %}col-md-12{% else %}col-md-6{% endif %}">
+                            <div class="form-group-clay">
+                                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                {{ field }}
+                                {% if field.errors %}
+                                    <span class="text-danger error-text ms-2">
+                                        <i class="bi bi-x-circle me-1"></i>{{ field.errors|striptags }}
+                                    </span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endif %}
+                    {% endfor %}
                 </div>
             </div>
 
             <div class="mt-5 d-flex justify-content-center gap-3">
-                <button type="submit" class="btn btn-primary px-5 shadow-lg rounded-pill">
-                    <i class="bi bi-save2-fill me-2"></i> Actualizar Todo
+                <button type="submit" class="btn btn-primary px-5 py-3 shadow-lg rounded-pill fw-bold">
+                    <i class="bi bi-save2-fill me-2"></i> GUARDAR CAMBIOS
                 </button>
-                <a href="{% url 'lista_pacientes' %}" class="btn btn-light rounded-pill px-4 d-flex align-items-center" style="box-shadow: var(--clay-shadow);">
+                <a href="{% url 'lista_pacientes' %}" class="btn btn-light rounded-pill px-5 d-flex align-items-center fw-bold text-muted" style="box-shadow: var(--clay-shadow);">
                     Cancelar
                 </a>
             </div>

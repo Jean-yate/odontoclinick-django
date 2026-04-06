@@ -4,6 +4,15 @@
 <div class="container mt-5">
     <div class="row justify-content-center">
         <div class="col-md-9">
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm border-0" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+
             <div class="card shadow-lg border-0 p-4" style="border-radius: 15px;">
                 <h2 class="fw-bold mb-4 text-primary"><i class="bi bi-calendar-plus"></i> Agendar Nueva Cita</h2>
                 
@@ -62,9 +71,19 @@
                         </button>
                     </div>
 
-                    {% if form.errors %}
+                    {% if form.errors or form.non_field_errors %}
                         <div class="alert alert-danger shadow-sm border-0 mt-3">
-                            <i class="bi bi-exclamation-triangle-fill me-2"></i> <strong>Error:</strong> {{ form.errors }}
+                            <i class="bi bi-exclamation-triangle-fill me-2"></i> <strong>Atención:</strong>
+                            <ul class="mb-0 mt-2">
+                                {% for error in form.non_field_errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                                {% for field in form %}
+                                    {% for error in field.errors %}
+                                        <li>{{ field.label }}: {{ error }}</li>
+                                    {% endfor %}
+                                {% endfor %}
+                            </ul>
                         </div>
                     {% endif %}
                 </form>
@@ -74,7 +93,6 @@
 </div>
 
 <style>
-    /* Diseño de los botones de selección de hora */
     .btn-check:checked + .btn-outline-primary {
         background-color: #0d6efd !important;
         color: white !important;
@@ -82,21 +100,9 @@
         transform: scale(1.05);
         box-shadow: 0 4px 10px rgba(13, 110, 253, 0.3);
     }
-    
-    .form-select, .form-control {
-        border-radius: 8px !important;
-        border: 1px solid #ced4da;
-    }
-
-    #lista-slots .btn {
-        transition: all 0.2s ease;
-        font-weight: 600;
-        border-radius: 10px;
-    }
-
-    #lista-slots .btn:hover {
-        background-color: #f0f7ff;
-    }
+    .form-select, .form-control { border-radius: 8px !important; border: 1px solid #ced4da; }
+    #lista-slots .btn { transition: all 0.2s ease; font-weight: 600; border-radius: 10px; }
+    #lista-slots .btn:hover { background-color: #f0f7ff; }
 </style>
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -114,12 +120,8 @@
                 $('#contenedor-slots').show();
 
                 $.ajax({
-                    // IMPORTANTE: Asegúrate de que el nombre coincide con el de tu urls.py de CitaApp
                     url: "{% url 'obtener_slots_ajax' %}", 
-                    data: {
-                        'fecha': fecha,
-                        'doctor_id': doctorId
-                    },
+                    data: { 'fecha': fecha, 'doctor_id': doctorId },
                     success: function(data) {
                         let html = '';
                         if (data.slots && data.slots.length > 0) {
@@ -141,8 +143,6 @@
                 });
             }
         }
-
-        // Escuchar cambios para actualizar la lista de horas
         inputFecha.on('change', cargarSlots);
         selectDoctor.on('change', cargarSlots);
     });
