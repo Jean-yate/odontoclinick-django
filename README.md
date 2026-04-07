@@ -29,7 +29,7 @@
 | **Backend** | Python 3.10+ / Django 5.x |
 | **Frontend** | HTML5, CSS3 (Custom Claymorphism), Bootstrap 5 |
 | **Iconografía** | Bootstrap Icons |
-| **Base de Datos** | PostgreSQL / SQL Server |
+| **Base de Datos** | MySQL |
 
 ---
 
