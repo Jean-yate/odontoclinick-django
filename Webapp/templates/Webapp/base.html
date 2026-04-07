@@ -114,6 +114,36 @@
 
         .pqrs-btn:hover { transform: translateY(-3px); }
 
+        /* ESTILOS MODAL CERRAR SESIÓN */
+        .modal-content.clay-modal {
+            border: none;
+            border-radius: 35px;
+            background: #fdfdfd;
+            box-shadow: var(--clay-shadow);
+            padding: 1rem;
+        }
+        .btn-logout-confirm {
+            background: #f1948a; /* Rojo suave */
+            color: white;
+            border-radius: 50px;
+            padding: 0.6rem 2rem;
+            border: none;
+            font-weight: 700;
+            transition: 0.3s;
+        }
+        .btn-logout-confirm:hover { background: #ec7063; transform: scale(1.03); }
+        .btn-logout-cancel {
+            background: white;
+            color: var(--secondary-color);
+            border-radius: 50px;
+            padding: 0.6rem 2rem;
+            border: none;
+            box-shadow: var(--clay-shadow);
+            font-weight: 700;
+            transition: 0.3s;
+        }
+        .btn-logout-cancel:hover { transform: translateY(-2px); }
+
         {% block extra_css %} {% endblock %}
     </style>
 </head>
@@ -136,11 +166,9 @@
                             {% if user.id_rol.nombre_rol == 'Secretaria' or user.id_rol.nombre_rol == 'Administrador' %}
                                 <li class="nav-item"><a class="nav-link" href="{% url 'panel_secretaria' %}">Dashboard</a></li>
                                 <li class="nav-item"><a class="nav-link" href="{% url 'lista_pacientes' %}">Pacientes</a></li>
-
                             {% elif user.id_rol.nombre_rol == 'Doctor' %}
                                 <li class="nav-item"><a class="nav-link" href="{% url 'dashboard_medico' %}">Mi Panel</a></li>
                                 <li class="nav-item"><a class="nav-link" href="{% url 'ver_citas' %}">Mi Agenda</a></li>
-
                             {% elif "Auxiliar" in user.id_rol.nombre_rol %}
                                 <li class="nav-item"><a class="nav-link" href="{% url 'dashboard_auxiliar' %}">Bodega</a></li>
                                 <li class="nav-item"><a class="nav-link" href="{% url 'lista_inventario' %}">Inventario</a></li>
@@ -163,7 +191,6 @@
                                     </li>
                                     <li><hr class="dropdown-divider"></li>
                                     
-                                    {# Enlaces de Perfil Dinámicos #}
                                     {% if user.id_rol.nombre_rol == 'Doctor' %}
                                         <li><a class="dropdown-item" href="{% url 'perfil_medico' %}"><i class="bi bi-person-badge me-2"></i>Perfil Médico</a></li>
                                     {% elif user.id_rol.nombre_rol == 'Paciente' %}
@@ -173,10 +200,9 @@
                                     {% endif %}
 
                                     <li>
-                                        <form action="{% url 'logout' %}" method="post" class="m-0">
-                                            {% csrf_token %}
-                                            <button type="submit" class="dropdown-item text-danger fw-bold"><i class="bi bi-door-open me-2"></i>Cerrar Sesión</button>
-                                        </form>
+                                        <button type="button" class="dropdown-item text-danger fw-bold" data-bs-toggle="modal" data-bs-target="#confirmLogoutModal">
+                                            <i class="bi bi-door-open me-2"></i>Cerrar Sesión
+                                        </button>
                                     </li>
                                 </ul>
                             </div>
@@ -204,6 +230,28 @@
 
         {% block content %}{% endblock %}
     </main>
+
+    <div class="modal fade" id="confirmLogoutModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content clay-modal text-center">
+                <div class="modal-body py-4">
+                    <div class="mb-3">
+                        <i class="bi bi-unlock text-muted" style="font-size: 3.5rem; opacity: 0.5;"></i>
+                    </div>
+                    <h5 class="fw-bold mb-2" style="color: var(--primary-color);">¿Terminar sesión?</h5>
+                    <p class="text-muted small px-4">Si cierras sesión, tendrás que ingresar tus credenciales nuevamente para acceder.</p>
+                    
+                    <div class="d-flex justify-content-center gap-3 mt-4">
+                        <button type="button" class="btn-logout-cancel" data-bs-dismiss="modal">Seguir aquí</button>
+                        <form action="{% url 'logout' %}" method="post" class="m-0">
+                            {% csrf_token %}
+                            <button type="submit" class="btn-logout-confirm">Cerrar sesión</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <footer class="text-center container">
         <a href="{% url 'pqrs' %}" class="pqrs-btn">

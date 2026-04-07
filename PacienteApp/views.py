@@ -5,19 +5,20 @@ from django.utils import timezone
 from .models import Paciente 
 from MedicoApp.models import HistorialMedico 
 from CitaApp.models import Cita
+from django.contrib.auth.password_validation import validate_password
 from CuentasApp.forms import EditarPerfilPacienteForm
+from django.core.exceptions import ValidationError
 
 @login_required
 def perfil_paciente(request):
-    # Seguridad: Solo pacientes pueden entrar a esta vista de perfil
+    # Seguridad: Solo pacientes
     if request.user.id_rol.nombre_rol != 'Paciente':
         messages.warning(request, "No tienes permisos para acceder a esta sección.")
         return redirect('home')
 
-    # Obtenemos los datos del paciente asociados al usuario logueado
     paciente = get_object_or_404(Paciente, id_usuario=request.user)
     
-    # Consultas para el Dashboard del Perfil
+    # Consultas para el Dashboard
     citas_proximas = Cita.objects.filter(
         id_paciente=paciente, 
         fecha_hora__gte=timezone.now()
@@ -27,7 +28,6 @@ def perfil_paciente(request):
         id_cita__id_paciente=paciente
     ).order_by('-fecha_creacion')
 
-    # Lógica del Formulario de Edición
     if request.method == 'POST':
         form = EditarPerfilPacienteForm(
             request.POST, 
@@ -35,14 +35,16 @@ def perfil_paciente(request):
             paciente_instance=paciente
         )
         if form.is_valid():
-            # Guardamos ambos modelos (Usuario y Paciente)
+            # El form.save debe manejar update_session_auth_hash si cambia password
             form.save(request=request) 
-            messages.success(request, "¡Perfil actualizado! Tus cambios se guardaron correctamente.")
+            messages.success(request, "¡Perfil actualizado correctamente!")
+            # Redirigir es vital para evitar re-envío de formulario al refrescar
             return redirect('perfil_paciente')
         else:
-            messages.error(request, "Por favor, corrige los errores en el formulario.")
+            # Imprimimos errores en consola para debugging si es necesario
+            print(form.errors)
+            messages.error(request, "Por favor, corrige los errores señalados.")
     else:
-        # Carga inicial con los datos actuales
         form = EditarPerfilPacienteForm(
             instance=request.user, 
             paciente_instance=paciente
@@ -53,4 +55,3 @@ def perfil_paciente(request):
         'citas_proximas': citas_proximas,
         'historial': historial
     })
-

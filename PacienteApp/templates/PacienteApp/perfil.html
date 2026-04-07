@@ -4,6 +4,7 @@
 
 {% block extra_css %}
 <style>
+    /* Estética Claymorphism */
     .clay-card-profile {
         background: white;
         border-radius: 35px;
@@ -41,7 +42,7 @@
         font-size: 0.7rem;
         padding: 0.4rem 1rem;
         border-radius: 50px;
-        text-uppercase;
+        text-transform: uppercase; /* Corregido */
         letter-spacing: 1px;
     }
 
@@ -82,7 +83,7 @@
         box-shadow: 0 5px 15px rgba(0,0,0,0.05);
     }
 
-    /* Inputs */
+    /* Inputs y Errores */
     .clay-form-inner label {
         color: var(--primary-color);
         margin-left: 5px;
@@ -99,6 +100,14 @@
         border-color: var(--accent-color);
         box-shadow: none;
         background: white;
+    }
+
+    .invalid-feedback-custom {
+        color: #dc3545;
+        font-size: 0.75rem;
+        margin-top: 0.25rem;
+        margin-left: 5px;
+        display: block;
     }
 
     .section-divider {
@@ -134,10 +143,10 @@
                 </div>
 
                 <div class="nav flex-column nav-pills nav-pills-clay" id="v-pills-tab" role="tablist">
-                    <button class="nav-link {% if not form.errors %}active{% endif %}" data-bs-toggle="pill" data-bs-target="#content-citas" type="button">
+                    <button class="nav-link {% if not form.errors %}active{% endif %}" id="tab-citas" data-bs-toggle="pill" data-bs-target="#content-citas" type="button" role="tab">
                         <i class="bi bi-calendar-event me-2"></i> Mis Citas
                     </button>
-                    <button class="nav-link {% if form.errors %}active{% endif %}" data-bs-toggle="pill" data-bs-target="#content-datos" type="button">
+                    <button class="nav-link {% if form.errors %}active{% endif %}" id="tab-datos" data-bs-toggle="pill" data-bs-target="#content-datos" type="button" role="tab">
                         <i class="bi bi-gear me-2"></i> Editar Perfil
                     </button>
                 </div>
@@ -148,7 +157,7 @@
             <div class="clay-card-profile h-100">
                 <div class="tab-content">
                     
-                    <div class="tab-pane fade {% if not form.errors %}show active{% endif %}" id="content-citas">
+                    <div class="tab-pane fade {% if not form.errors %}show active{% endif %}" id="content-citas" role="tabpanel">
                         <div class="d-flex justify-content-between align-items-center mb-4">
                             <h3 class="fw-bold m-0" style="color: var(--primary-color);">Mis Próximas Citas</h3>
                             <i class="bi bi-calendar-check fs-2 opacity-25"></i>
@@ -180,14 +189,15 @@
                             <div class="text-center py-5">
                                 <i class="bi bi-calendar-x fs-1 text-muted opacity-25"></i>
                                 <p class="text-muted mt-3">No tienes citas pendientes en este momento.</p>
-                                <a href="#" class="btn btn-outline-primary btn-sm rounded-pill px-4">Agendar Cita</a>
+                                <a href="{% url 'agendar_cita' %}" class="btn btn-outline-primary btn-sm rounded-pill px-4">Agendar Cita</a>
                             </div>
                         {% endif %}
                     </div>
 
-                    <div class="tab-pane fade {% if form.errors %}show active{% endif %}" id="content-datos">
+                    <div class="tab-pane fade {% if form.errors %}show active{% endif %}" id="content-datos" role="tabpanel">
                         <h3 class="fw-bold mb-4" style="color: var(--primary-color);">Configuración de Perfil</h3>
-                        <form method="post" class="clay-form-inner">
+                        
+                        <form method="post" class="clay-form-inner" novalidate>
                             {% csrf_token %}
                             
                             <div class="section-divider text-uppercase fw-bold">Información Básica</div>
@@ -195,18 +205,22 @@
                                 <div class="col-md-6">
                                     <label class="small fw-bold"><i class="bi bi-info-circle me-1"></i> Nombre(s)</label>
                                     {{ form.nombre }}
+                                    {% if form.nombre.errors %}<span class="invalid-feedback-custom">{{ form.nombre.errors.0 }}</span>{% endif %}
                                 </div>
                                 <div class="col-md-6">
                                     <label class="small fw-bold">Apellidos</label>
                                     {{ form.apellidos }}
+                                    {% if form.apellidos.errors %}<span class="invalid-feedback-custom">{{ form.apellidos.errors.0 }}</span>{% endif %}
                                 </div>
                                 <div class="col-md-6">
                                     <label class="small fw-bold"><i class="bi bi-envelope me-1"></i> Correo Electrónico</label>
                                     {{ form.correo }}
+                                    {% if form.correo.errors %}<span class="invalid-feedback-custom">{{ form.correo.errors.0 }}</span>{% endif %}
                                 </div>
                                 <div class="col-md-6">
                                     <label class="small fw-bold"><i class="bi bi-telephone me-1"></i> Teléfono</label>
                                     {{ form.telefono }}
+                                    {% if form.telefono.errors %}<span class="invalid-feedback-custom">{{ form.telefono.errors.0 }}</span>{% endif %}
                                 </div>
                             </div>
 
@@ -215,14 +229,17 @@
                                 <div class="col-md-4">
                                     <label class="small fw-bold">RH</label>
                                     {{ form.rh }}
+                                    {% if form.rh.errors %}<span class="invalid-feedback-custom">{{ form.rh.errors.0 }}</span>{% endif %}
                                 </div>
                                 <div class="col-md-8">
                                     <label class="small fw-bold">EPS</label>
                                     {{ form.eps }}
+                                    {% if form.eps.errors %}<span class="invalid-feedback-custom">{{ form.eps.errors.0 }}</span>{% endif %}
                                 </div>
                                 <div class="col-12">
                                     <label class="small fw-bold"><i class="bi bi-exclamation-triangle me-1"></i> Alergias Conocidas</label>
                                     {{ form.alergias }}
+                                    {% if form.alergias.errors %}<span class="invalid-feedback-custom">{{ form.alergias.errors.0 }}</span>{% endif %}
                                 </div>
                             </div>
 
@@ -231,11 +248,17 @@
                                 <div class="col-md-6">
                                     <label class="small fw-bold">Nueva Contraseña</label>
                                     {{ form.nueva_password }}
+                                    {% if form.nueva_password.errors %}
+                                        <span class="invalid-feedback-custom">{{ form.nueva_password.errors.0 }}</span>
+                                    {% endif %}
                                     <div class="form-text small">Dejar en blanco para no cambiar.</div>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="small fw-bold">Confirmar Contraseña</label>
                                     {{ form.confirmar_password }}
+                                    {% if form.confirmar_password.errors %}
+                                        <span class="invalid-feedback-custom">{{ form.confirmar_password.errors.0 }}</span>
+                                    {% endif %}
                                 </div>
                             </div>
 

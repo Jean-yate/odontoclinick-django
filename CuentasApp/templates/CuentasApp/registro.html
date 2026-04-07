@@ -1,33 +1,107 @@
 {% extends 'Webapp/base.html' %}
 
 {% block content %}
+<style>
+    /* Estilo para posicionar el ojo dentro del input */
+    .password-wrapper {
+        position: relative;
+    }
+    .toggle-password {
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        cursor: pointer;
+        z-index: 10;
+        color: #6c757d;
+    }
+    .form-control {
+        padding-right: 40px; /* Evita que el texto se solape con el ojo */
+    }
+</style>
+
 <div class="container mt-5">
     <div class="row justify-content-center">
         <div class="col-md-6">
             <div class="card shadow-lg border-0">
                 <div class="card-body p-5">
                     <h2 class="text-center fw-bold mb-4">Crear Cuenta</h2>
-                    <form method="post">
+                    
+                    <form method="post" novalidate>
                         {% csrf_token %}
                         
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger small py-2">
+                                {% for error in form.non_field_errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+
                         {% for field in form %}
                             <div class="mb-3">
                                 <label class="form-label small fw-bold">{{ field.label }}</label>
-                                {{ field }}
+                                
+                                {# Si el campo es una contraseña, envolvemos en el wrapper con el ojo #}
+                                {% if field.name == 'password' or field.name == 'confirmar_password' %}
+                                    <div class="password-wrapper">
+                                        {{ field }}
+                                        <i class="bi bi-eye toggle-password" id="toggle-{{ field.id_for_label }}"></i>
+                                    </div>
+                                {% else %}
+                                    {{ field }}
+                                {% endif %}
+                                
+                                {% if field.name == 'password' %}
+                                    <div class="form-text" style="font-size: 0.7rem;">
+                                        Mínimo 8 caracteres, evita contraseñas comunes.
+                                    </div>
+                                {% endif %}
+
                                 {% if field.errors %}
-                                    <div class="text-danger small">{{ field.errors }}</div>
+                                    <div class="text-danger mt-1" style="font-size: 0.75rem;">
+                                        {% for error in field.errors %}
+                                            <div class="d-flex align-items-start mb-1">
+                                                <i class="bi bi-exclamation-circle me-1 mt-1"></i>
+                                                <span>{{ error }}</span>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
                                 {% endif %}
                             </div>
                         {% endfor %}
 
-                        <button type="submit" class="btn btn-primary w-100 py-2 fw-bold mt-3">Registrarme</button>
+                        <button type="submit" class="btn btn-primary w-100 py-2 fw-bold mt-3">
+                            Registrarme
+                        </button>
                     </form>
+
                     <div class="text-center mt-4">
-                        <p class="small">¿Ya tienes cuenta? <a href="{% url 'login' %}">Inicia sesión aquí</a></p>
+                        <p class="small">¿Ya tienes cuenta? <a href="{% url 'login' %}" class="text-decoration-none">Inicia sesión aquí</a></p>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+    // Lógica para alternar visibilidad de contraseña
+    document.querySelectorAll('.toggle-password').forEach(button => {
+        button.addEventListener('click', function() {
+            // Buscamos el input que está justo antes del icono
+            const input = this.previousElementSibling;
+            
+            if (input.type === "password") {
+                input.type = "text";
+                this.classList.remove('bi-eye');
+                this.classList.add('bi-eye-slash');
+            } else {
+                input.type = "password";
+                this.classList.remove('bi-eye-slash');
+                this.classList.add('bi-eye');
+            }
+        });
+    });
+</script>
 {% endblock %}
