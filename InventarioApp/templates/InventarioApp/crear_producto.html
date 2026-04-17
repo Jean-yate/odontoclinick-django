@@ -9,6 +9,7 @@
                     <h2 class="fw-bold mb-4 text-dark">
                         {% if editando %} Modificar: {{ producto.nombre_producto }} {% else %} Nuevo Insumo {% endif %}
                     </h2>
+                    
                     <form method="POST">
                         {% csrf_token %}
                         
@@ -16,37 +17,56 @@
                             <div class="col-md-12">
                                 <label class="form-label fw-bold">Nombre del Producto</label>
                                 {{ form.nombre_producto }}
+                                <div class="text-danger small">{{ form.nombre_producto.errors }}</div>
                             </div>
+
+                            <div class="col-md-12">
+                                <label class="form-label fw-bold">Código del Producto (Obligatorio)</label>
+                                {{ form.codigo_producto }}
+                                <div class="text-danger small fw-bold">{{ form.codigo_producto.errors }}</div>
+                            </div>
+
                             <div class="col-md-12">
                                 <label class="form-label fw-bold">Categoría</label>
                                 {{ form.id_categoria }}
+                                <div class="text-danger small">{{ form.id_categoria.errors }}</div>
                             </div>
+
                             <div class="col-md-6">
                                 <label class="form-label fw-bold">Stock Inicial</label>
                                 {{ form.stock_actual }}
+                                <div class="text-danger small fw-bold">{{ form.stock_actual.errors }}</div>
                             </div>
+
                             <div class="col-md-6">
                                 <label class="form-label fw-bold">Alerta Stock Mínimo</label>
                                 {{ form.stock_minimo }}
+                                <div class="text-danger small fw-bold">{{ form.stock_minimo.errors }}</div>
                             </div>
+
                             <div class="col-md-6">
                                 <label class="form-label fw-bold">Precio de Compra (Costo)</label>
                                 {{ form.precio_compra }}
+                                <div class="text-danger small">{{ form.precio_compra.errors }}</div>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-bold">Precio Unitario</label>
                                 {{ form.precio_venta }}
+                                <div class="text-danger small">{{ form.precio_venta.errors }}</div>
                             </div>
+
                             <div class="col-md-12">
                                 <label class="form-label fw-bold">Notas adicionales</label>
                                 {{ form.descripcion }}
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label fw-bold">Código Personalizado (Opcional)</label>
-                                <input type="text" name="codigo_producto" class="form-control input-clay" 
-                                    value="{{ producto.codigo_producto|default:'' }}" placeholder="Ej: BRK-001">
+                                <div class="text-danger small">{{ form.descripcion.errors }}</div>
                             </div>
                         </div>
+
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger mt-3">
+                                {{ form.non_field_errors }}
+                            </div>
+                        {% endif %}
 
                         <div class="mt-5 d-flex gap-3">
                             <button type="submit" class="btn btn-primary rounded-pill px-5 py-2 shadow">Guardar Producto</button>

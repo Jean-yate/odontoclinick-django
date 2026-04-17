@@ -50,9 +50,15 @@ class AgendarCitaForm(forms.ModelForm):
         fecha_hora_inicio = getattr(self.instance, 'fecha_hora', None)
 
         if fecha_hora_inicio and doctor:
+            ahora = timezone.now()
             # 1. Evitar fechas pasadas
-            if fecha_hora_inicio < timezone.now():
+            if fecha_hora_inicio < ahora:
                 raise ValidationError("No se pueden agendar citas en fechas u horas pasadas.")
+
+            # --- NUEVA VALIDACIÓN: Límite Futuro (3 meses / 90 días) ---
+            limite_futuro = ahora + timedelta(days=90)
+            if fecha_hora_inicio > limite_futuro:
+                raise ValidationError("No se permite agendar citas con más de 3 meses de antelación.")
 
             # 2. Validación de choque de horarios (45 minutos de duración estimada)
             duracion_cita = timedelta(minutes=45)

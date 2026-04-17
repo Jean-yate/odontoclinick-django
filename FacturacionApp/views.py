@@ -20,6 +20,7 @@ from CitaApp.models import Cita
 def registrar_pago_cita(request, id_cita):
     """
     Registra abonos acumulativos y redirige con orden de impresión automática.
+    Incluye validación estricta de montos positivos y límites de saldo.
     """
     if request.user.id_rol.nombre_rol not in ['Secretaria', 'Administrador']:
         return redirect('home')
@@ -32,12 +33,21 @@ def registrar_pago_cita(request, id_cita):
             monto_input = request.POST.get('monto', '0').replace(',', '.')
             monto_pago = float(monto_input)
 
-            # 1. Validación: No dejar cobrar más de lo que debe
+            # 1. Validación: Bloquear montos negativos o cero
+            if monto_pago <= 0:
+                messages.error(request, "❌ El monto del abono debe ser un número positivo mayor a cero.")
+                return render(request, 'FacturacionApp/generar_cobro.html', {
+                    'cita': cita, 'metodos': metodos, 'total_abonado': cita.total_abonado, 'saldo_pendiente': cita.saldo_pendiente
+                })
+
+            # 2. Validación: No dejar cobrar más de lo que debe
             if monto_pago > cita.saldo_pendiente:
                 messages.warning(request, f"⚠️ El abono (${monto_pago}) excede el saldo restante (${cita.saldo_pendiente}).")
-                return redirect('registrar_pago_cita', id_cita=id_cita)
+                return render(request, 'FacturacionApp/generar_cobro.html', {
+                    'cita': cita, 'metodos': metodos, 'total_abonado': cita.total_abonado, 'saldo_pendiente': cita.saldo_pendiente
+                })
 
-            # 2. Creación atómica del pago
+            # 3. Creación atómica del pago
             with transaction.atomic():
                 Pago.objects.create(
                     id_cita=cita,
@@ -48,13 +58,10 @@ def registrar_pago_cita(request, id_cita):
                     notas=request.POST.get('notas')
                 )
                 
-                # Refrescamos la cita para actualizar propiedades
                 cita.refresh_from_db()
-                
                 messages.success(request, f"💰 Abono de ${monto_pago} registrado con éxito.")
             
-            # --- CAMBIO CLAVE PARA AUTOMATIZACIÓN ---
-            # Redirigimos a la lista de citas pasando el id para que el JS dispare la factura
+            # Redirigimos para impresión automática
             url_retorno = reverse('lista_citas')
             return redirect(f"{url_retorno}?imprimir_id={cita.id_cita}")
 
@@ -73,30 +80,30 @@ def registrar_pago_cita(request, id_cita):
 @login_required
 def generar_factura_ticket(request, id_cita):
     """
-    Genera el ticket POS calculando los valores en tiempo real 
-    para evitar conflictos con las @property del modelo Cita.
+    Genera el ticket POS calculando los valores en tiempo real.
     """
     cita = get_object_or_404(Cita, id_cita=id_cita)
-    
-    # 1. Obtenemos el historial de pagos de esta cita específica
     pagos = Pago.objects.filter(id_cita=cita).order_by('fecha_pago')
     
-    # 2. Realizamos los cálculos directamente en la vista
-    # Nota: Usamos 'costo_final' que ya tienes definido como property en tu modelo
+    # Cálculos directos para el ticket
     total_pagado = pagos.aggregate(total=Sum('monto'))['total'] or 0
-    saldo_restante = (cita.costo_final or 0) - total_pagado
+    # Aseguramos que el costo_final no sea None para evitar errores matemáticos
+    costo_total = cita.costo_final if cita.costo_final else 0
+    saldo_restante = costo_total - total_pagado
 
-    # 3. Enviamos los resultados como variables independientes al contexto
     return render(request, 'FacturacionApp/factura_pos.html', {
         'cita': cita,
         'pagos': pagos,
-        'total_abonado_calculado': total_pagado,   # Enviamos el dato calculado
-        'saldo_pendiente_calculado': saldo_restante, # Enviamos el saldo calculado
+        'total_abonado_calculado': total_pagado,
+        'saldo_pendiente_calculado': max(0, saldo_restante), # max(0,...) evita negativos visuales
         'hoy': timezone.now(),
     })
 
 @login_required
 def historial_pagos(request):
+    """
+    Muestra el historial completo de transacciones.
+    """
     if request.user.id_rol.nombre_rol not in ['Secretaria', 'Administrador']:
         return redirect('home')
 
@@ -108,7 +115,7 @@ def historial_pagos(request):
         'total_recaudado': total_recaudado
     })
 
-# --- FUNCIONES DE EXPORTACIÓN (REPORTES GENERALES) ---
+# --- FUNCIONES DE EXPORTACIÓN ---
 
 @login_required
 def exportar_pago_pdf(request):
@@ -138,14 +145,18 @@ def exportar_pago_pdf(request):
     y -= 20
     p.setFont("Helvetica", 10)
     for pago in pagos:
-        p.drawString(100, y, pago.fecha_pago.strftime('%d/%m/%Y'))
-        p.drawString(180, y, str(pago.id_cita.id_paciente)[:25])
-        p.drawString(350, y, str(pago.id_metodo_pago.nombre_metodo))
-        p.drawString(480, y, f"$ {pago.monto}")
-        y -= 20
         if y < 50:
             p.showPage()
             y = 750
+            p.setFont("Helvetica", 10)
+            
+        p.drawString(100, y, pago.fecha_pago.strftime('%d/%m/%Y'))
+        # Truncamos el nombre del paciente si es muy largo para que no se traslape con 'Método'
+        nombre_paciente = str(pago.id_cita.id_paciente)[:22] + ".." if len(str(pago.id_cita.id_paciente)) > 22 else str(pago.id_cita.id_paciente)
+        p.drawString(180, y, nombre_paciente)
+        p.drawString(350, y, str(pago.id_metodo_pago.nombre_metodo))
+        p.drawString(480, y, f"$ {pago.monto}")
+        y -= 20
             
     p.showPage()
     p.save()
@@ -165,12 +176,12 @@ def exportar_pago_excel(request):
     
     for pago in pagos:
         ws.append([
-            pago.fecha_pago.strftime('%d/%m/%Y %H:%M'),
+            pago.fecha_pago.replace(tzinfo=None) if pago.fecha_pago else "", # openpyxl prefiere datetime sin tz para Excel
             str(pago.id_cita.id_paciente),
             str(pago.id_metodo_pago.nombre_metodo),
             pago.referencia or "Sin referencia",
             pago.monto,
-            pago.notas or ""
+            pago.notes if hasattr(pago, 'notes') else (pago.notas if hasattr(pago, 'notas') else "")
         ])
     
     response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
