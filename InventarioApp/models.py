@@ -1,5 +1,5 @@
 from django.db import models
-from django.conf import settings # Para referenciar al usuario de forma segura
+from django.conf import settings 
 
 class CategoriaProducto(models.Model):
     id_categoria = models.AutoField(primary_key=True)
@@ -25,7 +25,7 @@ class Producto(models.Model):
     codigo_producto = models.CharField(unique=True, max_length=50, blank=True, null=True)
     nombre_producto = models.CharField(max_length=255)
     descripcion = models.TextField(blank=True, null=True)
-    id_categoria = models.ForeignKey(CategoriaProducto, models.PROTECT, db_column='id_categoria') # PROTECT evita borrar categorías con productos
+    id_categoria = models.ForeignKey(CategoriaProducto, models.PROTECT, db_column='id_categoria')
     
     # Precios y Stock
     precio_compra = models.DecimalField(max_digits=10, decimal_places=2)
@@ -33,12 +33,10 @@ class Producto(models.Model):
     stock_actual = models.IntegerField(default=0)
     stock_minimo = models.IntegerField(default=5)
     
-    # NUEVO: Unidad de medida para reportes precisos
     unidad_medida = models.CharField(max_length=2, choices=UNIDADES, default='UN')
-    
     fecha_vencimiento = models.DateField(blank=True, null=True)
-    activo = models.IntegerField(default=1) # 1 activo, 0 inactivo
-    fecha_creacion = models.DateTimeField(auto_now_add=True) # Se llena sola
+    activo = models.IntegerField(default=1)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"{self.nombre_producto} ({self.stock_actual} {self.unidad_medida})"

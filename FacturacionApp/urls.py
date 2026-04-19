@@ -4,7 +4,5 @@ from . import views
 urlpatterns = [
     path('cobrar/<int:id_cita>/', views.registrar_pago_cita, name='registrar_pago_cita'),
     path('historial/', views.historial_pagos, name='historial_pagos'),
-    path('exportar/pdf/', views.exportar_pago_pdf, name='exportar_pdf'),
-    path('exportar/excel/', views.exportar_pago_excel, name='exportar_excel'),
     path('factura/ticket/<int:id_cita>/', views.generar_factura_ticket, name='generar_factura_ticket'),
 ]

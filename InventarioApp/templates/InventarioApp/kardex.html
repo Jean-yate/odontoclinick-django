@@ -1,71 +1,145 @@
 {% extends 'Webapp/base.html' %}
-
 {% block title %}Kardex - Historial de Inventario{% endblock %}
 
 {% block content %}
-<div class="container mt-5 animate__animated animate__fadeIn">
+<div class="container mt-5 mb-5 animate__animated animate__fadeIn">
+
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h2 class="fw-bold text-dark">Movimientos de Inventario</h2>
-            <p class="text-muted small">Registro detallado de todos los movimientos de stock.</p>
+            <h2 class="fw-bold mb-1" style="color: var(--primary-color); letter-spacing: -1px;">
+                <i class="bi bi-arrow-left-right me-2"></i>Kardex de Inventario
+            </h2>
+            <p class="text-muted fw-semibold mb-0">
+                Historial detallado — <strong>{{ total }}</strong> movimiento(s) encontrados.
+            </p>
         </div>
-        <button onclick="window.print()" class="btn btn-outline-primary rounded-pill">
-            <i class="bi bi-printer me-2"></i>Imprimir Reporte
-        </button>
+        <div class="d-flex gap-2">
+            <a href="{% url 'dashboard_auxiliar' %}" class="btn btn-light rounded-pill px-4 border fw-bold">
+                <i class="bi bi-arrow-left me-2"></i>Volver
+            </a>
+        </div>
     </div>
 
-    <div class="card-clay p-4">
+    <div class="mb-4 p-4" style="background: white; border-radius: 30px; box-shadow: var(--clay-shadow);">
+        <h6 class="fw-bold mb-3" style="color: var(--secondary-color); text-transform: uppercase; letter-spacing: 1px; font-size: 0.75rem;">
+            <i class="bi bi-funnel me-2"></i>Filtros de Auditoría
+        </h6>
+        <form method="GET">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-2">
+                    <label class="form-label fw-bold small">Desde</label>
+                    <input type="date" name="fecha_inicio" class="form-control border-0 rounded-pill bg-light px-3" value="{{ request.GET.fecha_inicio }}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-bold small">Hasta</label>
+                    <input type="date" name="fecha_fin" class="form-control border-0 rounded-pill bg-light px-3" value="{{ request.GET.fecha_fin }}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-bold small">Tipo</label>
+                    <select name="tipo" class="form-select border-0 rounded-pill bg-light px-3">
+                        <option value="">Todos</option>
+                        <option value="ENTRADA" {% if request.GET.tipo == 'ENTRADA' %}selected{% endif %}>Entrada</option>
+                        <option value="SALIDA" {% if request.GET.tipo == 'SALIDA' %}selected{% endif %}>Salida</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-bold small">Producto</label>
+                    <input type="text" name="producto" class="form-control border-0 rounded-pill bg-light px-3" placeholder="Nombre o #" value="{{ request.GET.producto }}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-bold small">Responsable</label>
+                    <input type="text" name="usuario" class="form-control border-0 rounded-pill bg-light px-3" placeholder="Usuario..." value="{{ request.GET.usuario }}">
+                </div>
+                <div class="col-md-2 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold shadow-sm w-100">
+                        <i class="bi bi-search"></i>
+                    </button>
+                    <a href="{% url 'kardex' %}" class="btn btn-light rounded-pill px-3 border fw-bold">
+                        <i class="bi bi-arrow-clockwise"></i>
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div class="d-flex align-items-center gap-2">
+            <span class="badge rounded-pill px-3 py-2" style="background: var(--bg-body); color: var(--primary-color); font-weight: 700; font-size: 0.8rem;">
+                {{ total }} registros
+            </span>
+            {% if request.GET.fecha_inicio or request.GET.tipo or request.GET.producto or request.GET.usuario %}
+                <span class="badge bg-primary rounded-pill px-3 py-2" style="font-size: 0.75rem;">
+                    <i class="bi bi-funnel-fill me-1"></i>Filtros activos
+                </span>
+            {% endif %}
+        </div>
+        <div class="d-flex gap-2">
+            <a href="?{{ request.GET.urlencode }}&exportar=excel" class="btn btn-success rounded-pill px-4 fw-bold shadow-sm">
+                <i class="bi bi-file-earmark-excel me-2"></i>Excel
+            </a>
+            <a href="?{{ request.GET.urlencode }}&exportar=pdf" class="btn btn-danger rounded-pill px-4 fw-bold shadow-sm">
+                <i class="bi bi-file-earmark-pdf me-2"></i>PDF
+            </a>
+        </div>
+    </div>
+
+    <div style="background: white; border-radius: 30px; box-shadow: var(--clay-shadow); overflow: hidden;">
         <div class="table-responsive">
-            <table class="table table-hover align-middle">
-                <thead class="table-light">
+            <table class="table table-hover align-middle mb-0">
+                <thead style="background: var(--bg-body);">
                     <tr>
-                        <th>FECHA / HORA</th>
-                        <th>PRODUCTO</th>
-                        <th>TIPO</th>
-                        <th class="text-center">CANTIDAD</th>
-                        <th class="text-center">STOCK RESULTANTE</th>
-                        <th>RESPONSABLE</th>
-                        <th>MOTIVO</th>
+                        <th class="ps-4" style="font-size: 0.75rem; text-transform: uppercase; color: var(--secondary-color); padding: 1.2rem 1rem;">Fecha / Hora</th>
+                        <th style="font-size: 0.75rem; text-transform: uppercase; color: var(--secondary-color);">Producto</th>
+                        <th style="font-size: 0.75rem; text-transform: uppercase; color: var(--secondary-color);">Tipo</th>
+                        <th class="text-center" style="font-size: 0.75rem; text-transform: uppercase; color: var(--secondary-color);">Cantidad</th>
+                        <th class="text-center" style="font-size: 0.75rem; text-transform: uppercase; color: var(--secondary-color);">Stock Resultante</th>
+                        <th style="font-size: 0.75rem; text-transform: uppercase; color: var(--secondary-color);">Responsable</th>
+                        <th style="font-size: 0.75rem; text-transform: uppercase; color: var(--secondary-color);">Motivo</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {% for mov in movimientos %}
-                    <tr>
-                        <td class="small text-muted">{{ mov.fecha_movimiento|date:"d/m/Y H:i" }}</td>
-                        <td>
-                            <span class="fw-bold">{{ mov.producto.nombre_producto }}</span>
+                    {% for m in movimientos %}
+                    <tr style="border-bottom: 1px solid var(--bg-body);">
+                        <td class="ps-4">
+                            <div class="fw-bold" style="color: var(--primary-color);">{{ m.fecha_movimiento|date:"d/m/Y" }}</div>
+                            <small class="text-muted">{{ m.fecha_movimiento|time:"H:i" }}</small>
                         </td>
                         <td>
-                            {% if mov.tipo_movimiento == 'ENTRADA' %}
-                                <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-3">
-                                    <i class="bi bi-arrow-down-left me-1"></i> ENTRADA
+                            <div class="fw-bold text-dark">{{ m.producto.nombre_producto }}</div>
+                            <small class="text-muted">#{{ m.producto.codigo_producto|default:"S/C" }}</small>
+                        </td>
+                        <td>
+                            {% if m.tipo_movimiento == 'ENTRADA' %}
+                                <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-3 fw-bold">
+                                    <i class="bi bi-arrow-down-left me-1"></i>ENTRADA
                                 </span>
                             {% else %}
-                                <span class="badge bg-warning bg-opacity-10 text-warning rounded-pill px-3">
-                                    <i class="bi bi-arrow-up-right me-1"></i> SALIDA
+                                <span class="badge bg-warning bg-opacity-10 text-warning rounded-pill px-3 fw-bold">
+                                    <i class="bi bi-arrow-up-right me-1"></i>SALIDA
                                 </span>
                             {% endif %}
                         </td>
-                        <td class="text-center fw-bold">
-                            {% if mov.tipo_movimiento == 'ENTRADA' %}+{% else %}-{% endif %}{{ mov.cantidad }}
+                        <td class="fw-bold text-center">
+                            {% if m.tipo_movimiento == 'ENTRADA' %}
+                                <span class="text-success">+{{ m.cantidad }}</span>
+                            {% else %}
+                                <span class="text-danger">-{{ m.cantidad }}</span>
+                            {% endif %}
                         </td>
                         <td class="text-center">
-                            <span class="badge bg-light text-dark">{{ mov.stock_nuevo }}</span>
+                            <span class="badge bg-light text-dark border rounded-pill px-3">{{ m.stock_nuevo }}</span>
                         </td>
-                        <td class="small">
-                            <i class="bi bi-person-circle me-1"></i> 
-                            {% if mov.id_usuario %}
-                                {# Probamos con el objeto directo o el campo que use tu modelo #}
-                                {{ mov.id_usuario }} 
-                            {% else %}
-                                <span class="text-muted">Sistema</span>
-                            {% endif %}
+                        <td class="text-muted small fw-bold">
+                            <i class="bi bi-person-circle me-1"></i>{{ m.id_usuario|default:"Sistema" }}
                         </td>
-                        <td class="text-muted small italic">{{ mov.motivo }}</td>
+                        <td class="text-muted small">{{ m.motivo|default:"-" }}</td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="7" class="text-center py-5 text-muted">No hay movimientos registrados aún.</td>
+                        <td colspan="7" class="text-center py-5">
+                            <i class="bi bi-journal-x fs-1 opacity-25 d-block mb-3"></i>
+                            <p class="text-muted fw-bold">No se encontraron movimientos con estos filtros.</p>
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>

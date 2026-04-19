@@ -39,6 +39,9 @@ INSTALLED_APPS = [
     'django.contrib.sites',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'data_wizard',
+    'data_wizard.sources',
+    'rest_framework',
     'Webapp',            # La página principal
     'CuentasApp',        # Usuarios y Roles
     'PacienteApp',       # Fichas de pacientes
@@ -139,6 +142,14 @@ USE_TZ = False
 
 SITE_ID = 1
 
+DATA_WIZARD = {
+    'BACKEND': 'data_wizard.backends.threading',
+    'LOADER': 'data_wizard.loaders.FileLoader',
+    'IDMAPPER': 'data_wizard.idmappers.ModelIDMapper',
+    'PARSERS': [
+        'data_wizard.parsers.CSVParser',
+    ],
+}
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/

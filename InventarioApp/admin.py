@@ -1,5 +1,7 @@
 from django.contrib import admin
+import data_wizard
 from .models import CategoriaProducto, Producto, MovimientoInventario
+from .serializers import ProductoSerializer
 
 @admin.register(CategoriaProducto)
 class CategoriaAdmin(admin.ModelAdmin):
@@ -12,15 +14,12 @@ class ProductoAdmin(admin.ModelAdmin):
 
 @admin.register(MovimientoInventario)
 class MovimientoAdmin(admin.ModelAdmin):
-    # --- CAMBIO RADICAL AQUÍ ---
-    # Quitamos 'id_producto' de la lista principal para que no bloquee el arranque
     list_display = ('id_movimiento', 'mostrar_producto', 'tipo_movimiento', 'cantidad', 'fecha_movimiento')
-    
-    # Creamos una función "falsa" para mostrar el producto sin que Django se queje
+
     def mostrar_producto(self, obj):
         return obj.id_producto.nombre_producto
-    
-    # Le ponemos nombre a la columna en el Admin
     mostrar_producto.short_description = 'Producto'
 
     list_filter = ('tipo_movimiento', 'fecha_movimiento')
+
+data_wizard.register("Productos - Carga Masiva", ProductoSerializer)

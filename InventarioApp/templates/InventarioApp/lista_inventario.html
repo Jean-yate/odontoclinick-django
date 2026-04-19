@@ -5,13 +5,13 @@
 {% block extra_css %}
 <style>
     .table-container-clay { background: white; border-radius: 30px; box-shadow: var(--clay-shadow); padding: 2rem; border: none; }
-    .table thead th { border-bottom: 2px solid #f0ece9; color: var(--secondary-color); font-weight: 700; text-transform: uppercase; font-size: 0.8rem; letter-spacing: 1px; }
+    .table thead th { border-bottom: 2px solid #f0ece9; color: var(--secondary-color); font-weight: 700; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 1px; }
     .product-name { font-weight: 700; color: var(--primary-color); margin-bottom: 0; }
     .btn-circle { width: 40px; height: 40px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; transition: all 0.3s; border: none; background: #f8f9fa; text-decoration: none; }
     .btn-circle:hover { transform: scale(1.1); background: #fff; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
     .badge-stock { padding: 0.6rem 1rem; border-radius: 50px; font-weight: 700; }
-    .modal-content-clay { border-radius: 35px; border: none; box-shadow: var(--clay-shadow); }
-    .input-clay { background-color: #f8f9fa !important; border: none !important; padding: 0.8rem; border-radius: 15px !important; }
+    .filter-card { background: #fff; border-radius: 25px; box-shadow: var(--clay-shadow); border: none; margin-bottom: 2rem; }
+    .input-clay { background-color: #f8f9fa !important; border: none !important; border-radius: 15px !important; padding: 0.6rem 1rem; }
     .text-entrada { color: #28a745 !important; }
     .text-salida { color: #dc3545 !important; }
     .text-editar { color: #007bff !important; }
@@ -22,39 +22,94 @@
 <div id="contenedor-notificaciones" class="position-fixed bottom-0 end-0 p-3" style="z-index: 1060;"></div>
 
 <div class="container mt-5">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex justify-content-between align-items-start mb-4">
         <div>
             <h2 class="fw-bold text-dark mb-1">Gestión de Inventario</h2>
-            <p class="text-muted small">Panel de control de insumos médicos.</p>
+            <p class="text-muted small">Panel Maestro: Filtra, gestiona y exporta reportes en tiempo real.</p>
         </div>
-        <a href="{% url 'crear_producto' %}" class="btn btn-primary shadow-sm rounded-pill px-4">
-            <i class="bi bi-plus-lg me-2"></i>NUEVO PRODUCTO
-        </a>
+        <div class="d-flex gap-2">
+            <a href="?{{ request.GET.urlencode }}&exportar=excel" class="btn btn-success rounded-pill px-3 fw-bold shadow-sm">
+                <i class="bi bi-file-earmark-excel me-1"></i> EXCEL
+            </a>
+            <a href="?{{ request.GET.urlencode }}&exportar=pdf" class="btn btn-danger rounded-pill px-3 fw-bold shadow-sm">
+                <i class="bi bi-file-earmark-pdf me-1"></i> PDF
+            </a>
+            <a href="{% url 'crear_producto' %}" class="btn btn-primary shadow-sm rounded-pill px-4 fw-bold">
+                <i class="bi bi-plus-lg me-2"></i>NUEVO
+            </a>
+        </div>
     </div>
 
-    <div class="table-container-clay animate__animated animate__fadeIn">
+    <div class="filter-card p-4 animate__animated animate__fadeIn">
+        <form method="GET" class="row g-3 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label fw-bold small text-muted">Buscar Producto</label>
+                <input type="text" name="nombre" class="form-control input-clay" placeholder="Nombre o código..." value="{{ request.GET.nombre }}">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label fw-bold small text-muted">Categoría</label>
+                <select name="categoria" class="form-select input-clay">
+                    <option value="">Todas</option>
+                    {% for c in categorias %}
+                        <option value="{{ c.id_categoria }}" {% if request.GET.categoria == c.id_categoria|stringformat:"s" %}selected{% endif %}>
+                            {{ c.nombre_categoria }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label fw-bold small text-muted">Estado</label>
+                <select name="estado" class="form-select input-clay">
+                    <option value="">Todos</option>
+                    <option value="activo" {% if request.GET.estado == 'activo' %}selected{% endif %}>Activo</option>
+                    <option value="inactivo" {% if request.GET.estado == 'inactivo' %}selected{% endif %}>Inactivo</option>
+                    <option value="critico" {% if request.GET.estado == 'critico' %}selected{% endif %}>Stock Crítico</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-bold small text-muted">Rango Stock</label>
+                <div class="d-flex gap-2">
+                    <input type="number" name="stock_min" class="form-control input-clay" placeholder="Min" value="{{ request.GET.stock_min }}">
+                    <input type="number" name="stock_max" class="form-control input-clay" placeholder="Max" value="{{ request.GET.stock_max }}">
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary rounded-pill w-100 fw-bold shadow-sm">
+                        <i class="bi bi-funnel"></i> Filtrar
+                    </button>
+                    <a href="{% url 'lista_inventario' %}" class="btn btn-light rounded-pill shadow-sm" title="Limpiar">
+                        <i class="bi bi-arrow-clockwise"></i>
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <div class="table-container-clay animate__animated animate__fadeInUp">
         <div class="table-responsive">
-            <table class="table table-hover align-middle">
+            <table class="table table-hover align-middle mb-0">
                 <thead>
                     <tr>
                         <th>CÓDIGO</th>
                         <th>PRODUCTO</th>
                         <th>CATEGORÍA</th>
                         <th class="text-center">STOCK</th>
-                        <th>PRECIO VENTA</th>
+                        <th>P. VENTA</th>
+                        <th class="text-center">ESTADO</th>
                         <th class="text-center">ACCIONES</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for producto in productos %}
                     <tr>
-                        <td class="small fw-bold text-muted">#{{ producto.id_producto }}</td>
+                        <td class="small fw-bold text-muted">#{{ producto.codigo_producto|default:producto.id_producto }}</td>
                         <td>
                             <p class="product-name">{{ producto.nombre_producto }}</p>
                             <span class="text-muted small">{{ producto.unidad_medida }}</span>
                         </td>
                         <td>
-                            <span class="badge bg-light text-dark px-3 py-2 rounded-pill">
+                            <span class="badge bg-light text-dark px-3 py-2 rounded-pill border">
                                 {{ producto.id_categoria.nombre_categoria }}
                             </span>
                         </td>
@@ -65,21 +120,23 @@
                         </td>
                         <td class="fw-bold text-primary">${{ producto.precio_venta }}</td>
                         <td class="text-center">
+                            <button class="btn-estado badge {% if producto.activo == 1 %}bg-success{% else %}bg-danger{% endif %} border-0 py-2 px-3 rounded-pill shadow-sm text-white" 
+                                    data-id="{{ producto.id_producto }}"
+                                    id="btn-estado-{{ producto.id_producto }}">
+                                {% if producto.activo == 1 %} Activo {% else %} Inactivo {% endif %}
+                            </button>
+                        </td>
+                        <td class="text-center">
                             <div class="d-flex justify-content-center align-items-center gap-2">
-                                <button class="btn-circle text-entrada" data-bs-toggle="modal" data-bs-target="#modalEntrada{{ producto.pk }}"><i class="bi bi-box-arrow-in-down fs-5"></i></button>
-                                <button class="btn-circle text-salida" data-bs-toggle="modal" data-bs-target="#modalSalida{{ producto.pk }}"><i class="bi bi-box-arrow-up fs-5"></i></button>
-                                <a href="{% url 'editar_producto' producto.id_producto %}" class="btn-circle text-editar"><i class="bi bi-pencil-square fs-5"></i></a>
-                                <button class="btn-estado badge {% if producto.activo == 1 %}bg-success{% else %}bg-danger{% endif %} border-0 py-2 px-3 rounded-pill shadow-sm text-white" 
-                                        data-id="{{ producto.id_producto }}"
-                                        id="btn-estado-{{ producto.id_producto }}">
-                                    {% if producto.activo == 1 %} Activo {% else %} Inactivo {% endif %}
-                                </button>
+                                <button class="btn-circle text-entrada" data-bs-toggle="modal" data-bs-target="#modalEntrada{{ producto.pk }}" title="Entrada"><i class="bi bi-box-arrow-in-down fs-5"></i></button>
+                                <button class="btn-circle text-salida" data-bs-toggle="modal" data-bs-target="#modalSalida{{ producto.pk }}" title="Salida"><i class="bi bi-box-arrow-up fs-5"></i></button>
+                                <a href="{% url 'editar_producto' producto.id_producto %}" class="btn-circle text-editar" title="Editar"><i class="bi bi-pencil-square fs-5"></i></a>
                             </div>
                         </td>
                     </tr>
                     {% include 'InventarioApp/modales_inventario.html' %}
                     {% empty %}
-                    <tr><td colspan="6" class="text-center py-5">No hay productos registrados.</td></tr>
+                    <tr><td colspan="7" class="text-center py-5 text-muted">No se encontraron productos con los filtros aplicados.</td></tr>
                     {% endfor %}
                 </tbody>
             </table>

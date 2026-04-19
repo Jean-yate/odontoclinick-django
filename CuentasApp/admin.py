@@ -1,6 +1,8 @@
 # CuentasApp/admin.py
 from django.contrib import admin
+import data_wizard
 from .models import Usuario, Rol, Estado
+from .serializers import PacienteMasivoSerializer
 
 @admin.register(Rol)
 class RolAdmin(admin.ModelAdmin):
@@ -15,3 +17,8 @@ class UsuarioAdmin(admin.ModelAdmin):
     list_display = ('nombre_usuario', 'nombre', 'apellidos', 'id_rol', 'id_estado')
     list_filter = ('id_rol', 'id_estado')
     search_fields = ('nombre_usuario', 'correo')
+
+data_wizard.register(
+    "Pacientes - Carga Masiva",
+    PacienteMasivoSerializer
+)

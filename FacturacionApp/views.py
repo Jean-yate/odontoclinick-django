@@ -4,27 +4,23 @@ from django.utils import timezone
 from django.contrib import messages
 from django.http import HttpResponse
 from django.db import transaction
-from django.db.models import Sum
+from django.db.models import Sum, Q
 from django.urls import reverse
-
-# Librerías para exportar archivos
-from reportlab.pdfgen import canvas
-from reportlab.lib.pagesizes import letter
 from openpyxl import Workbook
-
-# Importación de modelos
+from io import BytesIO
+from reportlab.lib.pagesizes import letter
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, TableStyle
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib import colors
 from .models import Pago, MetodoPago
 from CitaApp.models import Cita
 
+
 @login_required
 def registrar_pago_cita(request, id_cita):
-    """
-    Registra abonos acumulativos y redirige con orden de impresión automática.
-    Incluye validación estricta de montos positivos y límites de saldo.
-    """
     if request.user.id_rol.nombre_rol not in ['Secretaria', 'Administrador']:
         return redirect('home')
-        
+
     cita = get_object_or_404(Cita, pk=id_cita)
     metodos = MetodoPago.objects.filter(activo=1)
 
@@ -33,21 +29,22 @@ def registrar_pago_cita(request, id_cita):
             monto_input = request.POST.get('monto', '0').replace(',', '.')
             monto_pago = float(monto_input)
 
-            # 1. Validación: Bloquear montos negativos o cero
             if monto_pago <= 0:
-                messages.error(request, "❌ El monto del abono debe ser un número positivo mayor a cero.")
+                messages.error(request, "❌ El monto debe ser mayor a cero.")
                 return render(request, 'FacturacionApp/generar_cobro.html', {
-                    'cita': cita, 'metodos': metodos, 'total_abonado': cita.total_abonado, 'saldo_pendiente': cita.saldo_pendiente
+                    'cita': cita, 'metodos': metodos,
+                    'total_abonado': cita.total_abonado,
+                    'saldo_pendiente': cita.saldo_pendiente
                 })
 
-            # 2. Validación: No dejar cobrar más de lo que debe
             if monto_pago > cita.saldo_pendiente:
-                messages.warning(request, f"⚠️ El abono (${monto_pago}) excede el saldo restante (${cita.saldo_pendiente}).")
+                messages.warning(request, f"⚠️ El abono excede el saldo restante (${cita.saldo_pendiente}).")
                 return render(request, 'FacturacionApp/generar_cobro.html', {
-                    'cita': cita, 'metodos': metodos, 'total_abonado': cita.total_abonado, 'saldo_pendiente': cita.saldo_pendiente
+                    'cita': cita, 'metodos': metodos,
+                    'total_abonado': cita.total_abonado,
+                    'saldo_pendiente': cita.saldo_pendiente
                 })
 
-            # 3. Creación atómica del pago
             with transaction.atomic():
                 Pago.objects.create(
                     id_cita=cita,
@@ -57,11 +54,9 @@ def registrar_pago_cita(request, id_cita):
                     referencia=request.POST.get('referencia'),
                     notas=request.POST.get('notas')
                 )
-                
                 cita.refresh_from_db()
                 messages.success(request, f"💰 Abono de ${monto_pago} registrado con éxito.")
-            
-            # Redirigimos para impresión automática
+
             url_retorno = reverse('lista_citas')
             return redirect(f"{url_retorno}?imprimir_id={cita.id_cita}")
 
@@ -77,17 +72,12 @@ def registrar_pago_cita(request, id_cita):
         'saldo_pendiente': cita.saldo_pendiente
     })
 
+
 @login_required
 def generar_factura_ticket(request, id_cita):
-    """
-    Genera el ticket POS calculando los valores en tiempo real.
-    """
     cita = get_object_or_404(Cita, id_cita=id_cita)
     pagos = Pago.objects.filter(id_cita=cita).order_by('fecha_pago')
-    
-    # Cálculos directos para el ticket
     total_pagado = pagos.aggregate(total=Sum('monto'))['total'] or 0
-    # Aseguramos que el costo_final no sea None para evitar errores matemáticos
     costo_total = cita.costo_final if cita.costo_final else 0
     saldo_restante = costo_total - total_pagado
 
@@ -95,96 +85,101 @@ def generar_factura_ticket(request, id_cita):
         'cita': cita,
         'pagos': pagos,
         'total_abonado_calculado': total_pagado,
-        'saldo_pendiente_calculado': max(0, saldo_restante), # max(0,...) evita negativos visuales
+        'saldo_pendiente_calculado': max(0, saldo_restante),
         'hoy': timezone.now(),
     })
 
+
 @login_required
 def historial_pagos(request):
-    """
-    Muestra el historial completo de transacciones.
-    """
     if request.user.id_rol.nombre_rol not in ['Secretaria', 'Administrador']:
         return redirect('home')
 
-    pagos = Pago.objects.all().order_by('-fecha_pago')
+    metodos = MetodoPago.objects.all()
+    pagos = Pago.objects.all().select_related(
+        'id_cita__id_paciente__id_usuario',
+        'id_metodo_pago'
+    ).order_by('-fecha_pago')
+
+    fecha_inicio = request.GET.get('fecha_inicio')
+    fecha_fin = request.GET.get('fecha_fin')
+    metodo = request.GET.get('metodo')
+    paciente = request.GET.get('paciente')
+    monto_min = request.GET.get('monto_min')
+    monto_max = request.GET.get('monto_max')
+
+    if fecha_inicio:
+        pagos = pagos.filter(fecha_pago__date__gte=fecha_inicio)
+    if fecha_fin:
+        pagos = pagos.filter(fecha_pago__date__lte=fecha_fin)
+    if metodo:
+        pagos = pagos.filter(id_metodo_pago__id_metodo_pago=metodo)
+    if paciente:
+        pagos = pagos.filter(
+            Q(id_cita__id_paciente__id_usuario__nombre__icontains=paciente) |
+            Q(id_cita__id_paciente__id_usuario__apellidos__icontains=paciente)
+        )
+    if monto_min:
+        pagos = pagos.filter(monto__gte=monto_min)
+    if monto_max:
+        pagos = pagos.filter(monto__lte=monto_max)
+
     total_recaudado = pagos.aggregate(Sum('monto'))['monto__sum'] or 0
-    
+
+    if request.GET.get('exportar') == 'excel':
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Historial Pagos"
+        ws.append(['Fecha', 'Paciente', 'Método', 'Referencia', 'Monto', 'Notas'])
+        for p in pagos:
+            ws.append([
+                p.fecha_pago.strftime('%d/%m/%Y %H:%M'),
+                str(p.id_cita.id_paciente),
+                p.id_metodo_pago.nombre_metodo,
+                p.referencia or 'Sin referencia',
+                str(p.monto),
+                p.notas or '',
+            ])
+        response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        response['Content-Disposition'] = 'attachment; filename="Historial_Pagos.xlsx"'
+        wb.save(response)
+        return response
+
+    if request.GET.get('exportar') == 'pdf':
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=letter)
+        elements = []
+        styles = getSampleStyleSheet()
+        elements.append(Paragraph("Historial de Pagos - OdontoClinick", styles['Title']))
+        elements.append(Paragraph(f"Total recaudado: ${total_recaudado}", styles['Normal']))
+        data = [['Fecha', 'Paciente', 'Método', 'Referencia', 'Monto']]
+        for p in pagos:
+            data.append([
+                p.fecha_pago.strftime('%d/%m/%Y'),
+                str(p.id_cita.id_paciente),
+                p.id_metodo_pago.nombre_metodo,
+                p.referencia or 'Sin ref.',
+                f"${p.monto}",
+            ])
+        t = Table(data, colWidths=[80, 120, 80, 80, 60])
+        t.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.green),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('FONTSIZE', (0, 0), (-1, -1), 8),
+        ]))
+        elements.append(t)
+        doc.build(elements)
+        response = HttpResponse(content_type='application/pdf')
+        response['Content-Disposition'] = 'attachment; filename="Historial_Pagos.pdf"'
+        response.write(buffer.getvalue())
+        buffer.close()
+        return response
+
     return render(request, 'FacturacionApp/historial_pagos.html', {
         'pagos': pagos,
-        'total_recaudado': total_recaudado
+        'metodos': metodos,
+        'total_recaudado': total_recaudado,
     })
-
-# --- FUNCIONES DE EXPORTACIÓN ---
-
-@login_required
-def exportar_pago_pdf(request):
-    if request.user.id_rol.nombre_rol not in ['Secretaria', 'Administrador']:
-        return redirect('home')
-
-    pagos = Pago.objects.all().order_by('-fecha_pago')
-    response = HttpResponse(content_type='application/pdf')
-    response['Content-Disposition'] = 'attachment; filename="Reporte_OdontoClinick.pdf"'
-    
-    p = canvas.Canvas(response, pagesize=letter)
-    p.setTitle("Reporte de Facturación")
-    
-    p.setFont("Helvetica-Bold", 16)
-    p.drawString(100, 750, "ODONTOCLINICK - REPORTE DE FACTURACIÓN")
-    p.setFont("Helvetica", 10)
-    p.drawString(100, 735, f"Fecha: {timezone.now().strftime('%d/%m/%Y %H:%M')}")
-    p.line(100, 730, 550, 730)
-    
-    y = 700
-    p.setFont("Helvetica-Bold", 11)
-    p.drawString(100, y, "Fecha")
-    p.drawString(180, y, "Paciente")
-    p.drawString(350, y, "Método")
-    p.drawString(480, y, "Monto")
-    
-    y -= 20
-    p.setFont("Helvetica", 10)
-    for pago in pagos:
-        if y < 50:
-            p.showPage()
-            y = 750
-            p.setFont("Helvetica", 10)
-            
-        p.drawString(100, y, pago.fecha_pago.strftime('%d/%m/%Y'))
-        # Truncamos el nombre del paciente si es muy largo para que no se traslape con 'Método'
-        nombre_paciente = str(pago.id_cita.id_paciente)[:22] + ".." if len(str(pago.id_cita.id_paciente)) > 22 else str(pago.id_cita.id_paciente)
-        p.drawString(180, y, nombre_paciente)
-        p.drawString(350, y, str(pago.id_metodo_pago.nombre_metodo))
-        p.drawString(480, y, f"$ {pago.monto}")
-        y -= 20
-            
-    p.showPage()
-    p.save()
-    return response
-
-@login_required
-def exportar_pago_excel(request):
-    if request.user.id_rol.nombre_rol not in ['Secretaria', 'Administrador']:
-        return redirect('home')
-
-    pagos = Pago.objects.all().order_by('-fecha_pago')
-    wb = Workbook()
-    ws = wb.active
-    ws.title = "Historial de Pagos"
-    
-    ws.append(['Fecha de Pago', 'Paciente', 'Método de Pago', 'Referencia', 'Monto', 'Notas'])
-    
-    for pago in pagos:
-        ws.append([
-            pago.fecha_pago.replace(tzinfo=None) if pago.fecha_pago else "", # openpyxl prefiere datetime sin tz para Excel
-            str(pago.id_cita.id_paciente),
-            str(pago.id_metodo_pago.nombre_metodo),
-            pago.referencia or "Sin referencia",
-            pago.monto,
-            pago.notes if hasattr(pago, 'notes') else (pago.notas if hasattr(pago, 'notas') else "")
-        ])
-    
-    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-    response['Content-Disposition'] = 'attachment; filename="Reporte_Facturacion.xlsx"'
-    wb.save(response)
-    return response

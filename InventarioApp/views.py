@@ -3,31 +3,27 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
 from django.utils import timezone
 from datetime import timedelta
-from django.db.models import Sum, F
+from django.db.models import Sum, F, Q
 from django.http import HttpResponse, JsonResponse
 from django.db import models
 import openpyxl
 from io import BytesIO
-from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
 from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
 from reportlab.lib.styles import getSampleStyleSheet
-
-# Importaciones de modelos
-from .models import Producto, MovimientoInventario
+from .models import Producto, MovimientoInventario, CategoriaProducto
 from TratamientoApp.models import Tratamiento, TratamientoProducto
 from .forms import ProductoForm
-from CuentasApp.models import Usuario 
+from CuentasApp.models import Usuario
 
-# --- PERMISOS ---
+
 def es_auxiliar(user):
     if not user.is_authenticated:
         return False
-    # Verifica si es Auxiliar o Superusuario
     return getattr(user, 'id_rol', None) and user.id_rol.nombre_rol == 'Auxiliar de Bodega' or user.is_superuser
 
-# --- DASHBOARD PRINCIPAL ---
+
 @login_required
 @user_passes_test(es_auxiliar)
 def dashboard_auxiliar(request):
@@ -38,20 +34,118 @@ def dashboard_auxiliar(request):
     productos_por_vencer = Producto.objects.filter(fecha_vencimiento__range=[hoy, proximo_mes], activo=1)
     total_productos = Producto.objects.filter(activo=1).count()
     ultimos_movimientos = MovimientoInventario.objects.all().order_by('-fecha_movimiento')[:5]
-    context = {
+
+    return render(request, 'InventarioApp/dashboard_auxiliar.html', {
         'usuario_perfil': usuario_actual,
         'bajo_stock': productos_bajo_stock,
         'por_vencer': productos_por_vencer,
         'total_productos': total_productos,
         'ultimos_movimientos': ultimos_movimientos,
-    }
-    return render(request, 'InventarioApp/dashboard_auxiliar.html', context)
+    })
 
-# --- GESTIÓN DE INVENTARIO (PRODUCTOS) ---
+
 @login_required
 def lista_inventario(request):
-    productos = Producto.objects.all().order_by('nombre_producto')
-    return render(request, 'InventarioApp/lista_inventario.html', {'productos': productos})
+    from django.db.models import F, Q
+    categorias = CategoriaProducto.objects.all()
+    productos = Producto.objects.all().select_related('id_categoria').order_by('nombre_producto')
+
+    nombre = request.GET.get('nombre')
+    categoria = request.GET.get('categoria')
+    stock_min = request.GET.get('stock_min')
+    stock_max = request.GET.get('stock_max')
+    estado = request.GET.get('estado')
+    fecha_vence_inicio = request.GET.get('fecha_vence_inicio')
+    fecha_vence_fin = request.GET.get('fecha_vence_fin')
+
+    if nombre:
+        if nombre.startswith('#'):
+            cod_limpio = nombre.replace('#', '').strip()
+            productos = productos.filter(codigo_producto__icontains=cod_limpio)
+        else:
+            productos = productos.filter(
+                Q(nombre_producto__icontains=nombre) |
+                Q(codigo_producto__icontains=nombre)
+            )
+    if categoria:
+        productos = productos.filter(id_categoria__id_categoria=categoria)
+    if stock_min:
+        productos = productos.filter(stock_actual__gte=stock_min)
+    if stock_max:
+        productos = productos.filter(stock_actual__lte=stock_max)
+    if estado == 'activo':
+        productos = productos.filter(activo=1)
+    if estado == 'inactivo':
+        productos = productos.filter(activo=0)
+    if estado == 'critico':
+        productos = productos.filter(stock_actual__lte=F('stock_minimo'))
+    if fecha_vence_inicio:
+        productos = productos.filter(fecha_vencimiento__gte=fecha_vence_inicio)
+    if fecha_vence_fin:
+        productos = productos.filter(fecha_vencimiento__lte=fecha_vence_fin)
+
+    if request.GET.get('exportar') == 'excel':
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Inventario"
+        ws.append(['Código', 'Producto', 'Categoría', 'Stock', 'Mínimo', 'P.Compra', 'P.Venta', 'Vencimiento', 'Estado'])
+        for p in productos:
+            ws.append([
+                p.codigo_producto or 'S/C',
+                p.nombre_producto,
+                p.id_categoria.nombre_categoria,
+                p.stock_actual,
+                p.stock_minimo,
+                str(p.precio_compra),
+                str(p.precio_venta),
+                p.fecha_vencimiento.strftime('%d/%m/%Y') if p.fecha_vencimiento else 'N/A',
+                'Activo' if p.activo == 1 else 'Inactivo',
+            ])
+        response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        response['Content-Disposition'] = 'attachment; filename="Inventario.xlsx"'
+        wb.save(response)
+        return response
+
+    if request.GET.get('exportar') == 'pdf':
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=letter)
+        elements = []
+        styles = getSampleStyleSheet()
+        elements.append(Paragraph("Inventario de Productos - OdontoClinick", styles['Title']))
+        elements.append(Paragraph(f"Generado: {timezone.now().strftime('%d/%m/%Y %H:%M')}", styles['Normal']))
+        data = [['Producto', 'Categoría', 'Stock', 'Mínimo', 'P.Venta', 'Estado']]
+        for p in productos:
+            data.append([
+                p.nombre_producto[:25],
+                p.id_categoria.nombre_categoria,
+                str(p.stock_actual),
+                str(p.stock_minimo),
+                f"${p.precio_venta}",
+                'Activo' if p.activo == 1 else 'Inactivo',
+            ])
+        t = Table(data, colWidths=[140, 90, 50, 50, 70, 60])
+        t.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#3f2e23')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('FONTSIZE', (0, 0), (-1, -1), 8),
+        ]))
+        elements.append(t)
+        doc.build(elements)
+        response = HttpResponse(content_type='application/pdf')
+        response['Content-Disposition'] = 'attachment; filename="Inventario.pdf"'
+        response.write(buffer.getvalue())
+        buffer.close()
+        return response
+
+    return render(request, 'InventarioApp/lista_inventario.html', {
+        'productos': productos,
+        'categorias': categorias,
+        'total': productos.count(),
+    })
+
 
 @login_required
 def crear_producto(request):
@@ -65,6 +159,7 @@ def crear_producto(request):
         form = ProductoForm()
     return render(request, 'InventarioApp/crear_producto.html', {'form': form})
 
+
 @login_required
 def editar_producto(request, id_producto):
     producto = get_object_or_404(Producto, id_producto=id_producto)
@@ -76,7 +171,10 @@ def editar_producto(request, id_producto):
             return redirect('lista_inventario')
     else:
         form = ProductoForm(instance=producto)
-    return render(request, 'InventarioApp/crear_producto.html', {'form': form, 'editando': True, 'producto': producto})
+    return render(request, 'InventarioApp/crear_producto.html', {
+        'form': form, 'editando': True, 'producto': producto
+    })
+
 
 @login_required
 def alternar_estado_producto(request, producto_id):
@@ -90,22 +188,20 @@ def alternar_estado_producto(request, producto_id):
             return JsonResponse({'status': 'error'}, status=404)
     return JsonResponse({'status': 'error'}, status=400)
 
-# --- CONFIGURACIÓN DE RECETAS (SOLO PARA EL AUXILIAR) ---
+
 @login_required
 def lista_tratamientos_auxiliar(request):
-    """ Muestra la lista simplificada para configurar insumos por tratamiento """
     tratamientos = Tratamiento.objects.filter(activo=1).order_by('nombre_tratamiento')
-    return render(request, 'InventarioApp/lista_insumos_auxiliar.html', {'tratamientos': tratamientos})
+    return render(request, 'InventarioApp/lista_tratamientos_auxiliar.html', {'tratamientos': tratamientos})
+
 
 @login_required
 def gestionar_insumos(request, pk):
-    """ Relaciona productos de inventario con tratamientos médicos """
     tratamiento = get_object_or_404(Tratamiento, pk=pk)
     if request.method == 'POST':
         producto_id = request.POST.get('producto')
         cantidad = request.POST.get('cantidad')
         producto = get_object_or_404(Producto, id_producto=producto_id)
-        
         TratamientoProducto.objects.update_or_create(
             id_tratamiento=tratamiento,
             id_producto=producto,
@@ -113,14 +209,15 @@ def gestionar_insumos(request, pk):
         )
         messages.success(request, f"Insumo vinculado a {tratamiento.nombre_tratamiento}")
         return redirect('gestionar_insumos', pk=pk)
-    
+
     insumos = TratamientoProducto.objects.filter(id_tratamiento=tratamiento).select_related('id_producto')
     productos = Producto.objects.filter(activo=1)
     return render(request, 'InventarioApp/gestionar_insumos.html', {
-        'tratamiento': tratamiento, 
-        'insumos': insumos, 
+        'tratamiento': tratamiento,
+        'insumos': insumos,
         'productos': productos
     })
+
 
 @login_required
 def eliminar_insumo(request, pk):
@@ -130,13 +227,12 @@ def eliminar_insumo(request, pk):
     messages.error(request, "Insumo eliminado del tratamiento.")
     return redirect('gestionar_insumos', pk=id_trat)
 
-# --- MOVIMIENTOS (ENTRADAS Y SALIDAS) ---
+
 @login_required
 def entrada_stock(request, pk):
     producto_obj = get_object_or_404(Producto, id_producto=pk)
     if request.method == 'POST':
         try:
-            usuario_personalizado = Usuario.objects.filter(id_usuario=request.user.id).first()
             cantidad = int(request.POST.get('cantidad', 0))
             if cantidad > 0:
                 stock_ant = producto_obj.stock_actual
@@ -149,19 +245,19 @@ def entrada_stock(request, pk):
                     stock_anterior=stock_ant,
                     stock_nuevo=producto_obj.stock_actual,
                     motivo=request.POST.get('motivo', 'Abastecimiento'),
-                    id_usuario=usuario_personalizado 
+                    id_usuario=request.user
                 )
                 messages.success(request, f"Entrada registrada para {producto_obj.nombre_producto}.")
         except Exception as e:
             messages.error(request, f"Error: {e}")
     return redirect('lista_inventario')
 
+
 @login_required
 def salida_stock(request, pk):
     producto_obj = get_object_or_404(Producto, id_producto=pk)
     if request.method == 'POST':
         try:
-            usuario_personalizado = Usuario.objects.filter(id_usuario=request.user.id).first()
             cantidad = int(request.POST.get('cantidad', 0))
             if 0 < cantidad <= producto_obj.stock_actual:
                 stock_ant = producto_obj.stock_actual
@@ -174,7 +270,7 @@ def salida_stock(request, pk):
                     stock_anterior=stock_ant,
                     stock_nuevo=producto_obj.stock_actual,
                     motivo=request.POST.get('motivo', 'Consumo clínico'),
-                    id_usuario=usuario_personalizado 
+                    id_usuario=request.user
                 )
                 messages.warning(request, f"Salida registrada de {producto_obj.nombre_producto}.")
             else:
@@ -183,154 +279,121 @@ def salida_stock(request, pk):
             messages.error(request, f"Error: {e}")
     return redirect('lista_inventario')
 
-# --- MÓDULO INFORMES Y KARDEX ---
+
 @login_required
 def informes_avanzados(request):
     productos = Producto.objects.filter(activo=1)
     valor_total = productos.aggregate(total=Sum(F('precio_compra') * F('stock_actual')))['total'] or 0
     primer_dia = timezone.now().replace(day=1, hour=0, minute=0)
-    inversion_mes = MovimientoInventario.objects.filter(tipo_movimiento='ENTRADA', fecha_movimiento__gte=primer_dia).aggregate(total=Sum(F('cantidad') * F('producto__precio_compra')))['total'] or 0
+    inversion_mes = MovimientoInventario.objects.filter(
+        tipo_movimiento='ENTRADA', fecha_movimiento__gte=primer_dia
+    ).aggregate(total=Sum(F('cantidad') * F('producto__precio_compra')))['total'] or 0
     hoy = timezone.now()
     labels, datos = [], []
     for i in range(6, -1, -1):
         fecha = hoy - timedelta(days=i)
         labels.append(fecha.strftime('%d/%m'))
-        total = MovimientoInventario.objects.filter(tipo_movimiento='SALIDA', fecha_movimiento__date=fecha.date()).aggregate(Sum('cantidad'))['cantidad__sum'] or 0
+        total = MovimientoInventario.objects.filter(
+            tipo_movimiento='SALIDA', fecha_movimiento__date=fecha.date()
+        ).aggregate(Sum('cantidad'))['cantidad__sum'] or 0
         datos.append(total)
-    context = {
+
+    return render(request, 'InventarioApp/informes.html', {
         'valor_total': valor_total,
         'inversion_mes': inversion_mes,
         'labels_grafica': labels,
         'datos_grafica': datos,
         'bajo_stock_count': Producto.objects.filter(stock_actual__lte=F('stock_minimo'), activo=1).count(),
         'insumos_criticos': Producto.objects.filter(stock_actual__lte=F('stock_minimo'), activo=1)
-    }
-    return render(request, 'InventarioApp/informes.html', context)
+    })
+
 
 @login_required
 def historial_kardex(request):
-    movimientos = MovimientoInventario.objects.all().order_by('-fecha_movimiento')
-    return render(request, 'InventarioApp/kardex.html', {'movimientos': movimientos})
+    movimientos = MovimientoInventario.objects.all().select_related(
+        'producto', 'id_usuario'
+    ).order_by('-fecha_movimiento')
 
-@login_required
-def centro_reportes(request):
-    return render(request, 'InventarioApp/reportes_descarga.html')
+    fecha_inicio = request.GET.get('fecha_inicio')
+    fecha_fin = request.GET.get('fecha_fin')
+    tipo = request.GET.get('tipo')
+    usuario = request.GET.get('usuario')
+    query = request.GET.get('producto', '').strip()
 
-# --- EXPORTACIONES EXCEL ---
-@login_required
-def exportar_inventario_excel(request):
-    wb = openpyxl.Workbook()
-    ws = wb.active
-    ws.title = "Reporte de Inventario"
-    ws.append(['Código', 'Producto', 'Stock Actual', 'Mínimo', 'Precio Compra', 'Inversión'])
-    for p in Producto.objects.filter(activo=1):
-        ws.append([p.codigo_producto, p.nombre_producto, p.stock_actual, p.stock_minimo, p.precio_compra, (p.stock_actual * p.precio_compra)])
-    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-    response['Content-Disposition'] = 'attachment; filename=Reporte_Inventario.xlsx'
-    wb.save(response)
-    return response
+    if query:
+        if query.startswith('#'):
+            cod_limpio = query.replace('#', '')
+            movimientos = movimientos.filter(producto__codigo_producto__icontains=cod_limpio)
+        else:
+            movimientos = movimientos.filter(producto__nombre_producto__icontains=query)
+    if fecha_inicio:
+        movimientos = movimientos.filter(fecha_movimiento__date__gte=fecha_inicio)
+    if fecha_fin:
+        movimientos = movimientos.filter(fecha_movimiento__date__lte=fecha_fin)
+    if tipo:
+        movimientos = movimientos.filter(tipo_movimiento=tipo)
+    if usuario:
+        movimientos = movimientos.filter(
+            Q(id_usuario__nombre__icontains=usuario) |
+            Q(id_usuario__apellidos__icontains=usuario)
+        )
 
-@login_required
-def exportar_kardex_excel(request):
-    wb = openpyxl.Workbook()
-    ws = wb.active
-    ws.title = "Historial Kardex"
-    ws.append(['Fecha', 'Producto', 'Tipo', 'Cantidad', 'Stock Nuevo', 'Motivo'])
-    movimientos = MovimientoInventario.objects.all().select_related('producto').order_by('-fecha_movimiento')
-    for m in movimientos:
-        ws.append([m.fecha_movimiento.strftime('%d/%m/%Y'), m.producto.nombre_producto if m.producto else "N/A", m.tipo_movimiento, m.cantidad, m.stock_nuevo, m.motivo])
-    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-    response['Content-Disposition'] = 'attachment; filename=Kardex_OdontoClinick.xlsx'
-    wb.save(response)
-    return response
+    if request.GET.get('exportar') == 'excel':
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Kardex"
+        ws.append(['Fecha', 'Producto', 'Tipo', 'Cantidad', 'Stock Anterior', 'Stock Nuevo', 'Motivo', 'Responsable'])
+        for m in movimientos:
+            ws.append([
+                m.fecha_movimiento.strftime('%d/%m/%Y %H:%M') if m.fecha_movimiento else 'N/A',
+                m.producto.nombre_producto if m.producto else 'N/A',
+                m.tipo_movimiento,
+                m.cantidad,
+                m.stock_anterior,
+                m.stock_nuevo,
+                m.motivo or 'Sin motivo',
+                str(m.id_usuario) if m.id_usuario else 'Sistema',
+            ])
+        response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        response['Content-Disposition'] = 'attachment; filename="Kardex.xlsx"'
+        wb.save(response)
+        return response
 
-# --- EXPORTACIONES PDF ---
-@login_required
-def exportar_inventario_pdf(request):
-    try:
-        response = HttpResponse(content_type='application/pdf')
-        response['Content-Disposition'] = 'attachment; filename="Inventario_OdontoClinick.pdf"'
+    if request.GET.get('exportar') == 'pdf':
         buffer = BytesIO()
         doc = SimpleDocTemplate(buffer, pagesize=letter)
         elements = []
         styles = getSampleStyleSheet()
-
-        elements.append(Paragraph("Reporte de Inventario Actual - OdontoClinick", styles['Title']))
-        elements.append(Paragraph(f"Fecha: {timezone.now().strftime('%d/%m/%Y %H:%M')}", styles['Normal']))
-        data = [['Producto', 'Stock', 'Mínimo', 'P. Compra', 'Subtotal']]
-        productos = Producto.objects.filter(activo=1)
-        
-        for p in productos:
-            stock = p.stock_actual if p.stock_actual is not None else 0
-            precio = p.precio_compra if p.precio_compra is not None else 0
-            subtotal = stock * precio
-            
+        elements.append(Paragraph("Historial de Movimientos - OdontoClinick", styles['Title']))
+        elements.append(Paragraph(f"Generado: {timezone.now().strftime('%d/%m/%Y %H:%M')}", styles['Normal']))
+        data = [['Fecha', 'Producto', 'Tipo', 'Cant.', 'Stock Nuevo', 'Responsable']]
+        for m in movimientos:
             data.append([
-                p.nombre_producto[:30], 
-                stock, 
-                p.stock_minimo, 
-                f"${precio}", 
-                f"${subtotal}"
+                m.fecha_movimiento.strftime('%d/%m/%y') if m.fecha_movimiento else 'N/A',
+                m.producto.nombre_producto[:20] if m.producto else 'N/A',
+                m.tipo_movimiento,
+                str(m.cantidad),
+                str(m.stock_nuevo),
+                str(m.id_usuario) if m.id_usuario else 'Sistema',
             ])
-        t = Table(data, colWidths=[200, 50, 50, 80, 80])
+        t = Table(data, colWidths=[70, 120, 70, 40, 60, 100])
         t.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.dodgerblue),
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#3f2e23')),
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('GRID', (0, 0), (-1, -1), 1, colors.black),
-            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('FONTSIZE', (0, 0), (-1, -1), 8),
         ]))
-        
         elements.append(t)
         doc.build(elements)
-        
+        response = HttpResponse(content_type='application/pdf')
+        response['Content-Disposition'] = 'attachment; filename="Kardex.pdf"'
         response.write(buffer.getvalue())
         buffer.close()
         return response
-    except Exception as e:
-        messages.error(request, f"Error al generar el PDF: {e}")
-        return redirect('centro_reportes')
-    
-@login_required
-def exportar_kardex_pdf(request):
-    response = HttpResponse(content_type='application/pdf')
-    response['Content-Disposition'] = 'attachment; filename="Kardex_Movimientos.pdf"'
-    buffer = BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=letter)
-    elements = []
-    styles = getSampleStyleSheet()
-    elements.append(Paragraph("Historial de Movimientos (Kardex)", styles['Title']))
-    data = [['Fecha', 'Producto', 'Tipo', 'Cant.', 'Usuario']]
-    movimientos = MovimientoInventario.objects.all().select_related('id_usuario', 'producto').order_by('-fecha_movimiento')[:30]
-    
-    for m in movimientos:
-        fecha = m.fecha_movimiento.strftime('%d/%m/%y')
-        prod = m.producto.nombre_producto if m.producto else "N/A"
-        if m.id_usuario:
-            try:
-                user = str(m.id_usuario)
-            except:
-                user = "ID: " + str(m.id_usuario_id) 
-        else:
-            user = "Sist./Eliminado"
-            
-        data.append([fecha, prod, m.tipo_movimiento, m.cantidad, user])
-    t = Table(data)
-    t.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
-    ]))
-    elements.append(t)
-    doc.build(elements)
-    response.write(buffer.getvalue())
-    buffer.close()
-    return response
 
-
-@login_required
-def lista_tratamientos_auxiliar(request):
-    tratamientos = Tratamiento.objects.filter(activo=1)
-    # El nombre aquí DEBE ser igual al del archivo .html
-    return render(request, 'InventarioApp/lista_tratamientos_auxiliar.html', {'tratamientos': tratamientos})
+    return render(request, 'InventarioApp/kardex.html', {
+        'movimientos': movimientos,
+        'total': movimientos.count(),
+    })

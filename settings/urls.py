@@ -26,5 +26,6 @@ urlpatterns = [
     path('facturacion/', include('FacturacionApp.urls')),
     path('medico/', include('MedicoApp.urls')),
     path('tratamientos/', include('TratamientoApp.urls')),
-    path('inventario/', include('InventarioApp.urls'))
+    path('inventario/', include('InventarioApp.urls')),
+    path('datawizard/', include('data_wizard.urls')),
 ]

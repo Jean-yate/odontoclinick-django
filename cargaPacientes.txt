@@ -1,0 +1,4 @@
+nombre_usuario,password,nombre,apellidos,correo,telefono,fecha_nacimiento,direccion,eps,rh,alergias,enfermedades_preexistentes,contacto_emergencia_nombre,contacto_emergencia_telefono
+paciente001,Pass1234!,Carlos,Ramírez,carlos.ramirez@email.com,3101234567,1990-05-15,Calle 10 #20-30,Sura,O+,Ninguna,Ninguna,María Ramírez,3209876543
+paciente002,Pass1234!,Laura,González,laura.gonzalez@email.com,3157654321,1985-08-22,Carrera 5 #15-20,Sanitas,A+,Penicilina,Diabetes,Pedro González,3112345678
+paciente003,Pass1234!,Andrés,Martínez,andres.martinez@email.com,3201112233,2000-01-10,Avenida 30 #45-60,Compensar,B+,Ninguna,Ninguna,Rosa Martínez,3187654321
