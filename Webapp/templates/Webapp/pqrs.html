@@ -44,20 +44,36 @@
             </div>
 
             <div class="clay-card">
+                {% if user.is_authenticated %}
+                    <div class="alert alert-light border-0 shadow-sm rounded-4 mb-4 text-center">
+                        Enviando solicitud como: <br>
+                        <strong class="text-primary">{{ user.nombre }} {{ user.apellidos }}</strong> 
+                        <span class="text-muted small">({{ user.correo }})</span>
+                    </div>
+                {% endif %}
+
                 <form method="POST">
                     {% csrf_token %}
+                    
                     {% for field in form %}
-                        <div class="mb-4 text-start">
-                            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                        {% if not field.is_hidden %}
+                            <div class="mb-4 text-start">
+                                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                {{ field }}
+                                {% if field.errors %}
+                                    <div class="text-danger small mt-1">{{ field.errors }}</div>
+                                {% endif %}
+                            </div>
+                        {% else %}
+                            {# Los campos ocultos (nombre y email) para usuarios logueados #}
                             {{ field }}
-                            {% if field.errors %}
-                                <div class="text-danger small mt-1">{{ field.errors }}</div>
-                            {% endif %}
-                        </div>
+                        {% endif %}
                     {% endfor %}
                     
                     <div class="d-grid gap-2 mt-5">
-                        <button type="submit" class="btn btn-primary btn-lg">ENVIAR SOLICITUD</button>
+                        <button type="submit" class="btn btn-primary btn-lg rounded-pill fw-bold">
+                            <i class="bi bi-send me-2"></i> ENVIAR SOLICITUD
+                        </button>
                     </div>
                 </form>
             </div>

@@ -6,6 +6,14 @@ from django.utils import timezone
 from django.contrib import messages
 from django.core.mail import send_mail
 from django.conf import settings
+import csv
+import io
+import openpyxl
+import openpyxl
+from datetime import datetime
+from django.core.paginator import Paginator
+
+from django.http import HttpResponse
 
 # Importaciones de modelos
 from PacienteApp.models import Paciente
@@ -29,22 +37,41 @@ def home(request):
 
 def contacto_pqrs(request):
     if request.method == 'POST':
-        form = PQRSForm(request.POST)
+        form = PQRSForm(request.POST, user=request.user)
         if form.is_valid():
-            nombre = form.cleaned_data['nombre']
-            email_usuario = form.cleaned_data['email']
+            # Si está logueado usamos datos de sesión, si no, los del formulario
+            if request.user.is_authenticated:
+                nombre = f"{request.user.nombre} {request.user.apellidos}"
+                email_usuario = request.user.correo
+            else:
+                nombre = form.cleaned_data.get('nombre')
+                email_usuario = form.cleaned_data.get('email')
+            
             tipo = form.cleaned_data['tipo']
             mensaje = form.cleaned_data['mensaje']
-            asunto = f"Nueva {tipo} de {nombre} - OdontoClinick"
-            cuerpo = f"Nombre: {nombre}\nCorreo: {email_usuario}\nTipo: {tipo}\n\nMensaje:\n{mensaje}"
+
+            # --- CORREOS ---
+            asunto_clinica = f"NUEVA {tipo.upper()} - {nombre}"
+            cuerpo_clinica = f"Se ha recibido una solicitud:\n\nNombre: {nombre}\nCorreo: {email_usuario}\nTipo: {tipo}\n\nMensaje:\n{mensaje}"
+            
+            asunto_usuario = f"Copia de su {tipo} - OdontoClinick"
+            cuerpo_usuario = f"Hola {nombre},\n\nHemos recibido tu {tipo.lower()} con éxito. Pronto nos comunicaremos contigo.\n\nDetalles:\n\"{mensaje}\""
+
             try:
-                send_mail(asunto, cuerpo, settings.EMAIL_HOST_USER, ['odontoclinick77@gmail.com'], fail_silently=False)
-                messages.success(request, "¡Tu PQRS ha sido enviada con éxito!")
+                # 1. Envío a la clínica
+                send_mail(asunto_clinica, cuerpo_clinica, settings.EMAIL_HOST_USER, ['odontoclinick77@gmail.com'])
+                
+                # 2. Envío de copia al usuario
+                if email_usuario:
+                    send_mail(asunto_usuario, cuerpo_usuario, settings.EMAIL_HOST_USER, [email_usuario])
+                
+                messages.success(request, "✅ PQRS enviada con éxito. Revisa tu correo para ver la copia.")
                 return redirect('home')
             except Exception as e:
-                messages.error(request, f"Error al enviar el correo: {e}")
+                messages.error(request, f"❌ No se pudo enviar el correo: {e}")
     else:
-        form = PQRSForm()
+        form = PQRSForm(user=request.user)
+        
     return render(request, 'Webapp/pqrs.html', {'form': form})
 
 # --- VISTAS PRIVADAS (GESTIÓN) ---
@@ -94,10 +121,22 @@ def registro_integral_paciente(request):
 def lista_pacientes(request):
     if request.user.id_rol.nombre_rol not in ['Secretaria', 'Administrador']:
         return redirect('home')
+    
     query = request.GET.get('q')
-    pacientes = Usuario.objects.filter(id_rol__nombre_rol='Paciente')
+    pacientes_list = Usuario.objects.filter(id_rol__nombre_rol='Paciente').order_by('nombre')
+    
     if query:
-        pacientes = pacientes.filter(Q(nombre_usuario__icontains=query) | Q(nombre__icontains=query) | Q(apellidos__icontains=query))
+        pacientes_list = pacientes_list.filter(
+            Q(nombre_usuario__icontains=query) | 
+            Q(nombre__icontains=query) | 
+            Q(apellidos__icontains=query)
+        )
+    
+    # Paginación: 10 pacientes por página
+    paginator = Paginator(pacientes_list, 10)
+    page_number = request.GET.get('page')
+    pacientes = paginator.get_page(page_number)
+    
     return render(request, 'Webapp/lista_pacientes.html', {'pacientes': pacientes, 'query': query})
 
 @login_required
@@ -152,6 +191,79 @@ def editar_paciente(request, id_usuario):
     })
 
 @login_required
+def carga_masiva_pacientes(request):
+    if request.user.id_rol.nombre_rol not in ['Secretaria', 'Administrador']:
+        return redirect('home')
+
+    if request.method == 'POST' and request.FILES.get('archivo_excel'):
+        archivo = request.FILES['archivo_excel']
+        
+        try:
+            wb = openpyxl.load_workbook(archivo)
+            hoja = wb.active
+            creados = 0
+            errores = 0
+
+            rol_paciente = Rol.objects.get(nombre_rol='Paciente')
+            estado_activo = Estado.objects.filter(nombre_estado__icontains='Acti').first()
+
+            # Quitamos el transaction.atomic() de afuera para que si uno falla, 
+            # los demás sí puedan procesarse individualmente.
+            for fila in hoja.iter_rows(min_row=2, values_only=True):
+                user_val = str(fila[0]) if fila[0] else None
+                if not user_val: continue 
+
+                try:
+                    with transaction.atomic():
+                        # 1. Intentamos obtener el usuario si ya existe, o crearlo si no.
+                        # update_or_create evita el error de "Duplicate entry"
+                        nuevo_u, created = Usuario.objects.update_or_create(
+                            nombre_usuario=user_val,
+                            defaults={
+                                'nombre': fila[2],
+                                'apellidos': fila[3],
+                                'correo': fila[4],
+                                'telefono': fila[5],
+                                'id_rol': rol_paciente,
+                                'id_estado': estado_activo,
+                            }
+                        )
+                        
+                        # Si es nuevo, le ponemos la contraseña del Excel
+                        if created:
+                            nuevo_u.set_password(str(fila[1]))
+                            nuevo_u.save()
+
+                        # 2. Intentamos crear o actualizar el perfil de Paciente
+                        # Esto evita el error en la llave foránea id_usuario
+                        Paciente.objects.update_or_create(
+                            id_usuario=nuevo_u,
+                            defaults={
+                                'fecha_nacimiento': fila[6],
+                                'direccion': fila[7],
+                                'eps': fila[8],
+                                'rh': fila[9],
+                                'alergias': fila[10],
+                                'enfermedades_preexistentes': fila[11],
+                                'contacto_emergencia_nombre': fila[12],
+                                'contacto_emergencia_telefono': fila[13]
+                            }
+                        )
+                        creados += 1
+                        
+                except Exception as e:
+                    print(f"Error procesando fila {user_val}: {e}")
+                    errores += 1
+
+            messages.success(request, f"Proceso finalizado. Procesados con éxito: {creados}. Errores: {errores}")
+            return redirect('lista_pacientes')
+
+        except Exception as e:
+            messages.error(request, f"Error crítico al leer el archivo: {e}")
+
+    return render(request, 'Webapp/carga_masiva.html')
+
+@login_required
 def detalle_paciente(request, id_usuario):
     if request.user.id_rol.nombre_rol not in ['Secretaria', 'Administrador']:
         return redirect('home')
@@ -159,3 +271,41 @@ def detalle_paciente(request, id_usuario):
     paciente_clinico = get_object_or_404(Paciente, id_usuario=usuario)
     citas_recientes = Cita.objects.filter(id_paciente=paciente_clinico).order_by('-fecha_hora')[:5]
     return render(request, 'Webapp/detalle_paciente.html', {'u': usuario, 'p': paciente_clinico, 'citas': citas_recientes})
+
+
+
+@login_required
+def descargar_plantilla_pacientes(request):
+    # Crear un nuevo libro de Excel
+    wb = openpyxl.Workbook()
+    hoja = wb.active
+    hoja.title = "Plantilla_Pacientes"
+
+    # Definir los encabezados (deben coincidir con el orden de tu vista de carga)
+    encabezados = [
+        'nombre_usuario', 'password', 'nombre', 'apellidos', 
+        'correo', 'telefono', 'fecha_nacimiento', 'direccion', 
+        'eps', 'rh', 'alergias', 'enfermedades_preexistentes', 
+        'contacto_emergencia_nombre', 'contacto_emergencia_telefono'
+    ]
+    
+    # Agregar los encabezados a la primera fila
+    hoja.append(encabezados)
+
+    # Opcional: Agregar una fila de ejemplo
+    ejemplo = [
+        '10102020', 'Pass123*', 'Juan', 'Perez', 
+        'juan.perez@email.com', '3001234567', '1995-10-25', 'Calle 123', 
+        'Sura', 'O+', 'Ninguna', 'Ninguna', 
+        'Maria Perez', '3109876543'
+    ]
+    hoja.append(ejemplo)
+
+    # Configurar la respuesta del navegador para descargar el archivo
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = 'attachment; filename=plantilla_pacientes_odontoclinick.xlsx'
+    
+    wb.save(response)
+    return response

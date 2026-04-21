@@ -9,7 +9,7 @@
         padding: 0.8rem;
         border-radius: 50px;
         box-shadow: var(--clay-shadow), var(--clay-inset);
-        margin-bottom: 3rem;
+        margin-bottom: 2rem;
     }
     
     .search-input-clay {
@@ -55,15 +55,6 @@
         font-weight: 500;
     }
 
-    .table-hover tbody tr {
-        transition: all 0.2s ease;
-    }
-
-    .table-hover tbody tr:hover {
-        background-color: var(--bg-body) !important;
-        transform: scale(1.01);
-    }
-
     /* Badges de Estado "Inflados" */
     .status-badge-clay {
         font-size: 0.75rem;
@@ -90,35 +81,72 @@
         border: none;
         transition: all 0.2s;
         margin: 0 4px;
+        text-decoration: none;
     }
     .btn-action-clay:hover {
         transform: translateY(-3px);
         color: var(--primary-color);
-        background: white;
         box-shadow: 6px 6px 12px #d1cdc7;
+    }
+
+    /* Paginación Estilo Clay */
+    .pagination-clay .page-link {
+        border: none;
+        margin: 0 5px;
+        border-radius: 50% !important;
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--secondary-color);
+        font-weight: 700;
+        box-shadow: 3px 3px 6px #d1cdc7;
+        transition: all 0.3s;
+    }
+    .pagination-clay .page-item.active .page-link {
+        background-color: var(--primary-color);
+        color: white;
+        box-shadow: inset 2px 2px 4px rgba(0,0,0,0.2);
     }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="container mt-5">
-    <div class="row mb-5 align-items-center">
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-dismissible fade show shadow-lg rounded-4 border-0 mb-4 animate__animated animate__fadeInDown" 
+                 style="background: white; border-left: 5px solid {% if message.tags == 'success' %}#10b981{% else %}#ef4444{% endif %} !important;">
+                <div class="d-flex align-items-center">
+                    <i class="bi {% if message.tags == 'success' %}bi-check-circle-fill text-success{% else %}bi-exclamation-triangle-fill text-danger{% endif %} fs-4 me-3"></i>
+                    <strong class="text-dark">{{ message }}</strong>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="row mb-4 align-items-center">
         <div class="col-md-7">
             <h2 class="fw-bold mb-1" style="color: var(--primary-color); letter-spacing: -1px;">Gestión de Pacientes</h2>
-            <p class="text-muted fw-semibold mb-0">Listado general de usuarios registrados en el sistema.</p>
+            <p class="text-muted fw-semibold mb-0">Panel administrativo de OdontoClinick.</p>
         </div>
-        <div class="col-md-5 text-md-end mt-3 mt-md-0">
-            <a href="{% url 'registro' %}" class="btn btn-primary d-inline-flex align-items-center px-4 py-2">
+        <div class="col-md-5 text-md-end mt-3 mt-md-0 d-flex gap-2 justify-content-md-end">
+            <a href="{% url 'carga_masiva_pacientes' %}" class="btn btn-outline-success d-inline-flex align-items-center px-3 py-2 rounded-pill fw-bold border-2">
+                <i class="bi bi-file-earmark-spreadsheet me-2 fs-5"></i> CARGA MASIVA
+            </a>
+            <a href="{% url 'registro' %}" class="btn btn-primary d-inline-flex align-items-center px-4 py-2 rounded-pill fw-bold shadow">
                 <i class="bi bi-person-plus-fill me-2 fs-5"></i> REGISTRAR NUEVO
             </a>
         </div>
     </div>
 
-    <div class="search-container-clay mx-auto mx-md-0">
+    <div class="search-container-clay">
         <form method="GET" class="d-flex gap-2">
             <input type="text" name="q" class="form-control search-input-clay" 
-                   placeholder="Buscar por nombre o usuario..." value="{{ query|default:'' }}">
-            <button class="btn btn-primary rounded-pill px-4" type="submit">
+                   刻placeholder="Buscar por nombre o cédula..." value="{{ query|default:'' }}">
+            <button class="btn btn-primary rounded-pill px-4 shadow" type="submit">
                 <i class="bi bi-search"></i>
             </button>
             {% if query %}
@@ -129,15 +157,13 @@
         </form>
     </div>
 
-    <br>
-
-    <div class="clay-table-card mb-5">
+    <div class="clay-table-card">
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
                 <thead>
                     <tr>
-                        <th class="ps-4">Usuario</th>
-                        <th>Nombre Completo</th>
+                        <th class="ps-4">Usuario/ID</th>
+                        <th>Paciente</th>
                         <th>Contacto</th>
                         <th>Estado</th>
                         <th class="text-center">Acciones</th>
@@ -171,7 +197,6 @@
                             <a href="{% url 'detalle_paciente' p.id_usuario %}" class="btn-action-clay" title="Ver detalle">
                                 <i class="bi bi-eye-fill"></i>
                             </a>
-
                             <a href="{% url 'editar_paciente' p.id_usuario %}" class="btn-action-clay" title="Editar">
                                 <i class="bi bi-pencil-fill"></i>
                             </a>
@@ -180,11 +205,8 @@
                     {% empty %}
                     <tr>
                         <td colspan="5" class="text-center py-5">
-                            <div class="py-4">
-                                <i class="bi bi-emoji-frown fs-1 opacity-25 d-block mb-3"></i>
-                                <h5 class="fw-bold text-muted">No encontramos a nadie</h5>
-                                <p class="small text-muted">Intenta con otros términos de búsqueda.</p>
-                            </div>
+                            <i class="bi bi-search fs-1 opacity-25 d-block mb-3"></i>
+                            <h5 class="fw-bold text-muted">No se encontraron registros</h5>
                         </td>
                     </tr>
                     {% endfor %}
@@ -192,5 +214,33 @@
             </table>
         </div>
     </div>
+
+    {% if pacientes.has_other_pages %}
+    <div class="d-flex justify-content-center mt-5 mb-5">
+        <nav>
+            <ul class="pagination pagination-clay align-items-center">
+                {% if pacientes.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link shadow-sm" href="?page={{ pacientes.previous_page_number }}{% if query %}&q={{ query }}{% endif %}">
+                            <i class="bi bi-chevron-left"></i>
+                        </a>
+                    </li>
+                {% endif %}
+
+                <li class="page-item active">
+                    <span class="page-link">{{ pacientes.number }}</span>
+                </li>
+
+                {% if pacientes.has_next %}
+                    <li class="page-item">
+                        <a class="page-link shadow-sm" href="?page={{ pacientes.next_page_number }}{% if query %}&q={{ query }}{% endif %}">
+                            <i class="bi bi-chevron-right"></i>
+                        </a>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}

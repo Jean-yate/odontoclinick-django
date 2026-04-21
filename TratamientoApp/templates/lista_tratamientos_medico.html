@@ -2,6 +2,19 @@
 
 {% block extra_css %}
 <style>
+
+    /* Añade esto a tu bloque extra_css en el HTML de la lista */
+    .btn-insumos-pulse {
+        background: #fff3cd !important; /* Un amarillo suave */
+        border: 2px solid #ffc107 !important;
+        animation: pulse-yellow 2s infinite;
+    }
+
+    @keyframes pulse-yellow {
+        0% { box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.4); }
+        70% { box-shadow: 0 0 0 10px rgba(255, 193, 7, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(255, 193, 7, 0); }
+    }
     .glass-table-container {
         background: rgba(255, 255, 255, 0.6) !important;
         backdrop-filter: blur(10px);
@@ -68,7 +81,9 @@
                     </td>
                     <td class="text-center">
                         <div class="d-flex justify-content-center gap-2">
-                            <a href="{% url 'gestionar_insumos_medico' t.pk %}" class="btn btn-light btn-action-clay" title="Configurar Insumos">
+                            <a href="{% url 'gestionar_insumos_medico' t.pk %}" 
+                                class="btn btn-light btn-action-clay btn-insumos-pulse" 
+                                title="Configurar Insumos y Receta">
                                 <i class="bi bi-box-seam text-warning"></i>
                             </a>
                         

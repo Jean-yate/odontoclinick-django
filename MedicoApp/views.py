@@ -6,6 +6,8 @@ from django.utils import timezone
 from decimal import Decimal
 from datetime import datetime, timedelta
 from django.views.decorators.http import require_POST
+from decimal import Decimal
+from django.db import transaction
 
 # Importación de modelos propios y de otras Apps
 from .models import Medico, Disponibilidad, HistorialMedico
@@ -136,55 +138,73 @@ def guardar_atencion(request):
         cita = get_object_or_404(Cita, id_cita=id_cita)
         tratamiento = get_object_or_404(Tratamiento, id_tratamiento=id_tratamiento_val)
 
-        # 1. Registrar en Historial Médico
+        # Usamos una transacción atómica para que si falla el inventario, no quede la cita a medias
         try:
-            costo = Decimal(request.POST.get('costo_aplicado', '0').strip().replace(',', '.'))
-        except:
-            costo = Decimal('0.00')
+            with transaction.atomic():
+                # 1. Registrar en Historial Médico
+                try:
+                    costo_str = request.POST.get('costo_aplicado', '0').strip().replace(',', '.')
+                    costo = Decimal(costo_str) if costo_str else Decimal('0.00')
+                except:
+                    costo = Decimal('0.00')
 
-        HistorialMedico.objects.update_or_create(
-            id_cita=cita,
-            defaults={
-                'id_tratamiento': tratamiento,
-                'diagnostico': request.POST.get('diagnostico'),
-                'sintomas': request.POST.get('sintomas'),
-                'plan_tratamiento': request.POST.get('plan_tratamiento'),
-                'observaciones_clinicas': request.POST.get('observaciones_clinicas'),
-                'costo_aplicado': costo,
-                'completado': True
-            }
-        )
+                HistorialMedico.objects.update_or_create(
+                    id_cita=cita,
+                    defaults={
+                        'id_tratamiento': tratamiento,
+                        'diagnostico': request.POST.get('diagnostico'),
+                        'sintomas': request.POST.get('sintomas'),
+                        'plan_tratamiento': request.POST.get('plan_tratamiento'),
+                        'observaciones_clinicas': request.POST.get('observaciones_clinicas'),
+                        'costo_aplicado': costo,
+                        'completado': True
+                    }
+                )
 
-        # 2. Lógica de Descuento de Inventario Automático
-        insumos_receta = TratamientoProducto.objects.filter(id_tratamiento=tratamiento)
-        for item in insumos_receta:
-            producto = item.id_producto
-            cantidad_a_descontar = item.cantidad_requerida
-            
-            # Ajuste de stock físico
-            stock_anterior = producto.stock_actual
-            producto.stock_actual -= cantidad_a_descontar
-            producto.save()
-            
-            # Registro del movimiento de salida
-            MovimientoInventario.objects.create(
-                producto=producto,
-                id_usuario=request.user,
-                tipo_movimiento='SALIDA',
-                cantidad=int(cantidad_a_descontar),
-                stock_anterior=stock_anterior,
-                stock_nuevo=producto.stock_actual,
-                motivo=f"Consumo automático: Cita #{cita.id_cita} ({tratamiento.nombre_tratamiento})"
-            )
+                # 2. Lógica de Descuento de Inventario Automático
+                insumos_receta = TratamientoProducto.objects.filter(id_tratamiento=tratamiento)
+                
+                for item in insumos_receta:
+                    try:
+                        # Acceso seguro al producto
+                        producto = item.id_producto 
+                        if not producto:
+                            continue # Si por alguna razón la relación es nula, saltar
+                            
+                        cantidad_a_descontar = item.cantidad_requerida
+                        
+                        # Ajuste de stock físico
+                        stock_anterior = producto.stock_actual
+                        producto.stock_actual -= cantidad_a_descontar
+                        producto.save()
+                        
+                        # Registro del movimiento
+                        MovimientoInventario.objects.create(
+                            producto=producto,
+                            id_usuario=request.user,
+                            tipo_movimiento='SALIDA',
+                            cantidad=int(cantidad_a_descontar),
+                            stock_anterior=stock_anterior,
+                            stock_nuevo=producto.stock_actual,
+                            motivo=f"Consumo automático: Cita #{cita.id_cita} ({tratamiento.nombre_tratamiento})"
+                        )
+                    except Producto.DoesNotExist:
+                        # Si el producto vinculado al tratamiento ya no existe en la tabla Producto
+                        print(f"Advertencia: El producto vinculado al tratamiento {tratamiento} no existe.")
+                        continue 
 
-        # 3. Finalizar estado de la cita
-        estado_fin = EstadoCita.objects.filter(nombre_estado__iexact='Finalizada').first()
-        if estado_fin:
-            cita.id_estado_cita = estado_fin
-            cita.save()
+                # 3. Finalizar estado de la cita
+                estado_fin = EstadoCita.objects.filter(nombre_estado__iexact='Finalizada').first()
+                if estado_fin:
+                    cita.id_estado_cita = estado_fin
+                    cita.save()
 
-        messages.success(request, "✅ Atención guardada e inventario actualizado.")
-        return redirect('perfil_paciente', paciente_id=cita.id_paciente.id_paciente)
+            messages.success(request, "✅ Atención guardada e inventario actualizado.")
+            return redirect('perfil_paciente', paciente_id=cita.id_paciente.id_paciente)
+
+        except Exception as e:
+            messages.error(request, f"❌ Error crítico al guardar la atención: {e}")
+            return redirect('dashboard_medico')
     
     return redirect('dashboard_medico')
 

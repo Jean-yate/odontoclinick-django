@@ -1,0 +1,32 @@
+{% extends 'Webapp/base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="clay-table-card p-5 text-center shadow-lg" style="border-radius: 30px; background: white;">
+                <h2 class="fw-bold mb-4" style="color: var(--primary-color);">Importar desde Excel</h2>
+                <p class="text-muted mb-4">Asegúrate de que las columnas estén en orden: <br> 
+                   <strong>Cédula, Nombre, Apellido, Correo, Teléfono</strong></p>
+                   <div class="mb-4 p-3 rounded-4" style="background: var(--bg-body); border: 1px dashed var(--secondary-color);">
+                        <p class="small text-muted mb-2">¿No tienes el formato? Descarga la plantilla oficial aquí:</p>
+                        <a href="{% url 'descargar_plantilla' %}" class="btn btn-sm btn-light rounded-pill fw-bold text-success shadow-sm">
+                            <i class="bi bi-download me-2"></i> Descargar Plantilla .xlsx
+                        </a>
+                    </div>
+
+                <form method="POST" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="mb-4">
+                        <input type="file" name="archivo_excel" class="form-control search-input-clay py-3" accept=".xlsx" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100 py-3 rounded-pill fw-bold">
+                        <i class="bi bi-cloud-upload-fill me-2"></i> PROCESAR PACIENTES
+                    </button>
+                </form>
+                <a href="{% url 'lista_pacientes' %}" class="btn btn-link mt-3 text-muted fw-bold">Regresar</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -25,6 +25,9 @@ def agendar_cita(request):
     if request.user.id_rol.nombre_rol not in ['Secretaria', 'Administrador']:
         return redirect('home')
 
+    # Obtener paciente_id si viene de la lista de pacientes (ej. /agendar/?paciente_id=51)
+    paciente_id = request.GET.get('paciente_id')
+    
     if request.method == 'POST':
         form = AgendarCitaForm(request.POST)
         fecha_solo = request.POST.get('fecha_seleccionada')
@@ -56,11 +59,20 @@ def agendar_cita(request):
         except Exception as e:
             messages.error(request, f'❌ Error al procesar la cita: {e}')
     else:
-        form = AgendarCitaForm()
+        # Si el paciente_id existe, pre-seleccionamos al paciente en el formulario
+        initial_data = {}
+        if paciente_id:
+            try:
+                # Cambia 'id_usuario' por el nombre exacto del campo PK en tu modelo Usuario
+                initial_data['id_paciente'] = paciente_id 
+            except Exception:
+                pass
+        form = AgendarCitaForm(initial=initial_data)
 
     return render(request, 'CitaApp/agendar_cita.html', {
         'form': form,
-        'hoy': timezone.now().date()
+        'hoy': timezone.now().date(),
+        'paciente_preseleccionado': paciente_id
     })
 
 
