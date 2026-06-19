@@ -1,5 +1,9 @@
 from django.db import models
 from django.db.models import Sum
+import qrcode
+from io import BytesIO
+from django.core.files import File
+from PIL import Image
 
 class EstadoCita(models.Model):
     id_estado_cita = models.AutoField(primary_key=True)
@@ -22,6 +26,37 @@ class Cita(models.Model):
     monto_estimado = models.DecimalField(max_digits=10, decimal_places=2, default=0)   
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     fecha_actualizacion = models.DateTimeField(auto_now=True)
+    qr_code = models.ImageField(
+        upload_to='qrcodes/',
+        blank=True,
+        null=True
+    )
+    hora_llegada = models.DateTimeField(
+        null=True,
+        blank=True
+    )
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+
+        if not self.qr_code:
+            qr_data = f"http://127.0.0.1:8000/citas/checkin/{self.id_cita}/"
+
+            qr = qrcode.make(qr_data)
+
+            buffer = BytesIO()
+            qr.save(buffer, format='PNG')
+            buffer.seek(0)
+
+            filename = f'cita_{self.id_cita}.png'
+
+            self.qr_code.save(
+                filename,
+                File(buffer),
+                save=False
+            )
+
+            super().save(update_fields=['qr_code'])
 
     class Meta:
         db_table = 'cita'

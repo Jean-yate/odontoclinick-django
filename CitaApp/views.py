@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse
 from django.contrib.auth.decorators import login_required
@@ -18,7 +20,11 @@ from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib import colors
-
+from .utils import generar_qr_cita
+from django.shortcuts import get_object_or_404, render
+from .models import Cita, EstadoCita
+from django.shortcuts import render, get_object_or_404
+from django.utils import timezone
 
 @login_required
 def agendar_cita(request):
@@ -47,8 +53,15 @@ def agendar_cita(request):
             form.instance.fecha_hora = fecha_hora_obj
 
             if form.is_valid():
-                form.save()
-                messages.success(request, f'✅ Cita agendada para el {fecha_solo} a las {hora_solo}.')
+                cita = form.save()
+
+                generar_qr_cita(cita)
+
+                messages.success(
+                    request,
+                    f'✅ Cita agendada para el {fecha_solo} a las {hora_solo}.'
+                )
+
                 return redirect('lista_citas')
             else:
                 for error in form.non_field_errors():
@@ -267,7 +280,7 @@ def registrar_pago_cita(request, id_cita):
     if request.method == 'POST':
         try:
             monto_input = request.POST.get('monto', '0').replace(',', '.')
-            monto_pago = float(monto_input)
+            monto_pago = Decimal(monto_input)
 
             if monto_pago > cita.saldo_pendiente:
                 messages.warning(request, f"⚠️ El abono excede el saldo (${cita.saldo_pendiente}).")
@@ -388,3 +401,45 @@ def editar_cita_rapido(request, id_cita):
             messages.error(request, f"❌ Error al actualizar: {e}")
 
     return redirect('lista_citas')
+
+def checkin_qr(request, cita_id):
+
+    cita = get_object_or_404(Cita, pk=cita_id)
+
+    # Evitar doble check-in
+    if cita.hora_llegada:
+        return render(
+            request,
+            'CitaApp/checkin_ya_realizado.html',
+            {'cita': cita}
+        )
+
+    estado_espera = EstadoCita.objects.get(
+        nombre_estado='En Espera'
+    )
+
+    cita.id_estado_cita = estado_espera
+    cita.hora_llegada = timezone.now()
+
+    cita.save()
+
+    return render(
+        request,
+        'CitaApp/checkin_exitoso.html',
+        {'cita': cita}
+    )
+
+def checkin_cita(request, cita_id):
+    cita = get_object_or_404(Cita, id_cita=cita_id)
+
+    if not cita.hora_llegada:
+        estado_en_proceso = EstadoCita.objects.filter(
+            nombre_estado__icontains='En Proceso'
+        ).first()
+
+        if estado_en_proceso:
+            cita.id_estado_cita = estado_en_proceso
+
+        cita.hora_llegada = timezone.now()
+        cita.save()
+

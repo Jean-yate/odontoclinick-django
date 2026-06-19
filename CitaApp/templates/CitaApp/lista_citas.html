@@ -5,11 +5,19 @@
 <style>
     .clay-card { background: white; border-radius: 30px; box-shadow: var(--clay-shadow); border: none; }
     .btn-action-clay {
-        width: 36px; height: 36px; display: inline-flex; align-items: center;
-        justify-content: center; border-radius: 10px; background: white;
-        box-shadow: 3px 3px 6px #d1cdc7; border: none; transition: all 0.2s;
-        text-decoration: none;
-    }
+    width: 40px;
+    height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    background: white;
+    box-shadow: 3px 3px 6px #d1cdc7;
+    border: none;
+    transition: all 0.2s;
+    text-decoration: none;
+    font-size: 1rem;
+}
     .btn-action-clay:hover:not(.disabled) { transform: translateY(-2px); box-shadow: 4px 4px 10px #c5c0bb; }
     .btn-action-clay.disabled { opacity: 0.4; pointer-events: none; }
     .progress-clay { height: 5px; border-radius: 10px; background: var(--bg-body); }
@@ -167,6 +175,21 @@
                                 {% else %}
                                     <span class="btn-action-clay disabled" title="Cita cancelada">
                                         <i class="bi bi-envelope-slash text-muted"></i>
+                                    </span>
+                                {% endif %}
+
+                                <!-- BOTÓN QR CHECK-IN -->
+                                {% if cita.qr_code %}
+                                    <a href="{{ cita.qr_code.url }}"
+                                    target="_blank"
+                                    class="btn-action-clay"
+                                    title="Ver QR de Check-In">
+                                        <i class="bi bi-qr-code text-dark"></i>
+                                    </a>
+                                {% else %}
+                                    <span class="btn-action-clay disabled"
+                                        title="QR no generado">
+                                        <i class="bi bi-qr-code text-muted"></i>
                                     </span>
                                 {% endif %}
                                 <a href="{% url 'generar_factura_ticket' cita.id_cita %}" target="_blank" class="btn-action-clay" title="Imprimir ticket">

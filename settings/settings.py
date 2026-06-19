@@ -160,8 +160,7 @@ STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
 MEDIA_URL = 'media/'
 
 #Indica dónde buscar archivos multimedia para desplegar
-MEDIA_ROOT = BASE_DIR/'settings/media'
-
+MEDIA_ROOT = BASE_DIR / 'settings' / 'media'
 #Requerimientos en Gmail
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
