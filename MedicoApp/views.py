@@ -253,56 +253,58 @@ def guardar_atencion(request):
 # --- MOTOR DE DISPONIBILIDAD (AJAX) ---
 
 def obtener_slots_ajax(request):
-    """Genera slots de tiempo disponibles para reserva de citas vía AJAX."""
+    doctor_id = request.GET.get('doctor_id')
+    fecha_str = request.GET.get('fecha')  # Formato 'YYYY-MM-DD'
+    
+    if not doctor_id or not fecha_str:
+        return JsonResponse({'slots': []})
+        
     try:
-        fecha_str = request.GET.get('fecha')
-        doctor_id = request.GET.get('doctor_id')
+        # 1. Definir la jornada laboral base (Ejemplo: 8:00 AM a 5:00 PM)
+        # Ajusta estos horarios según las reglas de OdontoClinick
+        hora_inicio = datetime.strptime("08:00", "%H:%M").time()
+        hora_fin = datetime.strptime("17:00", "%H:%M").time()
+        duracion_cita = timedelta(minutes=30) # Citas de 30 minutos
+
+        # Construir la lista base de todos los horarios posibles del día
+        fecha_obj = datetime.strptime(fecha_str, "%Y-%m-%d").date()
+        slots_posibles = []
         
-        if not fecha_str or not doctor_id:
-            return JsonResponse({'slots': []})
-
-        fecha_obj = datetime.strptime(fecha_str, '%Y-%m-%d').date()
-        # Django weekday: 0=Lunes, 6=Domingo. Si tu BD usa 1=Lunes, esto está bien:
-        dia_bd = fecha_obj.weekday() + 1 
-
-        horario = Disponibilidad.objects.filter(
-            id_medico_id=doctor_id, 
-            dia_semana=dia_bd, 
-            activo=True
-        ).first()
+        actual_dt = datetime.combine(fecha_obj, hora_inicio)
+        fin_dt = datetime.combine(fecha_obj, hora_fin)
         
-        if not horario:
-            return JsonResponse({'slots': []})
+        while actual_dt < fin_dt:
+            slots_posibles.append(actual_dt.time().strftime("%H:%M"))
+            actual_dt += duracion_cita
 
-        # --- CAMBIO CRÍTICO AQUÍ ---
-        # Filtramos las citas ocupadas EXCLUYENDO las que tengan estado "Cancelada"
+        # 2. Obtener las citas que YA TIENE ese doctor en esa fecha
+        # Excluimos las citas que estén 'Canceladas' para que esas horas sí se liberen
         citas_ocupadas = Cita.objects.filter(
-            id_doctor_id=doctor_id, 
+            id_doctor_id=doctor_id,
             fecha_hora__date=fecha_obj
         ).exclude(
             id_estado_cita__nombre_estado__icontains='Cancelada'
-        ).values_list('fecha_hora', flat=True)
-        # ---------------------------
+        ).values_list('fecha_hora__time', flat=True)
 
-        horas_bloqueadas = [cita.strftime('%H:%M') for cita in citas_ocupadas]
+        # Convertir los horarios ocupados a formato string 'HH:MM' para comparar fácilmente
+        horas_ocupadas = [t.strftime("%H:%M") for t in citas_ocupadas]
 
-        slots = []
-        # Combinamos la fecha seleccionada con las horas de la jornada del médico
-        inicio = datetime.combine(fecha_obj, horario.hora_inicio)
-        fin = datetime.combine(fecha_obj, horario.hora_fin)
-        intervalo = horario.duracion_cita
+        # 3. FILTRAR: Dejar solo los slots que NO estén en las horas ocupadas
+        # Si es el día de hoy, también filtramos las horas que ya pasaron
+        hoy = timezone.now().date()
+        ahora_time = timezone.now().time().strftime("%H:%M") if fecha_obj == hoy else "00:00"
 
-        # Generar los slots basados en la duración configurada (ej. 20, 30 o 45 min)
-        while inicio + timedelta(minutes=intervalo) <= fin:
-            slot_str = inicio.strftime('%H:%M')
-            if slot_str not in horas_bloqueadas:
-                slots.append(slot_str)
-            inicio += timedelta(minutes=intervalo)
+        slots_libres = [
+            slot for slot in slots_posibles 
+            if slot not in horas_ocupadas and slot >= ahora_time
+        ]
 
-        return JsonResponse({'slots': slots})
+        return JsonResponse({'slots': slots_libres})
+
     except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
-
+        print(f"[ERROR OBTENER SLOTS]: {e}")
+        return JsonResponse({'slots': []}, status=500)
+        
 # --- PERFIL Y OTROS ---
 
 @login_required

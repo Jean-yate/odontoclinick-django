@@ -1,15 +1,15 @@
+from datetime import timedelta
 from django import forms
-from .models import Cita, EstadoCita
+from django.core.exceptions import ValidationError
+from django.utils import timezone
+
 from PacienteApp.models import Paciente
 from MedicoApp.models import Medico
-from django.core.exceptions import ValidationError
-from datetime import timedelta
-from django.utils import timezone
+from .models import Cita, EstadoCita
 
 class AgendarCitaForm(forms.ModelForm):
     class Meta:
         model = Cita
-        # Campos solicitados
         fields = ['id_paciente', 'id_doctor', 'id_estado_cita', 'monto_estimado']
         
         widgets = {
@@ -26,8 +26,7 @@ class AgendarCitaForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         
-        # CORRECCIÓN CLAVE: Usamos select_related para traer al Usuario y evitar el DoesNotExist.
-        # Además, filtramos para que solo aparezcan los que realmente tienen un usuario vinculado.
+        # Optimización con select_related para evitar consultas Queryset duplicadas (Problema N+1)
         self.fields['id_paciente'].queryset = Paciente.objects.filter(
             id_usuario__isnull=False
         ).select_related('id_usuario')
@@ -38,7 +37,7 @@ class AgendarCitaForm(forms.ModelForm):
         
         self.fields['id_estado_cita'].queryset = EstadoCita.objects.all()
 
-        # Estado inicial por defecto de forma segura
+        # Asignación del estado inicial seguro
         if not self.instance.pk:
             try:
                 estado_inicial = EstadoCita.objects.filter(nombre_estado__icontains='Pendiente').first()
@@ -48,13 +47,10 @@ class AgendarCitaForm(forms.ModelForm):
                 pass
 
     def clean(self):
-        """
-        Validación personalizada para evitar choques de horario.
-        """
         cleaned_data = super().clean()
         doctor = cleaned_data.get('id_doctor')
         
-        # Obtenemos la fecha_hora asignada en la vista
+        # Se obtiene la fecha_hora asignada desde el POST de la vista
         fecha_hora_inicio = getattr(self.instance, 'fecha_hora', None)
 
         if fecha_hora_inicio and doctor:
@@ -64,22 +60,20 @@ class AgendarCitaForm(forms.ModelForm):
             if fecha_hora_inicio < ahora:
                 raise ValidationError("No se pueden agendar citas en fechas u horas pasadas.")
 
-            # 2. Límite Futuro (90 días)
+            # 2. Límite Futuro (90 días) - Corregido sin la palabra clave 'let' de JS
             limite_futuro = ahora + timedelta(days=90)
             if fecha_hora_inicio > limite_futuro:
                 raise ValidationError("No se permite agendar citas con más de 3 meses de antelación.")
 
-            # 3. Validación de choque de horarios (45 minutos)
-            duracion_cita = timedelta(minutes=45)
-            
+            # 3. Validación de cruce de agendas (excluyendo citas canceladas)
             conflictos = Cita.objects.filter(
                 id_doctor=doctor,
-                fecha_hora__lt=fecha_hora_inicio + duracion_cita, 
-                fecha_hora__gt=fecha_hora_inicio - duracion_cita 
+                fecha_hora=fecha_hora_inicio
             ).exclude(
                 id_estado_cita__nombre_estado__icontains='Cancelada'
             )
 
+            # Si es edición, excluimos la cita actual para evitar un falso positivo
             if self.instance.pk:
                 conflictos = conflictos.exclude(pk=self.instance.pk)
 

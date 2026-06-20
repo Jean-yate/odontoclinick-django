@@ -78,16 +78,28 @@ def contacto_pqrs(request):
 
 @login_required
 def panel_secretaria(request):
+    # 1. Validación de Roles (4 espacios de indentación)
     if request.user.id_rol.nombre_rol not in ['Secretaria', 'Administrador']:
         return redirect('home')
+        
+    # 2. Lógica de negocio (4 espacios de indentación)
     total_pacientes = Usuario.objects.filter(id_rol__nombre_rol='Paciente').count()
     hoy = timezone.now().date()
-    citas_hoy_count = Cita.objects.filter(fecha_hora__date=hoy).count()
+    
+    citas_hoy_count = Cita.objects.filter(
+        fecha_hora__date=hoy
+    ).exclude(
+        id_estado_cita__nombre_estado__icontains='Cancelada'
+    ).count()
+    
+    # 3. Definición del Contexto (4 espacios de indentación)
     contexto = {
         'total_pacientes': total_pacientes,
         'citas_hoy_count': citas_hoy_count,
         'nombre_usuario': request.user.nombre,
     }
+    
+    # 4. Retorno de la respuesta (4 espacios de indentación)
     return render(request, 'Webapp/panel_secretaria.html', contexto)
 
 @login_required

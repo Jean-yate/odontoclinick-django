@@ -5,19 +5,19 @@
 <style>
     .clay-card { background: white; border-radius: 30px; box-shadow: var(--clay-shadow); border: none; }
     .btn-action-clay {
-    width: 40px;
-    height: 40px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 12px;
-    background: white;
-    box-shadow: 3px 3px 6px #d1cdc7;
-    border: none;
-    transition: all 0.2s;
-    text-decoration: none;
-    font-size: 1rem;
-}
+        width: 40px;
+        height: 40px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 12px;
+        background: white;
+        box-shadow: 3px 3px 6px #d1cdc7;
+        border: none;
+        transition: all 0.2s;
+        text-decoration: none;
+        font-size: 1rem;
+    }
     .btn-action-clay:hover:not(.disabled) { transform: translateY(-2px); box-shadow: 4px 4px 10px #c5c0bb; }
     .btn-action-clay.disabled { opacity: 0.4; pointer-events: none; }
     .progress-clay { height: 5px; border-radius: 10px; background: var(--bg-body); }
@@ -30,6 +30,41 @@
     }
     .table tbody tr { border-bottom: 1px solid var(--bg-body); transition: background 0.15s; }
     .table tbody tr:hover { background: #fafbff; }
+    
+    .dia-separador {
+        background: #f8f9fa;
+        border-left: 5px solid var(--primary-color);
+        padding: 10px 20px;
+        margin: 25px 0 15px 0;
+        border-radius: 0 15px 15px 0;
+        font-weight: bold;
+        color: #333;
+        box-shadow: 2px 2px 5px rgba(0,0,0,0.03);
+    }
+
+    .nav-clay {
+        background: #f1f3f5;
+        padding: 6px;
+        border-radius: 20px;
+        display: inline-flex;
+        border: none;
+    }
+    .nav-clay .nav-link {
+        border-radius: 15px;
+        padding: 8px 20px;
+        font-weight: 700;
+        color: #6c757d;
+        border: none;
+        transition: all 0.2s;
+    }
+    .nav-clay .nav-link.active {
+        background: white;
+        color: var(--primary-color);
+        box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    }
+    .dropdown-content-clay:hover {
+        background-color: var(--bg-body) !important;
+    }
 </style>
 {% endblock %}
 
@@ -59,32 +94,34 @@
             </a>
         </div>
     </div>
+
     <div class="filter-section mb-4">
-        <form method="GET" action="{% url 'lista_citas' %}">
+        <form method="GET" action="{% url 'lista_citas' %}" id="filterForm">
+            <input type="hidden" name="vista" id="inputVista" value="{{ request.GET.vista|default:'todas' }}">
+            
             <div class="row g-2 align-items-end">
                 <div class="col-md-2">
                     <label class="form-label fw-bold small text-muted mb-1">Buscar paciente/doctor</label>
-                    <input type="text" name="buscar" class="form-control border-0 bg-light rounded-pill px-3" placeholder="Nombre..." value="{{ request.GET.buscar }}">
+                    <input type="text" name="buscar" class="form-control border-0 bg-light rounded-pill px-3" placeholder="Nombre..." value="{{ request.GET.buscar|default:'' }}">
                 </div>
                 <div class="col-md-2">
                     <label class="form-label fw-bold small text-muted mb-1">Fecha inicio</label>
-                    <input type="date" name="fecha_inicio" class="form-control border-0 bg-light rounded-pill px-3" value="{{ request.GET.fecha_inicio }}">
+                    <input type="date" name="fecha_inicio" class="form-control border-0 bg-light rounded-pill px-3" value="{{ request.GET.fecha_inicio|default:'' }}">
                 </div>
                 <div class="col-md-2">
                     <label class="form-label fw-bold small text-muted mb-1">Fecha fin</label>
-                    <input type="date" name="fecha_fin" class="form-control border-0 bg-light rounded-pill px-3" value="{{ request.GET.fecha_fin }}">
+                    <input type="date" name="fecha_fin" class="form-control border-0 bg-light rounded-pill px-3" value="{{ request.GET.fecha_fin|default:'' }}">
                 </div>
                 <div class="col-md-2">
                     <label class="form-label fw-bold small text-muted mb-1">Doctor</label>
-                    <input type="text" name="doctor" class="form-control border-0 bg-light rounded-pill px-3" placeholder="Nombre..." value="{{ request.GET.doctor }}">
+                    <input type="text" name="doctor" class="form-control border-0 bg-light rounded-pill px-3" placeholder="Nombre..." value="{{ request.GET.doctor|default:'' }}">
                 </div>
                 <div class="col-md-1">
                     <label class="form-label fw-bold small text-muted mb-1">Estado cita</label>
                     <select name="estado" class="form-select border-0 bg-light rounded-pill px-3">
                         <option value="">Todos</option>
                         {% for e in estados_disponibles %}
-                            <option value="{{ e.id_estado_cita }}"
-                                {% if request.GET.estado == e.id_estado_cita|stringformat:"s" %}selected{% endif %}>
+                            <option value="{{ e.id_estado_cita }}" {% if request.GET.estado == e.id_estado_cita|stringformat:"s" %}selected{% endif %}>
                                 {{ e.nombre_estado }}
                             </option>
                         {% endfor %}
@@ -110,215 +147,357 @@
             </div>
         </form>
     </div>
-    <div class="clay-card overflow-hidden">
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead style="background: var(--bg-body);">
-                    <tr>
-                        <th class="ps-4">Fecha / Hora</th>
-                        <th>Paciente</th>
-                        <th>Doctor</th>
-                        <th>Estado Cita</th>
-                        <th>Estado Pago</th>
-                        <th>Costo / Abono</th>
-                        <th class="text-center pe-4">Acciones</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for cita in citas %}
-                    <tr>
-                        <td class="ps-4">
-                            <div class="fw-bold text-primary">{{ cita.fecha_hora|date:"d/m/Y" }}</div>
-                            <small class="text-muted fw-bold">{{ cita.fecha_hora|time:"H:i" }}</small>
-                        </td>
-                        <td>
-                            <div class="fw-bold" style="color: var(--primary-color);">
-                                {{ cita.id_paciente.id_usuario.nombre }} {{ cita.id_paciente.id_usuario.apellidos }}
-                            </div>
-                            <small class="text-muted">ID: {{ cita.id_paciente.id_paciente }}</small>
-                        </td>
-                        <td class="text-muted small fw-bold">
-                            <i class="bi bi-person-badge me-1"></i>Dr. {{ cita.id_doctor.id_usuario.nombre }}
-                        </td>
-                        <td>
-                            <span class="badge px-3 py-2 rounded-pill text-white" style="background-color: {{ cita.id_estado_cita.color|default:'#6c757d' }}; font-size: 0.7rem; font-weight: 800;">
-                                {{ cita.id_estado_cita.nombre_estado }}
-                            </span>
-                        </td>
-                        <td>
-                            {% with pago=cita.estado_pago %}
-                            <span class="badge rounded-pill bg-{{ pago.color }} px-3 py-2" style="font-size: 0.7rem; font-weight: 800;">
-                                {{ pago.texto|upper }}
-                            </span>
-                            {% endwith %}
-                        </td>
-                        <td>
-                            <div class="fw-bold">${{ cita.costo_final }}</div>
-                            {% if cita.id_estado_cita.nombre_estado|lower != 'cancelada' and cita.costo_final > 0 %}
-                                <div class="progress progress-clay mt-1" style="width: 75px;">
-                                    <div class="progress-bar bg-success"style="width: {% widthratio cita.total_abonado cita.costo_final 100 %}%">
-                                    </div>
-                                </div>
-                                {% if cita.saldo_pendiente > 0 %}
-                                    <small class="text-danger fw-bold" style="font-size: 0.65rem;">
-                                        Resta: ${{ cita.saldo_pendiente }}
-                                    </small>
-                                {% endif %}
-                            {% endif %}
-                        </td>
-                        <td class="text-center pe-4">
-                            <div class="d-flex justify-content-center gap-1">
-                                {% if cita.id_estado_cita.nombre_estado|lower != 'cancelada' %}
-                                    <a href="{% url 'enviar_recordatorio_manual' cita.id_cita %}" class="btn-action-clay" title="Enviar recordatorio">
-                                        <i class="bi bi-envelope-at text-primary"></i>
-                                    </a>
-                                {% else %}
-                                    <span class="btn-action-clay disabled" title="Cita cancelada">
-                                        <i class="bi bi-envelope-slash text-muted"></i>
-                                    </span>
-                                {% endif %}
 
-                                <!-- BOTÓN QR CHECK-IN -->
-                                {% if cita.qr_code %}
-                                    <a href="{{ cita.qr_code.url }}"
-                                    target="_blank"
-                                    class="btn-action-clay"
-                                    title="Ver QR de Check-In">
-                                        <i class="bi bi-qr-code text-dark"></i>
-                                    </a>
-                                {% else %}
-                                    <span class="btn-action-clay disabled"
-                                        title="QR no generado">
-                                        <i class="bi bi-qr-code text-muted"></i>
-                                    </span>
-                                {% endif %}
-                                <a href="{% url 'generar_factura_ticket' cita.id_cita %}" target="_blank" class="btn-action-clay" title="Imprimir ticket">
-                                    <i class="bi bi-printer text-info"></i>
-                                </a>
-                                {% if cita.saldo_pendiente > 0 and cita.id_estado_cita.nombre_estado|lower != 'cancelada' %}
-                                    <a href="{% url 'registrar_pago_cita' cita.id_cita %}" class="btn-action-clay" title="Registrar pago">
-                                        <i class="bi bi-cash-coin {% if cita.total_abonado > 0 %}text-warning{% else %}text-success{% endif %}"></i>
-                                    </a>
-                                {% else %}
-                                    <span class="btn-action-clay disabled" title="Sin saldo pendiente">
-                                        <i class="bi bi-check-all text-success"></i>
-                                    </span>
-                                {% endif %}
-                                {% if cita.id_estado_cita.nombre_estado|lower != 'cancelada' and cita.id_estado_cita.nombre_estado|lower != 'finalizada' %}
-                                    <button type="button" class="btn-action-clay"
-                                            data-bs-toggle="modal"
-                                            data-bs-target="#modal{{ cita.id_cita }}"
-                                            title="Gestionar cita">
-                                        <i class="bi bi-pencil-square text-primary"></i>
-                                    </button>
-                                {% else %}
-                                    <span class="btn-action-clay disabled" title="No editable">
-                                        <i class="bi bi-lock text-muted"></i>
-                                    </span>
-                                {% endif %}
-                                {% if cita.id_estado_cita.nombre_estado|lower == 'cancelada' %}
-                                    <span class="btn-action-clay disabled" title="Ya cancelada">
-                                        <i class="bi bi-x-circle text-muted"></i>
-                                    </span>
-                                {% elif cita.id_estado_cita.nombre_estado|lower == 'finalizada' %}
-                                    <span class="btn-action-clay disabled" title="Cita finalizada">
-                                        <i class="bi bi-check-circle text-muted"></i>
-                                    </span>
-                                {% else %}
-                                    <a href="{% url 'cancelar_cita' cita.id_cita %}" class="btn-action-clay" onclick="return confirm('¿Estás seguro de cancelar esta cita?')" title="Cancelar cita">
-                                        <i class="bi bi-trash3 text-danger"></i>
-                                    </a>
-                                {% endif %}
-                            </div>
-                        </td>
-                    </tr>
-                    {% if cita.id_estado_cita.nombre_estado|lower != 'cancelada' and cita.id_estado_cita.nombre_estado|lower != 'finalizada' %}
-                    <div class="modal fade" id="modal{{ cita.id_cita }}" tabindex="-1" aria-hidden="true">
-                        <div class="modal-dialog modal-dialog-centered">
-                            <div class="modal-content p-2">
-                                <form action="{% url 'actualizar_estado_gestion' cita.id_cita %}" method="POST">
-                                    {% csrf_token %}
-                                    <div class="modal-header border-0 pt-4 px-4">
-                                        <h5 class="modal-title fw-bold text-primary">
-                                            <i class="bi bi-pencil-square me-2"></i>Gestión de Cita
-                                        </h5>
-                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                    </div>
-                                    <div class="modal-body px-4 pb-2">
-                                        <div class="mb-3">
-                                            <label class="form-label small fw-bold text-muted text-uppercase">Estado</label>
-                                            <select name="id_estado"
-                                                    class="form-select border-0 bg-light rounded-pill fw-bold shadow-sm">
-                                                {% for estado in estados_disponibles %}
-                                                    <option value="{{ estado.id_estado_cita }}"
-                                                        {% if estado.id_estado_cita == cita.id_estado_cita.id_estado_cita %}selected{% endif %}>
-                                                        {{ estado.nombre_estado }}
-                                                    </option>
-                                                {% endfor %}
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label class="form-label small fw-bold text-muted text-uppercase">
-                                                Reprogramar fecha <span class="text-muted fw-normal">(Opcional)</span>
-                                            </label>
-                                            <input type="date" name="nueva_fecha" class="form-control border-0 bg-light rounded-pill fw-bold shadow-sm fecha-cita" value="{{ cita.fecha_hora|date:'Y-m-d' }}">
-                                        </div>
-                                    </div>
-                                    <div class="modal-footer border-0 px-4 pb-4">
-                                        <button type="button"
-                                                class="btn btn-light rounded-pill px-4 fw-bold border"
-                                                data-bs-dismiss="modal">Cancelar</button>
-                                        <button type="submit"
-                                                class="btn btn-primary rounded-pill px-5 fw-bold shadow-sm">
-                                            Guardar Cambios
-                                        </button>
-                                    </div>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
-                    {% endif %}
-
-                    {% empty %}
-                    <tr>
-                        <td colspan="7" class="text-center py-5">
-                            <i class="bi bi-calendar-x fs-1 opacity-25 d-block mb-3"></i>
-                            <p class="text-muted fw-bold mb-2">No se encontraron citas con los filtros aplicados.</p>
-                            <a href="{% url 'lista_citas' %}" class="btn btn-sm btn-light rounded-pill border px-4">
-                                Limpiar filtros
-                            </a>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+    <div class="mb-3">
+        <div class="nav nav-clay" role="tablist">
+            <button class="nav-link {% if request.GET.vista == 'todas' or not request.GET.vista %}active{% endif %}" onclick="cambiarVista('todas')">
+                <i class="bi bi-collection me-1"></i> Todas las Citas
+            </button>
+            <button class="nav-link {% if request.GET.vista == 'hoy' %}active{% endif %}" onclick="cambiarVista('hoy')">
+                <i class="bi bi-calendar-day me-1"></i> Citas de Hoy
+            </button>
+            <button class="nav-link {% if request.GET.vista == 'proximas' %}active{% endif %}" onclick="cambiarVista('proximas')">
+                <i class="bi bi-calendar-plus me-1"></i> Próximas Citas
+            </button>
+            <button class="nav-link {% if request.GET.vista == 'historial' %}active{% endif %}" onclick="cambiarVista('historial')">
+                <i class="bi bi-archive me-1"></i> Historial (Pasadas)
+            </button>
         </div>
     </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show rounded-pill px-4" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    {% if citas %}
+        {% regroup citas by fecha_hora.date as citas_por_dia %}
+
+        {% for dia in citas_por_dia %}
+            <div class="dia-separador d-flex align-items-center">
+                <i class="bi bi-calendar-check me-2 text-primary"></i>
+                <span>{{ dia.grouper|date:"l, d \d\e F \d\e Y"|title }}</span>
+            </div>
+
+            <div class="clay-card overflow-hidden mb-4">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead style="background: var(--bg-body);">
+                            <tr>
+                                <th class="ps-4" style="width: 12%;">Hora</th>
+                                <th style="width: 23%;">Paciente</th>
+                                <th style="width: 18%;">Doctor</th>
+                                <th style="width: 12%;">Estado Cita</th>
+                                <th style="width: 12%;">Estado Pago</th>
+                                <th style="width: 11%;">Costo / Abono</th>
+                                <th class="text-center pe-4" style="width: 12%;">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for cita in dia.list %}
+                            <tr>
+                                <td class="ps-4">
+                                    <div class="fw-bold text-primary">{{ cita.fecha_hora|time:"H:i" }}</div>
+                                    <small class="text-muted text-uppercase" style="font-size: 0.65rem;">{{ cita.fecha_hora|time:"A" }}</small>
+                                </td>
+                                <td>
+                                    <div class="fw-bold" style="color: var(--primary-color);">
+                                        {{ cita.id_paciente.id_usuario.nombre }} {{ cita.id_paciente.id_usuario.apellidos }}
+                                    </div>
+                                    <small class="text-muted">ID: {{ cita.id_paciente.id_paciente }}</small>
+                                </td>
+                                <td class="text-muted small fw-bold">
+                                    <i class="bi bi-person-badge me-1"></i>Dr. {{ cita.id_doctor.id_usuario.nombre }}
+                                </td>
+                                <td>
+                                    <span class="badge px-3 py-2 rounded-pill text-white" style="background-color: {{ cita.id_estado_cita.color|default:'#6c757d' }}; font-size: 0.7rem; font-weight: 800;">
+                                        {{ cita.id_estado_cita.nombre_estado }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% with pago=cita.estado_pago %}
+                                    <span class="badge rounded-pill bg-{{ pago.color }} px-3 py-2" style="font-size: 0.7rem; font-weight: 800;">
+                                        {{ pago.texto|upper }}
+                                    </span>
+                                    {% endwith %}
+                                </td>
+                                <td>
+                                    <div class="fw-bold">${{ cita.costo_final }}</div>
+                                    {% if cita.id_estado_cita.nombre_estado|lower != 'cancelada' and cita.costo_final > 0 %}
+                                        <div class="progress progress-clay mt-1" style="width: 75px;">
+                                            <div class="progress-bar bg-success" style="width: {% widthratio cita.total_abonado cita.costo_final 100 %}%"></div>
+                                        </div>
+                                        {% if cita.saldo_pendiente > 0 %}
+                                            <small class="text-danger fw-bold" style="font-size: 0.65rem;">
+                                                Resta: ${{ cita.saldo_pendiente }}
+                                            </small>
+                                        {% endif %}
+                                    {% endif %}
+                                </td>
+                                <td class="text-center pe-4">
+                                    <div class="d-flex justify-content-center gap-1">
+                                        {% if cita.id_estado_cita.nombre_estado == 'En Espera' %}
+                                            <a href="{% url 'llamar_paciente' cita.id_cita %}" class="btn-action-clay" title="Llamar paciente">
+                                                <i class="bi bi-megaphone-fill text-warning"></i>
+                                            </a>
+                                        {% endif %}
+                                        
+                                        {% if cita.id_estado_cita.nombre_estado|lower != 'cancelada' %}
+                                            <div class="dropdown d-inline-block">
+                                                <button class="btn-action-clay" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Enviar recordatorio">
+                                                    <i class="bi bi-envelope-at text-primary"></i>
+                                                </button>
+                                                <ul class="dropdown-menu dropdown-menu-end border-0 shadow-lg p-2" style="border-radius: 15px; min-width: 180px; z-index: 1050;">
+                                                    <li>
+                                                        <h6 class="dropdown-header fw-bold text-uppercase small pb-1 text-muted" style="font-size: 0.65rem;">Canal de envío</h6>
+                                                    </li>
+                                                    <li>
+                                                        <a class="dropdown-item dropdown-content-clay rounded-3 py-2 fw-semibold small text-primary" href="{% url 'enviar_recordatorio_manual' cita.id_cita %}?canal=sms">
+                                                            <i class="bi bi-chat-left-text-fill me-2"></i> Mensaje de Texto (SMS)
+                                                        </a>
+                                                    </li>
+                                                    <li>
+                                                        <a class="dropdown-item dropdown-content-clay rounded-3 py-2 fw-semibold small text-dark" href="{% url 'enviar_recordatorio_manual' cita.id_cita %}?canal=correo">
+                                                            <i class="bi bi-envelope-check-fill me-2 text-danger"></i> Correo Electrónico
+                                                        </a>
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                        {% else %}
+                                            <span class="btn-action-clay disabled" title="Cita cancelada">
+                                                <i class="bi bi-envelope-slash text-muted"></i>
+                                            </span>
+                                        {% endif %}
+
+                                        {% if cita.qr_code %}
+                                            <a href="{{ cita.qr_code.url }}" target="_blank" class="btn-action-clay" title="Ver QR de Check-In">
+                                                <i class="bi bi-qr-code text-dark"></i>
+                                            </a>
+                                        {% else %}
+                                            <span class="btn-action-clay disabled" title="QR no generado">
+                                                <i class="bi bi-qr-code text-muted"></i>
+                                            </span>
+                                        {% endif %}
+                                        
+                                        <a href="{% url 'generar_factura_ticket' cita.id_cita %}" target="_blank" class="btn-action-clay" title="Imprimir ticket">
+                                            <i class="bi bi-printer text-info"></i>
+                                        </a>
+                                        
+                                        {% if cita.saldo_pendiente > 0 and cita.id_estado_cita.nombre_estado|lower != 'cancelada' %}
+                                            <a href="{% url 'registrar_pago_cita' cita.id_cita %}" class="btn-action-clay" title="Registrar pago">
+                                                <i class="bi bi-cash-coin {% if cita.total_abonado > 0 %}text-warning{% else %}text-success{% endif %}"></i>
+                                            </a>
+                                        {% else %}
+                                            <span class="btn-action-clay disabled" title="Sin saldo pendiente">
+                                                <i class="bi bi-check-all text-success"></i>
+                                            </span>
+                                        {% endif %}
+                                        
+                                        {% if cita.id_estado_cita.nombre_estado|lower != 'cancelada' and cita.id_estado_cita.nombre_estado|lower != 'finalizada' %}
+                                            <button type="button" class="btn-action-clay" data-bs-toggle="modal" data-bs-target="#modal{{ cita.id_cita }}" title="Gestionar cita">
+                                                <i class="bi bi-pencil-square text-primary"></i>
+                                            </button>
+                                        {% else %}
+                                            <span class="btn-action-clay disabled" title="No editable">
+                                                <i class="bi bi-lock text-muted"></i>
+                                            </span>
+                                        {% endif %}
+                                        
+                                        {% if cita.id_estado_cita.nombre_estado|lower == 'cancelada' %}
+                                            <span class="btn-action-clay disabled" title="Ya cancelada">
+                                                <i class="bi bi-x-circle text-muted"></i>
+                                            </span>
+                                        {% elif cita.id_estado_cita.nombre_estado|lower == 'finalizada' %}
+                                            <span class="btn-action-clay disabled" title="Cita finalizada">
+                                                <i class="bi bi-check-circle text-muted"></i>
+                                            </span>
+                                        {% else %}
+                                            <a href="{% url 'cancelar_cita' cita.id_cita %}" class="btn-action-clay" onclick="return confirm('¿Estás seguro de cancelar esta cita?')" title="Cancelar cita">
+                                                <i class="bi bi-trash3 text-danger"></i>
+                                            </a>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+
+                            {% if cita.id_estado_cita.nombre_estado|lower != 'cancelada' and cita.id_estado_cita.nombre_estado|lower != 'finalizada' %}
+                            <div class="modal fade" id="modal{{ cita.id_cita }}" tabindex="-1" aria-hidden="true">
+                                <div class="modal-dialog modal-dialog-centered">
+                                    <div class="modal-content p-2">
+                                        <form action="{% url 'actualizar_estado_gestion' cita.id_cita %}" method="POST">
+                                            {% csrf_token %}
+                                            <div class="modal-header border-0 pt-4 px-4">
+                                                <h5 class="modal-title fw-bold text-primary">
+                                                    <i class="bi bi-pencil-square me-2"></i>Gestión de Cita
+                                                </h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                            </div>
+                                            <div class="modal-body px-4 pb-2">
+                                                <div class="mb-3">
+                                                    <label class="form-label small fw-bold text-muted text-uppercase">Estado</label>
+                                                    <select name="id_estado" class="form-select border-0 bg-light rounded-pill fw-bold shadow-sm">
+                                                        {% for estado in estados_disponibles %}
+                                                            <option value="{{ estado.id_estado_cita }}"
+                                                                {% if estado.id_estado_cita == cita.id_estado_cita.id_estado_cita %}selected{% endif %}>
+                                                                {{ estado.nombre_estado }}
+                                                            </option>
+                                                        {% endfor %}
+                                                    </select>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label class="form-label small fw-bold text-muted text-uppercase">
+                                                        Reprogramar fecha <span class="text-muted fw-normal">(Opcional)</span>
+                                                    </label>
+                                                    <input
+                                                        type="date"
+                                                        name="nueva_fecha"
+                                                        class="form-control border-0 bg-light rounded-pill fw-bold shadow-sm fecha-reprogramar"
+                                                        value="{{ cita.fecha_hora|date:'Y-m-d' }}"
+                                                        data-cita-id="{{ cita.id_cita }}"
+                                                        data-doctor-id="{{ cita.id_doctor.id_doctor }}"
+                                                        data-hora-actual="{{ cita.fecha_hora|date:'H:i' }}"
+                                                    >
+                                                </div>
+                                                <div class="mb-2">
+                                                    <label class="form-label small fw-bold text-muted text-uppercase">
+                                                        Hora disponible <span class="text-muted fw-normal">(Opcional)</span>
+                                                    </label>
+                                                    <select
+                                                        name="nueva_hora"
+                                                        class="form-select border-0 bg-light rounded-pill fw-bold shadow-sm"
+                                                        id="selectHora_{{ cita.id_cita }}"
+                                                    >
+                                                        <option value="{{ cita.fecha_hora|date:'H:i' }}" selected>
+                                                            {{ cita.fecha_hora|date:'H:i' }} — hora actual
+                                                        </option>
+                                                    </select>
+                                                    <div class="text-muted small mt-1 ms-2 d-none spinner-cita-{{ cita.id_cita }}">
+                                                        <span class="spinner-border spinner-border-sm me-1 text-primary"></span> Cargando horas...
+                                                    </div>
+                                                    <div class="small mt-1 ms-2 fw-semibold text-primary info-slots-{{ cita.id_cita }}"></div>
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer border-0 px-4 pb-4">
+                                                <button type="button" class="btn btn-light rounded-pill px-4 fw-bold border" data-bs-dismiss="modal">Cancelar</button>
+                                                <button type="submit" class="btn btn-primary rounded-pill px-5 fw-bold shadow-sm">Guardar Cambios</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        {% endfor %}
+    {% else %}
+        <div class="clay-card py-5 text-center shadow-sm">
+            <i class="bi bi-calendar-x fs-1 opacity-25 d-block mb-3 text-muted"></i>
+            <p class="text-muted fw-bold mb-2">No se encontraron citas con la vista o filtros aplicados.</p>
+            <a href="{% url 'lista_citas' %}" class="btn btn-sm btn-light rounded-pill border px-4">Limpiar filtros</a>
+        </div>
+    {% endif %}
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-    document.addEventListener("DOMContentLoaded", function() {
-        // Restricción de fechas pasadas en modales
-        const hoy = new Date().toISOString().split('T')[0];
-        document.querySelectorAll('.fecha-cita').forEach(input => {
-            input.setAttribute('min', hoy);
-        });
+// ─── Cambiar pestaña y reenviar filtros ────────────────────────────────────
+function cambiarVista(nombreVista) {
+    document.getElementById('inputVista').value = nombreVista;
+    document.getElementById('filterForm').submit();
+}
 
-        // Impresión automática si viene imprimir_id
-        const urlParams = new URLSearchParams(window.location.search);
-        const imprimirId = urlParams.get('imprimir_id');
-        if (imprimirId) {
-            const basePrintUrl = "{% url 'generar_factura_ticket' 999999 %}";
-            const finalPrintUrl = basePrintUrl.replace('999999', imprimirId);
-            const win = window.open(finalPrintUrl, '_blank');
-            if (win) {
-                win.focus();
-                const cleanUrl = window.location.origin + window.location.pathname;
-                window.history.replaceState({}, document.title, cleanUrl);
-            }
-        }
+document.addEventListener("DOMContentLoaded", function () {
+    // ─── Fecha mínima hoy en todos los inputs de fecha ────────────────────
+    const hoy = new Date().toISOString().split('T')[0];
+    document.querySelectorAll('.fecha-reprogramar').forEach(input => {
+        input.setAttribute('min', hoy);
     });
+
+    // ─── Impresión automática si viene parámetro imprimir_id ──────────────
+    const urlParams  = new URLSearchParams(window.location.search);
+    const imprimirId = urlParams.get('imprimir_id');
+    if (imprimirId) {
+        const basePrintUrl  = "{% url 'generar_factura_ticket' 999999 %}";
+        const finalPrintUrl = basePrintUrl.replace('999999', imprimirId);
+        const win = window.open(finalPrintUrl, '_blank');
+        if (win) {
+            win.focus();
+            window.history.replaceState({}, document.title,
+                window.location.origin + window.location.pathname);
+        }
+    }
+
+    // ─── Carga de slots al cambiar la fecha en un modal ───────────────────
+    document.querySelectorAll('.fecha-reprogramar').forEach(function (inputFecha) {
+        inputFecha.addEventListener('change', function () {
+            const fecha      = this.value;
+            const doctorId   = this.dataset.doctorId;
+            const citaId     = this.dataset.citaId;
+            const horaActual = this.dataset.horaActual;
+            const selectHora = document.getElementById('selectHora_' + citaId);
+            const spinner    = document.querySelector('.spinner-cita-' + citaId);
+            const info       = document.querySelector('.info-slots-' + citaId);
+
+            if (!fecha || !doctorId) return;
+
+            // Mostrar estado de carga
+            spinner.classList.remove('d-none');
+            selectHora.disabled = true;
+            info.textContent    = '';
+
+            // Consulta dinámica al endpoint de disponibilidad
+            fetch(`/medico/slots/?fecha=${fecha}&doctor_id=${doctorId}`)
+                .then(r => r.json())
+                .then(data => {
+                    selectHora.innerHTML = '';
+                    const slots = data.slots || [];
+                    
+                    if (slots.length === 0) {
+                        selectHora.innerHTML = '<option value="">Sin horas disponibles ese día</option>';
+                        info.textContent     = 'El doctor no tiene disponibilidad configurada para esa fecha.';
+                        return;
+                    }
+
+                    const slotSet = new Set(slots);
+
+                    // Agregar la hora actual si está disponible en la nueva fecha
+                    if (horaActual && slotSet.has(horaActual)) {
+                        const optActual      = document.createElement('option');
+                        optActual.value      = horaActual;
+                        optActual.textContent = `${horaActual} — hora actual`;
+                        optActual.selected   = true;
+                        selectHora.appendChild(optActual);
+                    }
+
+                    // Agregar el resto de slots disponibles
+                    slots.forEach(slot => {
+                        if (slot === horaActual) return;
+                        const opt       = document.createElement('option');
+                        opt.value       = slot;
+                        opt.textContent = slot;
+                        selectHora.appendChild(opt);
+                    });
+
+                    info.textContent = `${slots.length} hora(s) disponible(s)`;
+                })
+                .catch(() => {
+                    selectHora.innerHTML = '<option value="">Error al consultar disponibilidad</option>';
+                    info.textContent     = 'No se pudo conectar con el servidor.';
+                })
+                .finally(() => {
+                    spinner.classList.add('d-none');
+                    selectHora.disabled = false;
+                });
+        });
+    });
+});
 </script>
 {% endblock %}

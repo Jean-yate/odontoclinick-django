@@ -20,9 +20,10 @@ urlpatterns = [
     path('paciente/<int:paciente_id>/', views.perfil_paciente, name='perfil_paciente'),
     path('guardar-atencion/', views.guardar_atencion, name='guardar_atencion'),
     
-    # Perfil (Opcional si quieres una vista aparte)
+    # Perfil
     path('perfil/', views.perfil_medico, name='perfil_medico'),
     path('mi-perfil/editar/', views.editar_perfil_medico, name='editar_perfil_medico'),
 
-
+    # ← NUEVO: Endpoint AJAX de slots de disponibilidad
+    path('slots/', views.obtener_slots_ajax, name='obtener_slots_ajax'),
 ]
