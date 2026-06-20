@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'TratamientoApp',    # Servicios y procedimientos
     'InventarioApp',     # Stock de insumos
     'FacturacionApp',    # Pagos y recibos
+    'EmpresaApp',        # Empresas
 ]
 
 MIDDLEWARE = [

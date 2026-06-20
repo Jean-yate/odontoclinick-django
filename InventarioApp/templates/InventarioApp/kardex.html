@@ -33,15 +33,15 @@
     border-bottom: 2px solid #f0ece9;
     color: var(--secondary-color, #7c6f65);
     font-weight: 700;
-    font-size: 0.68rem;
+    font-size: 0.63rem;
     text-transform: uppercase;
-    letter-spacing: 1.3px;
-    padding: 1rem 0.85rem;
+    letter-spacing: 0.9px;
+    padding: 0.85rem 0.55rem;
     white-space: nowrap;
 }
 .kx-table tbody tr { border-bottom: 1px solid #f8f6f4; transition: background 0.12s; }
 .kx-table tbody tr:hover { background: #fdfcfb; }
-.kx-table tbody td { padding: 0.8rem 0.85rem; vertical-align: middle; }
+.kx-table tbody td { padding: 0.65rem 0.55rem; vertical-align: middle; font-size: 0.81rem; }
 
 .pill-entrada {
     display: inline-flex; align-items: center; gap: 5px;
@@ -70,8 +70,6 @@
     color: var(--primary-color, #3f2e23);
     display: inline-flex; align-items: center; gap: 6px;
 }
-.stat-chip.entrada { background: #e8f5e9; color: #2e7d32; }
-.stat-chip.salida  { background: #fce4e4; color: #c62828; }
 .filtro-activo-badge {
     background: #fff3cd; border: 1.5px solid #ffc107; border-radius: 10px;
     padding: 0.2rem 0.65rem; font-size: 0.75rem; font-weight: 600; color: #856404;
@@ -157,7 +155,7 @@
     </div>
     {% endif %}
 
-    <!-- Filtros multicriterio -->
+    <!-- Filtros -->
     <div class="kx-card p-4 mb-4 kx-anim kx-anim-1">
         <p class="fw-bold text-uppercase small mb-3" style="color:var(--secondary-color);letter-spacing:1px;font-size:0.7rem;">
             <i class="bi bi-funnel me-1"></i> Filtros de auditoría
@@ -177,7 +175,6 @@
                            placeholder="Nombre o #código…" value="{{ request.GET.producto }}">
                 </div>
                 {% endif %}
-
                 <div class="col-sm-6 col-md-2">
                     <label class="form-label fw-bold small text-muted mb-1">Tipo</label>
                     <select name="tipo" class="form-select input-clay">
@@ -186,7 +183,6 @@
                         <option value="SALIDA"  {% if request.GET.tipo == 'SALIDA'  %}selected{% endif %}>↑ Salidas</option>
                     </select>
                 </div>
-
                 <div class="col-sm-6 col-md-2">
                     <label class="form-label fw-bold small text-muted mb-1">
                         <i class="bi bi-building me-1"></i>Empresa
@@ -201,25 +197,21 @@
                         {% endfor %}
                     </select>
                 </div>
-
                 <div class="col-sm-6 col-md-2">
                     <label class="form-label fw-bold small text-muted mb-1">Responsable</label>
                     <input type="text" name="usuario" class="form-control input-clay"
                            placeholder="Nombre…" value="{{ request.GET.usuario }}">
                 </div>
-
                 <div class="col-sm-6 col-md-1">
                     <label class="form-label fw-bold small text-muted mb-1">Desde</label>
                     <input type="date" name="fecha_inicio" class="form-control input-clay"
                            value="{{ request.GET.fecha_inicio }}">
                 </div>
-
                 <div class="col-sm-6 col-md-1">
                     <label class="form-label fw-bold small text-muted mb-1">Hasta</label>
                     <input type="date" name="fecha_fin" class="form-control input-clay"
                            value="{{ request.GET.fecha_fin }}">
                 </div>
-
                 <div class="col-sm-12 col-md-1 d-flex gap-2">
                     <button type="submit" class="btn btn-primary rounded-pill fw-bold shadow-sm flex-grow-1" title="Filtrar">
                         <i class="bi bi-search"></i>
@@ -259,6 +251,8 @@
                         <th class="text-center">Stock nuevo</th>
                         <th>Empresa / Cliente</th>
                         <th class="text-center">Precio / ud.</th>
+                        <th class="text-center">Total mov.</th>
+                        <th class="text-center">Ganancia</th>
                         <th>Motivo</th>
                         <th>Responsable</th>
                     </tr>
@@ -306,6 +300,7 @@
                         </span>
                     </td>
 
+                    {# ── Empresa / Cliente / Paciente ───────────────── #}
                     <td>
                         {% if m.empresa_asociada %}
                             <div class="d-flex align-items-center gap-1">
@@ -315,22 +310,78 @@
                         {% elif m.cliente_externo %}
                             <div class="d-flex align-items-center gap-1">
                                 <i class="bi bi-person-fill text-info" style="font-size:0.8rem;"></i>
-                                <span class="small">{{ m.cliente_externo }}</span>
+                                <span class="small">{{ m.cliente_externo.nombre }} {{ m.cliente_externo.apellidos }}</span>
+                            </div>
+                        {% elif m.id_cita %}
+                            <div class="d-flex align-items-center gap-1">
+                                <i class="bi bi-heart-pulse text-warning" style="font-size:0.8rem;"></i>
+                                <div>
+                                    <span class="small fw-semibold">
+                                        {{ m.id_cita.id_paciente.id_usuario.nombre }}
+                                        {{ m.id_cita.id_paciente.id_usuario.apellidos }}
+                                    </span>
+                                    <div class="text-muted" style="font-size:0.7rem;">Cita #{{ m.id_cita.id_cita }}</div>
+                                </div>
                             </div>
                         {% else %}
                             <span class="text-muted small">—</span>
                         {% endif %}
                     </td>
 
+                    {# ── Precio / ud. ──────────────────────────────── #}
                     <td class="text-center">
-                        {% if m.precio_transaccion %}
-                            <span class="fw-bold small text-success">${{ m.precio_transaccion|floatformat:"0" }}</span>
+                        {% if m.precio_transaccion is not None %}
+                            <span class="fw-bold small {% if m.tipo_movimiento == 'ENTRADA' %}text-danger{% else %}text-success{% endif %}">
+                                ${{ m.precio_transaccion|floatformat:"0"|cut:"-" }}
+                            </span>
+                            {# Para salidas, mostrar también el costo FIFO en pequeño #}
+                            {% if m.tipo_movimiento == 'SALIDA' and m.costo_unitario_salida %}
+                                <div style="font-size:0.68rem;color:#aaa;" title="Costo de compra por unidad (FIFO)">
+                                    costo: ${{ m.costo_unitario_salida|floatformat:"0" }}
+                                </div>
+                            {% endif %}
+                        {% elif m.id_producto.precio_venta %}
+                            <span style="background:#f0f0f0;color:#999;border-radius:7px;padding:0.12rem 0.45rem;font-size:0.7rem;font-weight:600;"
+                                  title="Precio de venta de referencia">
+                                ~${{ m.id_producto.precio_venta|floatformat:"0" }}
+                            </span>
                         {% else %}
                             <span class="text-muted small">—</span>
                         {% endif %}
                     </td>
 
-                    <td class="small text-muted">{{ m.motivo|default:"Sin motivo" }}</td>
+                    {# ── Total mov. ──────────────────────────────────── #}
+                    <td class="text-center">
+                        {% if m.es_referencia %}
+                            <span style="color:#bbb;font-size:0.82rem;font-style:italic;"
+                                  title="Estimado — no generó movimiento de dinero real">
+                                ~${{ m.total_movimiento|floatformat:"0" }}
+                            </span>
+                        {% elif m.total_movimiento %}
+                            <span class="fw-bold" style="font-size:0.88rem;color:{% if m.tipo_movimiento == 'ENTRADA' %}#c62828{% else %}#2e7d32{% endif %};">
+                                ${{ m.total_movimiento|floatformat:"0" }}
+                            </span>
+                        {% else %}
+                            <span class="text-muted small">—</span>
+                        {% endif %}
+                    </td>
+
+                    {# ── Ganancia por línea (solo en ventas reales) ── #}
+                    <td class="text-center">
+                        {% if m.ganancia_linea is not None %}
+                            <span class="fw-bold" style="font-size:0.85rem;color:{% if m.ganancia_linea >= 0 %}#2e7d32{% else %}#c62828{% endif %};">
+                                {% if m.ganancia_linea >= 0 %}+{% endif %}${{ m.ganancia_linea|floatformat:"0" }}
+                            </span>
+                        {% else %}
+                            <span class="text-muted small">—</span>
+                        {% endif %}
+                    </td>
+
+                    <td class="small text-muted"
+                        style="max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
+                        title="{{ m.motivo|default:'Sin motivo' }}">
+                        {{ m.motivo|default:"Sin motivo" }}
+                    </td>
 
                     <td>
                         <div class="d-flex align-items-center gap-1">
@@ -341,7 +392,7 @@
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="10" class="text-center py-5">
+                    <td colspan="12" class="text-center py-5">
                         <i class="bi bi-journal-x fs-1 d-block mb-3 text-muted opacity-25"></i>
                         <p class="text-muted fw-bold mb-1">
                             {% if producto_seleccionado %}
@@ -361,21 +412,62 @@
         </div>
 
         {% if movimientos %}
-        <div class="d-flex justify-content-between align-items-center px-4 py-3 border-top"
-             style="background:#faf8f6;">
-            <span class="text-muted small">
-                Mostrando <strong>{{ total }}</strong> registro{{ total|pluralize }}
-                {% if producto_seleccionado %}de <strong>{{ producto_seleccionado.nombre_producto }}</strong>{% endif %}
-            </span>
-            {% if producto_seleccionado %}
-            <a href="{% url 'lista_inventario' %}" class="btn btn-light btn-sm rounded-pill shadow-sm border">
-                <i class="bi bi-grid me-1"></i> Volver al inventario
-            </a>
-            {% else %}
-            <a href="{% url 'dashboard_auxiliar' %}" class="btn btn-light btn-sm rounded-pill shadow-sm border">
-                <i class="bi bi-arrow-left me-1"></i> Dashboard
-            </a>
-            {% endif %}
+        <div class="px-4 py-3 border-top" style="background:#f5f3f1;">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                <div class="d-flex gap-2 flex-wrap align-items-center">
+                    <span class="text-muted small fw-semibold">Resumen:</span>
+
+                    {# Invertido: egresos por compras → rojo #}
+                    <span style="background:#fce4e4;color:#c62828;border-radius:12px;padding:0.5rem 0.9rem;font-size:0.8rem;font-weight:700;">
+                        <i class="bi bi-arrow-down-circle me-1"></i>Invertido (compras):
+                        <strong>${{ total_invertido|floatformat:"0" }}</strong>
+                    </span>
+
+                    {# Recaudado: ingresos por ventas → verde #}
+                    <span style="background:#e8f5e9;color:#2e7d32;border-radius:12px;padding:0.5rem 0.9rem;font-size:0.8rem;font-weight:700;">
+                        <i class="bi bi-arrow-up-circle me-1"></i>Recaudado (ventas):
+                        <strong>${{ total_recaudado|floatformat:"0" }}</strong>
+                    </span>
+
+                    {# Costo de ventas FIFO #}
+                    {% if total_costo_ventas %}
+                    <span style="background:#fff8e1;color:#f57f17;border-radius:12px;padding:0.5rem 0.9rem;font-size:0.8rem;font-weight:700;"
+                          title="Costo real de las unidades vendidas según lotes FIFO">
+                        <i class="bi bi-layers me-1"></i>Costo ventas (FIFO):
+                        <strong>${{ total_costo_ventas|floatformat:"0" }}</strong>
+                    </span>
+                    {% endif %}
+
+                    {# Desperdicios → gris estimado #}
+                    <span style="background:#fff;border:1.5px solid #dee2e6;border-radius:12px;padding:0.5rem 0.9rem;font-size:0.8rem;font-weight:700;color:#0d6efd;">
+                        <i class="bi bi-heart-pulse-fill me-1"></i>Uso Clínico / Médico:
+                        <em>${{ total_uso_medico|floatformat:"0" }}</em>
+                    </span>
+                
+                    <span style="background:#fff;border:1.5px solid #dee2e6;border-radius:12px;padding:0.5rem 0.9rem;font-size:0.8rem;font-weight:700;color:#dc3545;">
+                        <i class="bi bi-trash3 me-1"></i>Mermas / Desperdicios:
+                        <em>${{ total_desperdicio|floatformat:"0" }}</em>
+                    </span>
+                    {# Ganancia neta = recaudado - costo_ventas #}
+                    <span style="background:#fff;border:1.5px solid #dee2e6;border-radius:12px;padding:0.5rem 0.9rem;font-size:0.8rem;font-weight:700;color:#3f2e23;">
+                        Ganancia neta:
+                        <strong class="{% if ganancia_neta >= 0 %}text-success{% else %}text-danger{% endif %}">
+                            {% if ganancia_neta >= 0 %}+{% endif %}${{ ganancia_neta|floatformat:"0" }}
+                        </strong>
+                    </span>
+                    <span class="text-muted" style="font-size:0.68rem;">* ~ estimado · ganancia = recaudado − costo FIFO</span>
+                </div>
+
+                {% if producto_seleccionado %}
+                <a href="{% url 'lista_inventario' %}" class="btn btn-light btn-sm rounded-pill shadow-sm border">
+                    <i class="bi bi-grid me-1"></i> Volver al inventario
+                </a>
+                {% else %}
+                <a href="{% url 'dashboard_auxiliar' %}" class="btn btn-light btn-sm rounded-pill shadow-sm border">
+                    <i class="bi bi-arrow-left me-1"></i> Dashboard
+                </a>
+                {% endif %}
+            </div>
         </div>
         {% endif %}
     </div>

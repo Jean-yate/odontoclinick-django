@@ -109,16 +109,28 @@
                 </span>
             {% endif %}
         </div>
+
         <div class="d-flex gap-2 flex-wrap">
-            <a href="?{{ request.GET.urlencode }}&exportar=excel" class="btn btn-success rounded-pill px-3 fw-bold shadow-sm">
-                <i class="bi bi-file-earmark-excel me-1"></i> Excel
-            </a>
-            <a href="?{{ request.GET.urlencode }}&exportar=pdf" class="btn btn-danger rounded-pill px-3 fw-bold shadow-sm">
-                <i class="bi bi-file-earmark-pdf me-1"></i> PDF
-            </a>
-            <a href="{% url 'crear_producto' %}" class="btn btn-primary shadow-sm rounded-pill px-4 fw-bold">
-                <i class="bi bi-plus-lg me-1"></i> Nuevo
-            </a>
+        
+            <div class="me-2">
+                <small class="text-muted fw-bold">REPORTES</small><br>
+                    <a href="?{{ request.GET.urlencode }}&exportar=excel" class="btn btn-success rounded-pill px-3 fw-bold shadow-sm">
+                        <i class="bi bi-file-earmark-excel me-1"></i> Excel
+                    </a>
+                    <a href="?{{ request.GET.urlencode }}&exportar=pdf" class="btn btn-danger rounded-pill px-3 fw-bold shadow-sm">
+                        <i class="bi bi-file-earmark-pdf me-1"></i> PDF
+                    </a>
+            </div>
+        
+            <div>
+                <small class="text-muted fw-bold">CREACIÓN</small><br>
+                    <a href="{% url 'crear_producto' %}" class="btn btn-primary shadow-sm rounded-pill px-4 fw-bold">
+                        <i class="bi bi-plus-lg me-1"></i> Producto
+                    </a>
+                    <a href="{% url 'EmpresaApp:lista_empresas' %}" class="btn btn-dark shadow-sm rounded-pill px-4 fw-bold">
+                        <i class="bi bi-plus-lg me-1"></i> Empresa
+                    </a>
+            </div>
         </div>
     </div>
 
@@ -243,6 +255,13 @@
                                         title="Registrar salida">
                                     <i class="bi bi-box-arrow-up"></i>
                                 </button>
+                                {# Ver lotes — abre modal específico de este producto #}
+                                <button class="btn-circle text-primary"
+                                        onclick="verLotes({{ producto.id_producto }})"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#modalLotesGlobal">
+                                    <i class="bi bi-boxes"></i>
+                                </button>
                                 {# Historial individual (Req 1.1.3) #}
                                 <a href="{% url 'kardex' %}?producto_id={{ producto.id_producto }}"
                                    class="btn-circle text-historia" title="Historial de este insumo">
@@ -321,9 +340,7 @@
                             <label class="form-label fw-semibold small text-muted text-uppercase">Precio de compra / unidad <span class="text-danger">*</span></label>
                             <div class="input-group">
                                 <span class="input-group-text bg-light border-0 fw-bold text-muted">$</span>
-                                <input type="number" name="precio_transaccion"
-                                       id="inputPrecioE{{ producto.id_producto }}"
-                                       class="form-control input-clay" placeholder="Ej: 1500" min="0" step="1">
+                                <input type="number" name="precio_transaccion" id="inputPrecioE{{ producto.id_producto }}" class="form-control input-clay" placeholder="Ej: 1500" min="0" step="1">
                             </div>
                             <div class="form-text text-warning"><i class="bi bi-tag me-1"></i>Se registrará vinculado a esta empresa.</div>
                         </div>
@@ -344,7 +361,7 @@
         </div>
     </div>
 
-    {# ── MODAL SALIDA ───────────────────────────────────────────────────── #}
+{# ── MODAL SALIDA ───────────────────────────────────────────────────── #}
     <div class="modal fade" id="modalSalida{{ producto.id_producto }}" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-md">
             <div class="modal-content shadow-lg overflow-hidden">
@@ -360,9 +377,13 @@
                     </div>
                     <button type="button" class="btn-close ms-auto" data-bs-dismiss="modal"></button>
                 </div>
-                <form method="POST" action="{% url 'salida_stock' producto.id_producto %}">
+                <form method="POST" action="{% url 'salida_stock' producto.id_producto %}" onsubmit="return validarModalSalida(this, {{ producto.id_producto }})">
                     {% csrf_token %}
-                    <div class="modal-body px-4 py-3">
+                    <div class="modal-body px-4 py-3 position-relative">
+                        
+                        {# Alerta inline para la validación JS #}
+                        <div class="alert alert-danger d-none py-2 px-3 small mb-3" id="alertSalida{{ producto.id_producto }}" style="border-radius:12px;"></div>
+
                         {# Stock disponible #}
                         <div class="alert alert-light border d-flex align-items-center gap-2 py-2 mb-3" style="border-radius:14px;">
                             <i class="bi bi-boxes text-danger"></i>
@@ -397,13 +418,35 @@
                                 {% endfor %}
                             </select>
                         </div>
-                        {# Cliente interno (oculto por defecto) #}
-                        <div class="mb-3 d-none" id="divCliS{{ producto.id_producto }}">
-                            <label class="form-label fw-semibold small text-muted text-uppercase">ID de usuario / cliente <span class="text-danger">*</span></label>
-                            <input type="number" name="cliente_id" id="inputCliS{{ producto.id_producto }}"
-                                   class="form-control input-clay" placeholder="ID numérico del usuario" min="1" step="1">
-                            <div class="form-text"><i class="bi bi-person-badge me-1"></i>Ingresa el ID del usuario registrado.</div>
+                        
+                        {# 🆕 BLOQUE REEMPLAZADO: BUSCADOR DINÁMICO AJAX DE CLIENTE 🆕 #}
+                        <div class="mb-3 d-none position-relative" id="divCliS{{ producto.id_producto }}">
+                            <label class="form-label fw-semibold small text-muted text-uppercase">
+                                Cliente / Usuario
+                            </label>
+
+                            <input type="text"
+                                   id="buscadorCliente{{ producto.id_producto }}"
+                                   class="form-control input-clay"
+                                   placeholder="Buscar usuario por nombre..."
+                                   onkeyup="buscarCliente(this, {{ producto.id_producto }})">
+
+                            <div id="dropCliente{{ producto.id_producto }}"
+                                 class="border rounded bg-white position-absolute w-100 shadow-sm d-none"
+                                 style="z-index: 2000; max-height: 200px; overflow-y: auto;">
+                            </div>
+
+                            <div id="chipCliente{{ producto.id_producto }}"
+                                 class="d-none align-items-center justify-content-between mt-2 p-2 rounded bg-light border">
+                                <span id="chipNombreCliente{{ producto.id_producto }}" class="small fw-bold text-dark"></span>
+                                <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2" onclick="limpiarCliente({{ producto.id_producto }})">
+                                    ✕
+                                </button>
+                            </div>
+
+                            <input type="hidden" name="cliente_id" id="inputCliId{{ producto.id_producto }}">
                         </div>
+
                         {# Precio cobrado #}
                         <div class="mb-3">
                             <label class="form-label fw-semibold small text-muted text-uppercase">
@@ -413,7 +456,7 @@
                             <div class="input-group">
                                 <span class="input-group-text bg-light border-0 fw-bold text-muted">$</span>
                                 <input type="number" name="precio_transaccion"
-                                       class="form-control input-clay" placeholder="Dejar vacío = precio por defecto" min="0" step="1">
+                                       class="form-control input-clay" placeholder="Vacío = por defecto (${{ producto.precio_venta|floatformat:0 }})" min="0" step="1">
                             </div>
                         </div>
                         {# Motivo #}
@@ -432,6 +475,67 @@
             </div>
         </div>
     </div>
+    
+    {# ── MODAL LOTES HISTÓRICOS GLOBAL MAXIMIZADO (XL) ───────────────────────── #}
+<div class="modal fade" id="modalLotesGlobal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl"> {# Cambiado a modal-xl para mayor amplitud #}
+        <div class="modal-content shadow-lg overflow-hidden" style="border-radius: 24px; border: none;">
+
+            {# HEADER CON GRADIENTE PROFESIONAL #}
+            <div class="modal-header border-0 px-4 pt-4 pb-3" style="background: linear-gradient(135deg, #f0f7ff 0%, #ffffff 100%);">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="modal-icon-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center rounded-circle" style="width: 50px; height: 50px;">
+                        <i class="bi bi-journal-text text-primary fs-4"></i>
+                    </div>
+                    <div>
+                        <h4 class="fw-bold mb-0 text-dark">Trazabilidad de Auditoría por Lotes (FIFO)</h4>
+                        <p class="text-muted small mb-0 fs-6" id="nombreProductoLoteHeader">Identificando insumo...</p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close ms-auto" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            {# CUERPO PRINCIPAL #}
+            <div class="modal-body px-4 py-4">
+                
+                {# Pantalla de carga #}
+                <div id="lotesLoading" class="text-center py-5">
+                    <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status"></div>
+                    <p class="text-muted small mt-3 fw-medium">Sincronizando lotes y proveedores...</p>
+                </div>
+
+                {# Tabla expandida #}
+                <div class="table-responsive d-none" id="tablaLotesContenedor">
+                    <table class="table table-striped table-hover align-middle custom-table-clay fs-6">
+                        <thead class="table-primary text-dark text-uppercase" style="font-size: 0.8rem; letter-spacing: 0.5px;">
+                            <tr>
+                                <th class="py-3 px-3">Código de Lote</th>
+                                <th class="py-3">Empresa / Proveedor de Entrada</th>
+                                <th class="py-3">Costo de Compra (U)</th>
+                                <th class="py-3">Cantidad Comprada</th>
+                                <th class="py-3">Existencia Actual</th>
+                                <th class="py-3">Total Consumido</th>
+                                <th class="py-3 px-3">Fecha de Abastecimiento</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaLotesBody" style="font-size: 0.92rem;">
+                            {# Filas inyectadas vía AJAX #}
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+
+            {# BOTÓN DE CIERRE #}
+            <div class="modal-footer border-0 px-4 pb-4 pt-0 justify-content-end">
+                <button type="button" class="btn btn-secondary rounded-pill px-5 py-2 fw-semibold" data-bs-dismiss="modal">
+                    Cerrar Auditoría
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
 
     {% endfor %} {# fin loop modales #}
 
@@ -440,14 +544,16 @@
 
 {% block extra_js %}
 <script>
-/* ── Toggle estado (AJAX) ────────────────────────────────────────────────── */
+const CSRF_TOKEN = '{{ csrf_token }}';
+
+/* ── Toggle estado producto (AJAX) ────────────────────────────────────────── */
 document.addEventListener('DOMContentLoaded', function () {
     document.querySelectorAll('.btn-estado').forEach(function (btn) {
         btn.addEventListener('click', function () {
             const id = this.getAttribute('data-id');
             fetch(`/inventario/alternar/${id}/`, {
                 method: 'POST',
-                headers: { 'X-CSRFToken': '{{ csrf_token }}', 'Content-Type': 'application/json' }
+                headers: { 'X-CSRFToken': CSRF_TOKEN, 'Content-Type': 'application/json' }
             })
             .then(r => r.json())
             .then(data => {
@@ -481,28 +587,127 @@ function togglePrecioEntrada(select, productoId) {
     }
 }
 
-/* ── Modal salida: mostrar empresa o cliente según tipo ──────────────────── */
+/* ── Modal salida: alternar empresa / buscador cliente ───────────────────── */
 function toggleDestinoSalida(select, productoId) {
-    const divEmp  = document.getElementById('divEmpS'  + productoId);
-    const divCli  = document.getElementById('divCliS'  + productoId);
-    const selEmp  = document.getElementById('selEmpS'  + productoId);
-    const inpCli  = document.getElementById('inputCliS'+ productoId);
+    const divEmp = document.getElementById('divEmpS'  + productoId);
+    const divCli = document.getElementById('divCliS'  + productoId);
+    const selEmp = document.getElementById('selEmpS'  + productoId);
 
     divEmp.classList.add('d-none');
     divCli.classList.add('d-none');
     if (selEmp) selEmp.required = false;
-    if (inpCli) inpCli.required = false;
 
     if (select.value === 'empresa') {
         divEmp.classList.remove('d-none');
         if (selEmp) selEmp.required = true;
     } else if (select.value === 'cliente') {
         divCli.classList.remove('d-none');
-        if (inpCli) inpCli.required = true;
     }
 }
 
-/* ── Toast ───────────────────────────────────────────────────────────────── */
+/* ── Buscador AJAX de cliente ────────────────────────────────────────────── */
+let _debounceTimer = null;
+
+function buscarCliente(input, productoId) {
+    const q    = input.value.trim();
+    const drop = document.getElementById('dropCliente' + productoId);
+
+    clearTimeout(_debounceTimer);
+    if (q.length < 2) { drop.classList.add('d-none'); drop.innerHTML = ''; return; }
+
+    _debounceTimer = setTimeout(() => {
+        fetch(`/inventario/buscar-usuario/?q=${encodeURIComponent(q)}`, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(r => r.json())
+        .then(data => {
+            drop.innerHTML = '';
+            if (!data.usuarios || data.usuarios.length === 0) {
+                drop.innerHTML = '<div class="px-3 py-2 text-muted small text-center">Sin resultados</div>';
+            } else {
+                data.usuarios.forEach(u => {
+                    const item = document.createElement('div');
+                    item.className = 'px-3 py-2 small d-flex justify-content-between align-items-center';
+                    item.style.cssText = 'cursor:pointer; transition:background 0.1s; border-bottom:1px solid #f5f3f1;';
+                    item.innerHTML = `
+                        <div>
+                            <strong>${u.nombre} ${u.apellidos}</strong>
+                            <span class="text-muted ms-1 small">(@${u.nombre_usuario})</span>
+                        </div>
+                        <span class="badge bg-light text-muted border rounded-pill" style="font-size:0.68rem;">ID ${u.id_usuario}</span>`;
+                    item.addEventListener('mouseenter', () => item.style.background = '#f5f3f1');
+                    item.addEventListener('mouseleave', () => item.style.background = '');
+                    item.addEventListener('click', () => {
+                        seleccionarCliente(productoId, u.id_usuario, `${u.nombre} ${u.apellidos}`, u.nombre_usuario);
+                    });
+                    drop.appendChild(item);
+                });
+            }
+            drop.classList.remove('d-none');
+        })
+        .catch(() => {
+            drop.innerHTML = '<div class="px-3 py-2 text-danger small">Error al buscar</div>';
+            drop.classList.remove('d-none');
+        });
+    }, 280);
+}
+
+function seleccionarCliente(productoId, id, nombreCompleto, usuario) {
+    document.getElementById('inputCliId' + productoId).value = id;
+
+    const chip      = document.getElementById('chipCliente'        + productoId);
+    const chipLabel = document.getElementById('chipNombreCliente'   + productoId);
+    chipLabel.textContent = `${nombreCompleto} (@${usuario})`;
+    chip.classList.remove('d-none');
+    chip.classList.add('d-flex');
+
+    const buscador = document.getElementById('buscadorCliente' + productoId);
+    buscador.value = '';
+    buscador.classList.add('d-none');
+    document.getElementById('dropCliente' + productoId).classList.add('d-none');
+}
+
+function limpiarCliente(productoId) {
+    document.getElementById('inputCliId'       + productoId).value = '';
+    const chip = document.getElementById('chipCliente' + productoId);
+    chip.classList.add('d-none');
+    chip.classList.remove('d-flex');
+    const buscador = document.getElementById('buscadorCliente' + productoId);
+    buscador.classList.remove('d-none');
+    buscador.value = '';
+    document.getElementById('dropCliente' + productoId).classList.add('d-none');
+}
+
+/* ── Validación inline del modal de salida ───────────────────────────────── */
+function validarModalSalida(form, productoId) {
+    const tipo      = document.getElementById('selTipoS'   + productoId)?.value;
+    const empresaEl = document.getElementById('selEmpS'    + productoId);
+    const clienteId = document.getElementById('inputCliId' + productoId)?.value;
+    const cantInput = form.querySelector('input[name="cantidad"]');
+    const alert     = document.getElementById('alertSalida' + productoId);
+
+    let error = '';
+
+    /* Validar cantidad entera */
+    const cant = parseFloat(cantInput?.value);
+    if (!Number.isInteger(cant) || cant < 1) {
+        error = 'La cantidad debe ser un número entero mayor a cero.';
+    } else if (tipo === 'empresa' && (!empresaEl || !empresaEl.value)) {
+        error = 'Debes seleccionar una empresa compradora.';
+    } else if (tipo === 'cliente' && !clienteId) {
+        error = 'Debes buscar y seleccionar un cliente antes de continuar.';
+    }
+
+    if (error) {
+        alert.textContent = error;
+        alert.classList.remove('d-none');
+        return false; /* Bloquea el submit — el modal permanece abierto */
+    }
+    alert.classList.add('d-none');
+    return true;
+}
+
+/* ── Toast de notificación ───────────────────────────────────────────────── */
 function mostrarNotificacion(mensaje, tipo) {
     const contenedor = document.getElementById('contenedor-notificaciones');
     const id = Date.now();
@@ -519,6 +724,86 @@ function mostrarNotificacion(mensaje, tipo) {
             </div>
         </div>`;
     setTimeout(() => { const t = document.getElementById(`toast-${id}`); if (t) t.remove(); }, 3500);
+}
+function verLotes(productoId, nombreProducto) {
+    const modalElement = document.getElementById('modalLotesGlobal');
+    if (!modalElement) return;
+
+    const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
+    const tbody = document.getElementById('tablaLotesBody');
+    const loader = document.getElementById('lotesLoading');
+    const tablaContenedor = document.getElementById('tablaLotesContenedor');
+    const headerNombre = document.getElementById('nombreProductoLoteHeader');
+
+    // Cambiamos el encabezado para mostrar el producto auditado
+    if (headerNombre) {
+        headerNombre.innerHTML = nombreProducto ? `Insumo Seleccionado: <strong class="text-primary">${nombreProducto}</strong>` : `Producto ID: #${productoId}`;
+    }
+
+    // Limpieza inicial
+    tbody.innerHTML = '';
+    if (loader) loader.classList.remove('d-none');
+    if (tablaContenedor) tablaContenedor.classList.add('d-none');
+    
+    modal.show();
+
+    // Resolutor de URL dinámica nativa de Django
+    let urlBase = "{% url 'detalle_lotes_producto' producto_id=0 %}";
+    let urlFinal = urlBase.replace('0', productoId);
+
+    fetch(urlFinal)
+        .then(res => {
+            if (!res.ok) throw new Error("Error HTTP: " + res.status);
+            return res.json();
+        })
+        .then(data => {
+            if (loader) loader.classList.add('d-none');
+            if (tablaContenedor) tablaContenedor.classList.remove('d-none');
+
+            if (!data.lotes || !data.lotes.length) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="text-center text-muted py-5 fs-5">
+                            <i class="bi bi-info-circle text-warning d-block mb-2 fs-2"></i>
+                            Este producto no registra lotes ni compras asociadas en el histórico.
+                        </td>
+                    </tr>`;
+                return;
+            }
+
+            data.lotes.forEach(l => {
+                const precioFormateado = Number(l.precio_compra).toLocaleString('es-CO');
+                
+                // Estilo condicional: si el lote está agotado (0 disponible), lo atenuamos
+                const claseFila = l.disponible === 0 ? 'table-light text-muted opacity-75' : '';
+                const badgeDisponible = l.disponible === 0 
+                    ? `<span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 px-3 py-1.5 rounded-pill">Agotado (0)</span>` 
+                    : `<span class="text-success fw-bold fs-5">${l.disponible}</span>`;
+
+                tbody.innerHTML += `
+                    <tr class="${claseFila}">
+                        <td class="px-3"><strong>#LT-${l.id_lote}</strong></td>
+                        <td class="fw-medium text-dark"><i class="bi bi-building me-2 text-secondary"></i>${l.empresa}</td>
+                        <td class="fw-bold text-primary">$${precioFormateado}</td>
+                        <td class="text-center fw-semibold text-secondary">${l.inicial} uds</td>
+                        <td class="text-center">${badgeDisponible}</td>
+                        <td class="text-center text-danger fw-bold">${l.consumido}</td>
+                        <td class="small text-muted px-3">${l.fecha}</td>
+                    </tr>
+                `;
+            });
+        })
+        .catch(error => {
+            console.error("Error cargando lotes:", error);
+            if (loader) loader.classList.add('d-none');
+            if (tablaContenedor) tablaContenedor.classList.remove('d-none');
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="7" class="text-center text-danger py-4 fw-bold">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i> No se pudo obtener la información de lotes desde el servidor.
+                    </td>
+                </tr>`;
+        });
 }
 </script>
 {% endblock %}

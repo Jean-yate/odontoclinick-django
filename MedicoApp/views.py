@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 from django.views.decorators.http import require_POST
 from decimal import Decimal
 from django.db import transaction
+import re
 
 # Importación de modelos propios y de otras Apps
 from .models import Medico, Disponibilidad, HistorialMedico
@@ -88,26 +89,40 @@ def agenda_semanal(request):
 def perfil_paciente(request, paciente_id):
     """Muestra el expediente del paciente, historial de citas y atención actual."""
     
-    # CAMBIO AQUÍ: Agregamos select_related('id_usuario')
     paciente = get_object_or_404(
         Paciente.objects.select_related('id_usuario'), 
         id_paciente=paciente_id
     )
     
-    # El resto del código se mantiene igual...
+    # 1. Traemos las citas con sus relaciones optimizadas
+    # Nota: Si es OneToOne, cambiamos prefetch_related por select_related para que sea más veloz
     citas = Cita.objects.filter(id_paciente=paciente).select_related(
-        'id_doctor__id_usuario', 'id_estado_cita'
-    ).prefetch_related('historial').order_by('-fecha_hora')
+        'id_doctor__id_usuario', 'id_estado_cita', 'historial'
+    ).order_by('-fecha_hora')
+
+    citas_lista = list(citas)
+
+    # 2. Asignamos el historial de forma directa (Sin usar .all())
+    for cita in citas_lista:
+        try:
+            # Al ser OneToOne, Django accede directamente al objeto adjunto
+            cita.historial_directo = cita.historial
+        except Cita.historial.RelatedObjectDoesNotExist:
+            # Si la cita es nueva y no tiene historial aún
+            cita.historial_directo = None
 
     tratamientos = Tratamiento.objects.filter(activo=1)
-    cita_actual = citas.filter(
-        id_doctor__id_usuario=request.user,
-        id_estado_cita__nombre_estado__in=['Confirmada', 'En Proceso']
-    ).first()
+    
+    # 3. Buscamos la cita activa del día
+    cita_actual = next(
+        (c for c in citas_lista 
+         if c.id_doctor.id_usuario == request.user and c.id_estado_cita.nombre_estado in ['Confirmada', 'En Proceso']), 
+        None
+    )
 
     return render(request, 'perfil_paciente.html', {
         'paciente': paciente,
-        'citas': citas,
+        'citas': citas_lista,  
         'cita_actual': cita_actual,
         'tratamientos': tratamientos,
         'hoy': timezone.now().date()
@@ -130,125 +145,217 @@ def iniciar_atencion(request, cita_id):
 
 @login_required
 def guardar_atencion(request):
-    """Registra el historial médico con validaciones estrictas, finaliza la cita y descuenta insumos."""
-    if request.method == 'POST':
-        id_cita = request.POST.get('id_cita')
-        id_tratamiento_val = request.POST.get('id_tratamiento')
-        
-        cita = get_object_or_404(Cita, id_cita=id_cita)
-        tratamiento = get_object_or_404(Tratamiento, id_tratamiento=id_tratamiento_val)
-
-        # ---- EXTRACCIÓN Y VALIDACIÓN DE DATOS OBLIGATORIOS ----
-        diagnostico = request.POST.get('diagnostico', '').strip()
-        plan_tratamiento = request.POST.get('plan_tratamiento', '').strip()
-        observaciones_clinicas = request.POST.get('observaciones_clinicas', '').strip()
-        sintomas = request.POST.get('sintomas', '').strip()
-        costo_str = request.POST.get('costo_aplicado', '').strip()
-
-        # 1. Verificar que ningún campo esté vacío
-        if not all([diagnostico, plan_tratamiento, observaciones_clinicas, sintomas, costo_str]):
-            messages.error(request, "❌ Todos los campos del registro clínico son obligatorios.")
-            return redirect('perfil_paciente', paciente_id=cita.id_paciente.id_paciente)
-
-        # Región de expresiones regulares básicas (letras, números y espacios)
-        # ^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ ]{3,}$ -> Mínimo 3 caracteres, sin caracteres especiales como @, $, *, #, etc.
-        regex_letras_numeros = r'^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ ]{3,}$'
-        
-        # ^[a-zA-ZáéíóúÁÉÍÓÚñÑ ]{3,}$ -> Mínimo 3 caracteres, solo letras y espacios (sin números)
-        regex_solo_letras = r'^[a-zA-ZáéíóúÁÉÍÓÚñÑ ]{3,}$'
-
-        # 2. Validar Diagnóstico, Plan de tratamiento y Observaciones clínicas
-        if not re.match(regex_letras_numeros, diagnostico):
-            messages.error(request, "❌ Diagnóstico inválido: Mínimo 3 caracteres (letras/números), sin caracteres especiales.")
-            return redirect('perfil_paciente', paciente_id=cita.id_paciente.id_paciente)
-
-        if not re.match(regex_letras_numeros, plan_treatment := plan_tratamiento):
-            messages.error(request, "❌ Plan de tratamiento inválido: Mínimo 3 caracteres (letras/números), sin caracteres especiales.")
-            return redirect('perfil_paciente', paciente_id=cita.id_paciente.id_paciente)
-
-        if not re.match(regex_letras_numeros, observaciones_clinicas):
-            messages.error(request, "❌ Observaciones médicas inválidas: Mínimo 3 caracteres (letras/números), sin caracteres especiales.")
-            return redirect('perfil_paciente', paciente_id=cita.id_paciente.id_paciente)
-
-        # 3. Validar Síntomas (Solo letras, mínimo 3 caracteres)
-        if not re.match(regex_solo_letras, sintomas):
-            messages.error(request, "❌ Síntomas inválidos: Mínimo 3 letras, no se permiten números ni caracteres especiales.")
-            return redirect('perfil_paciente', paciente_id=cita.id_paciente.id_paciente)
-
-        # 4. Validar Costo Total Cobrado (Entero positivo, no se aceptan negativos ni decimales/double)
-        try:
-            # Si contiene puntos o comas, rechazamos explícitamente para evitar decimales camuflados
-            if '.' in costo_str or ',' in costo_str:
-                raise ValueError()
+    """Registra el historial médico, finaliza la cita y descuenta insumos del inventario."""
+    if request.method != 'POST':
+        return redirect('dashboard_medico')
+ 
+    id_cita          = request.POST.get('id_cita')
+    id_tratamiento_v = request.POST.get('id_tratamiento')
+ 
+    cita       = get_object_or_404(Cita, id_cita=id_cita)
+    tratamiento = get_object_or_404(Tratamiento, id_tratamiento=id_tratamiento_v)
+ 
+    # ── Extracción de datos ───────────────────────────────────────────────────
+    diagnostico           = request.POST.get('diagnostico', '').strip()
+    plan_tratamiento      = request.POST.get('plan_tratamiento', '').strip()
+    observaciones_clinicas = request.POST.get('observaciones_clinicas', '').strip()
+    sintomas              = request.POST.get('sintomas', '').strip()
+    costo_str             = request.POST.get('costo_aplicado', '0').strip()
+ 
+    # ── Validaciones ─────────────────────────────────────────────────────────
+    regex_gral   = r'^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s\.,;_\-\?:!\r\n]{3,}$'
+    regex_letras = r'^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s\.,;_\-\?:!\r\n]{3,}$'
+ 
+    if not all([diagnostico, plan_tratamiento, observaciones_clinicas, sintomas, costo_str]):
+        messages.error(request, "❌ Todos los campos del registro clínico son obligatorios.")
+        return redirect('perfil_paciente', paciente_id=cita.id_paciente.id_paciente)
+ 
+    if not re.match(regex_gral, diagnostico):
+        messages.error(request, "❌ Diagnóstico inválido (mínimo 3 caracteres).")
+        return redirect('perfil_paciente', paciente_id=cita.id_paciente.id_paciente)
+ 
+    if not re.match(regex_gral, plan_tratamiento):
+        messages.error(request, "❌ Plan de tratamiento inválido (mínimo 3 caracteres).")
+        return redirect('perfil_paciente', paciente_id=cita.id_paciente.id_paciente)
+ 
+    if not re.match(regex_gral, observaciones_clinicas):
+        messages.error(request, "❌ Observaciones inválidas (mínimo 3 caracteres).")
+        return redirect('perfil_paciente', paciente_id=cita.id_paciente.id_paciente)
+ 
+    if not re.match(regex_letras, sintomas):
+        messages.error(request, "❌ Síntomas inválidos: solo letras, mínimo 3 caracteres.")
+        return redirect('perfil_paciente', paciente_id=cita.id_paciente.id_paciente)
+ 
+    try:
+        if '.' in costo_str or ',' in costo_str:
+            raise ValueError()
+        costo_int = int(costo_str)
+        if costo_int < 0:
+            raise ValueError()
+        costo = Decimal(costo_int)
+    except ValueError:
+        messages.error(request, "❌ El costo debe ser un número entero positivo.")
+        return redirect('perfil_paciente', paciente_id=cita.id_paciente.id_paciente)
+ 
+    # ── Transacción atómica ───────────────────────────────────────────────────
+    try:
+        with transaction.atomic():
+ 
+            # 1. Guardar / actualizar historial médico
+            HistorialMedico.objects.update_or_create(
+                id_cita=cita,
+                defaults={
+                    'id_tratamiento':       tratamiento,
+                    'diagnostico':          diagnostico,
+                    'sintomas':             sintomas,
+                    'plan_tratamiento':     plan_tratamiento,
+                    'observaciones_clinicas': observaciones_clinicas,
+                    'costo_aplicado':       costo,
+                    'completado':           True,
+                }
+            )
+ 
+            # 2. Descontar insumos del inventario
+            # BUG FIX 3: int() para evitar conflicto Decimal vs IntegerField
+            # Reemplaza todo el bloque "# 2. Descontar insumos del inventario"
+            insumos = TratamientoProducto.objects.filter(
+                id_tratamiento=tratamiento
+            ).select_related('id_producto')
+            
+            for item in insumos:
+                producto = item.id_producto
+                if not producto:
+                    continue
                 
-            costo_int = int(costo_str)
-            if costo_int < 0:
-                raise ValueError()
-                
-            costo = Decimal(costo_int)
-        except ValueError:
-            messages.error(request, "❌ El costo total cobrado debe ser un número entero positivo (sin decimales ni signos negativos).")
-            return redirect('perfil_paciente', paciente_id=cita.id_paciente.id_paciente)
-
-        # ---- PROCESO DE TRANSACCIÓN ATÓMICA ----
-        try:
-            with transaction.atomic():
-                # 1. Registrar en Historial Médico
-                HistorialMedico.objects.update_or_create(
+                cantidad = int(item.cantidad_requerida)
+                stock_anterior = producto.stock_actual
+            
+                # Registrar movimiento
+                mov = MovimientoInventario.objects.create(
+                    id_producto=producto,
+                    id_usuario=request.user,
+                    tipo_movimiento='SALIDA',
+                    cantidad=cantidad,
+                    stock_anterior=stock_anterior,
+                    stock_nuevo=stock_anterior - cantidad,
+                    motivo=f"USO MEDICO - CITA #{cita.id_cita} - {tratamiento.nombre_tratamiento}",
                     id_cita=cita,
-                    defaults={
-                        'id_tratamiento': tratamiento,
-                        'diagnostico': diagnostico,
-                        'sintomas': sintomas,
-                        'plan_tratamiento': plan_tratamiento,
-                        'observaciones_clinicas': observaciones_clinicas,
-                        'costo_aplicado': costo,
-                        'completado': True
-                    }
+                    precio_transaccion=None,
                 )
-
-                # 2. Lógica de Descuento de Inventario Automático
-                insumos_receta = TratamientoProducto.objects.filter(id_tratamiento=tratamiento)
-                
-                for item in insumos_receta:
-                    try:
-                        producto = item.id_producto 
-                        if not producto:
-                            continue
-                            
-                        cantidad_a_descontar = item.cantidad_requerida
-                        stock_anterior = producto.stock_actual
-                        producto.stock_actual -= cantidad_a_descontar
-                        producto.save()
-                        
-                        MovimientoInventario.objects.create(
-                            id_producto=producto,
-                            id_usuario=request.user,
-                            tipo_movimiento='SALIDA',
-                            cantidad=int(cantidad_a_descontar),
-                            stock_anterior=stock_anterior,
-                            stock_nuevo=producto.stock_actual,
-                            motivo=f"Consumo automático: Cita #{cita.id_cita} ({tratamiento.nombre_tratamiento})",
-                            id_cita=cita
+            
+                # ── FIFO: descontar lotes igual que salida_stock ──────────────
+                from InventarioApp.models import LoteCompra, DetalleSalida
+                lotes = LoteCompra.objects.filter(
+                    id_producto=producto,
+                    cantidad_disponible__gt=0
+                ).order_by('fecha_compra')
+            
+                por_descontar = cantidad
+                costo_acumulado = 0
+            
+                for lote in lotes:
+                    if por_descontar <= 0:
+                        break
+                    if lote.cantidad_disponible >= por_descontar:
+                        cantidad_tomada = por_descontar
+                        lote.cantidad_disponible -= cantidad_tomada
+                        lote.save()
+                        DetalleSalida.objects.create(
+                            id_movimiento=mov,
+                            id_lote=lote,
+                            cantidad=cantidad_tomada,
+                            precio_compra=lote.precio_compra
                         )
-                    except Producto.DoesNotExist:
-                        print(f"Advertencia: El producto vinculado al tratamiento {tratamiento} no existe.")
-                        continue 
-
-                # 3. Finalizar estado de la cita
-                estado_fin = EstadoCita.objects.filter(nombre_estado__iexact='Finalizada').first()
-                if estado_fin:
-                    cita.id_estado_cita = estado_fin
-                    cita.save()
-
-            messages.success(request, "✅ Atención guardada e inventario actualizado con éxito.")
-            return redirect('perfil_paciente', paciente_id=cita.id_paciente.id_paciente)
-
-        except Exception as e:
-            messages.error(request, f"❌ Error crítico al guardar la atención: {e}")
-            return redirect('dashboard_medico')
+                        costo_acumulado += cantidad_tomada * lote.precio_compra
+                        por_descontar = 0
+                    else:
+                        cantidad_tomada = lote.cantidad_disponible
+                        por_descontar -= cantidad_tomada
+                        costo_acumulado += cantidad_tomada * lote.precio_compra
+                        DetalleSalida.objects.create(
+                            id_movimiento=mov,
+                            id_lote=lote,
+                            cantidad=cantidad_tomada,
+                            precio_compra=lote.precio_compra
+                        )
+                        lote.cantidad_disponible = 0
+                        lote.save()
+            
+                if cantidad > 0:
+                    mov.costo_unitario_salida = int(costo_acumulado / cantidad)
+                    mov.save()
+            
+                # Actualizar stock del producto
+                producto.stock_actual = stock_anterior - cantidad
+                producto.save()
+ 
+            # 3. Finalizar la cita
+            estado_fin = EstadoCita.objects.filter(
+                nombre_estado__iexact='Finalizada'
+            ).first()
+            if estado_fin:
+                cita.id_estado_cita = estado_fin
+                cita.monto_estimado = costo
+                cita.save()
+ 
+        messages.success(request, "✅ Atención guardada e inventario actualizado con éxito.")
+ 
+    except Exception as e:
+        messages.error(request, f"❌ Error crítico al guardar la atención: {e}")
+ 
+    return redirect('perfil_paciente', paciente_id=cita.id_paciente.id_paciente)
+ 
+ 
+# ── perfil_paciente corregido ─────────────────────────────────────────────────
+# BUG FIX 1: select_related con 'historial' (related_name del OneToOne)
+# y asignación explícita de historial_directo para el template
+ 
+@login_required
+def perfil_paciente(request, paciente_id):
+    """Muestra el expediente del paciente, historial de citas y atención actual."""
+    paciente = get_object_or_404(
+        Paciente.objects.select_related('id_usuario'),
+        id_paciente=paciente_id
+    )
+ 
+    # BUG FIX: select_related con 'historial' (el related_name del OneToOne)
+    citas = Cita.objects.filter(id_paciente=paciente).select_related(
+        'id_doctor__id_usuario',
+        'id_estado_cita',
+        'historial',                        # ← OneToOne related_name correcto
+        'historial__id_tratamiento',        # ← para mostrar nombre del tratamiento
+    ).order_by('-fecha_hora')
+ 
+    citas_lista = list(citas)
+ 
+    # Asignar historial_directo a cada cita para el template
+    for cita in citas_lista:
+        try:
+            cita.historial_directo = cita.historial  # acceso OneToOne
+        except Exception:
+            cita.historial_directo = None
     
-    return redirect('dashboard_medico')
+        cita.puede_editar = (
+        cita.id_doctor.id_usuario == request.user and
+        cita.id_estado_cita.nombre_estado != 'Finalizada'
+        )
+ 
+    tratamientos = Tratamiento.objects.filter(activo=1)
+ 
+    cita_actual = next(
+        (c for c in citas_lista
+         if c.id_doctor.id_usuario == request.user
+         and c.id_estado_cita.nombre_estado in ['Confirmada', 'En Proceso']),
+        None
+    )
+ 
+    return render(request, 'perfil_paciente.html', {
+        'paciente': paciente,
+        'citas': citas_lista,
+        'cita_actual': cita_actual,
+        'tratamientos': tratamientos,
+        'hoy': timezone.now().date(),
+    })
 
 # --- MOTOR DE DISPONIBILIDAD (AJAX) ---
 

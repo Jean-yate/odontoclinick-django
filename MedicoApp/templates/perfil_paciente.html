@@ -5,25 +5,19 @@
     :root {
         --clay-primary: #0ea5e9;
         --secondary-color: #64748b;
-        --clay-danger: #ef4444;
-        --clay-success: #22c55e;
     }
-
-    /* Estilo Base Claymorphism */
     .clay-card {
         background: white;
         border-radius: 24px;
         box-shadow: 9px 9px 20px #d1d9e6, -9px -9px 20px #ffffff;
         border: 1px solid rgba(255,255,255,0.7);
     }
-
     .clay-modal {
         border-radius: 28px !important;
         background: white;
         box-shadow: 15px 15px 30px rgba(0,0,0,0.08) !important;
         border: 1px solid rgba(255,255,255,0.8) !important;
     }
-
     .form-label-custom {
         font-weight: 700;
         color: var(--secondary-color);
@@ -32,8 +26,6 @@
         margin-bottom: 6px;
         display: block;
     }
-
-    /* Inputs estilo Clay Inset */
     .input-clay {
         border-radius: 14px !important;
         padding: 10px 18px !important;
@@ -43,229 +35,279 @@
         transition: all 0.3s ease;
         width: 100%;
     }
-
-    .input-clay:focus:not(:disabled) {
+    .input-clay:focus {
         background: #ffffff !important;
         box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.15) !important;
         outline: none;
     }
-
-    .input-clay:disabled {
+    /* Campo readonly — visualmente apagado pero SÍ envía datos */
+    .input-clay[readonly] {
         background: #e9ecef !important;
-        opacity: 0.8;
-        cursor: not-allowed;
+        opacity: 0.85;
+        cursor: default;
         box-shadow: none !important;
     }
-
-    /* Validaciones */
     .input-clay.is-invalid {
         border: 1px solid #dc3545 !important;
         background-color: #fff8f8 !important;
         box-shadow: 0 0 0 4px rgba(220, 53, 69, 0.1) !important;
     }
-
     .invalid-feedback {
         font-size: 0.8rem;
         color: #dc3545;
         padding-left: 8px;
         margin-top: 4px;
     }
-
-    /* Sticky Sidebar Responsivo */
-    @media (min-width: 768px) { 
-        .sticky-md-top { position: sticky; top: 90px !important; } 
+    @media (min-width: 768px) {
+        .sticky-md-top { position: sticky; top: 90px !important; }
     }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="container-fluid mt-4 px-4 animate__animated animate__fadeIn">
-    <div class="row align-items-start"> 
-        
-        <!-- COLUMNA IZQUIERDA: Tarjeta del Paciente (Fija/Sticky) -->
+    <div class="row align-items-start">
+
+        {# ── Sidebar paciente ──────────────────────────────────────────────── #}
         <div class="col-md-4 col-lg-3 sticky-md-top" style="z-index: 10;">
             <div class="clay-card p-4 text-center mb-4">
-                <!-- API de UI-Avatars alimentada de forma segura con el string del usuario -->
-                <img src="https://ui-avatars.com/api/?name={{ paciente.id_usuario }}&background=0ea5e9&color=fff&size=128" class="rounded-circle shadow-sm border border-4 border-white mb-3" alt="Avatar">
-                
-                <!-- Nombre seguro llamando al __str__ para evitar caídas del servidor -->
+                <img src="https://ui-avatars.com/api/?name={{ paciente.id_usuario }}&background=0ea5e9&color=fff&size=128"
+                     class="rounded-circle shadow-sm border border-4 border-white mb-3" alt="Avatar">
                 <h4 class="fw-bold text-dark mb-1">{{ paciente.id_usuario }}</h4>
-                
                 <div class="badge bg-primary bg-opacity-10 text-primary px-3 py-2 rounded-pill mb-4 mt-2 fw-bold">
                     ID Paciente: #{{ paciente.id_paciente }}
                 </div>
-
-                <!-- Bloque de Alerta Médica Estética -->
-                <div class="text-start p-3 rounded-4 mb-3 border-start border-4 border-danger" style="background: #fff5f5;">
-                    <h6 class="fw-bold small text-uppercase text-danger mb-2"><i class="bi bi-exclamation-triangle-fill me-1"></i> Alerta Médica</h6>
-                    <p class="small mb-1 text-dark"><strong>Alergias:</strong> <span class="text-danger fw-bold">{{ paciente.alergias|default:"Ninguna registrada" }}</span></p>
-                    <p class="small mb-0 text-dark"><strong>G. Sanguíneo:</strong> <span class="badge bg-danger px-2 rounded-pill">{{ paciente.rh|upper|default:"No reg." }}</span></p>
+                <div class="text-start p-3 rounded-4 mb-3 border-start border-4 border-danger" style="background:#fff5f5;">
+                    <h6 class="fw-bold small text-uppercase text-danger mb-2">
+                        <i class="bi bi-exclamation-triangle-fill me-1"></i> Alerta Médica
+                    </h6>
+                    <p class="small mb-1 text-dark">
+                        <strong>Alergias:</strong>
+                        <span class="text-danger fw-bold">{{ paciente.alergias|default:"Ninguna registrada" }}</span>
+                    </p>
+                    <p class="small mb-0 text-dark">
+                        <strong>G. Sanguíneo:</strong>
+                        <span class="badge bg-danger px-2 rounded-pill">{{ paciente.rh|upper|default:"No reg." }}</span>
+                    </p>
                 </div>
-
-                <!-- Información Adicional de Contacto -->
                 <div class="text-start small px-2">
-                    <p class="mb-2 text-muted text-uppercase fw-bold" style="font-size: 0.65rem; letter-spacing: 0.5px;">Información de Control</p>   
-                    
+                    <p class="mb-2 text-muted text-uppercase fw-bold" style="font-size:0.65rem;letter-spacing:0.5px;">Información de Control</p>
                     <p class="mb-2 text-secondary">
-                        <strong><i class="bi bi-telephone me-2 text-primary"></i>Teléfono:</strong> 
+                        <strong><i class="bi bi-telephone me-2 text-primary"></i>Teléfono:</strong>
                         {{ paciente.id_usuario.telefono|default:"Ref. en Sistema" }}
                     </p>
-                    
                     <p class="mb-0 text-secondary">
                         <strong><i class="bi bi-shield-lock me-2 text-success"></i>Historial:</strong>
                         Cifrado Activo
                     </p>
                 </div>
             </div>
-
-            <!-- Botón Volver -->
-            <a href="{% url 'dashboard_medico' %}" class="btn btn-light w-100 rounded-pill fw-bold text-muted border py-2 mb-4 shadow-sm">
+            <a href="{% url 'dashboard_medico' %}"
+               class="btn btn-light w-100 rounded-pill fw-bold text-muted border py-2 mb-4 shadow-sm">
                 <i class="bi bi-arrow-left"></i> Panel Principal
             </a>
         </div>
 
-        <!-- COLUMNA DERECHA: Lista de Citas y Evoluciones -->
+        {# ── Columna principal ─────────────────────────────────────────────── #}
         <div class="col-md-8 col-lg-9">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h3 class="fw-bold text-dark mb-0">Evolución Clínica</h3>
-                
                 {% if cita_actual %}
-                    <!-- Botón para detonar el modal de la cita del día de hoy -->
-                    <button class="btn btn-warning rounded-pill px-4 shadow-sm fw-bold text-dark" data-bs-toggle="modal" data-bs-target="#modalAnotacion{{ cita_actual.id_cita }}" style="border: none; background-color: #ffb703;">
-                        <i class="bi bi-plus-circle me-1"></i> Atender Cita de Hoy
-                    </button>
+                <button class="btn btn-warning rounded-pill px-4 shadow-sm fw-bold text-dark"
+                        data-bs-toggle="modal"
+                        data-bs-target="#modalAnotacion{{ cita_actual.id_cita }}"
+                        style="border:none; background-color:#ffb703;">
+                    <i class="bi bi-plus-circle me-1"></i> Atender Cita de Hoy
+                </button>
                 {% endif %}
             </div>
 
-            <!-- Bucle Principal de Citas -->
             {% for cita in citas %}
-            <div class="clay-card mb-4 border-0 p-0" style="overflow: hidden;">
+            {# ─────────────────────────────────────────────────────────────── #}
+            {# BUG FIX 1: el related_name es 'historial' (OneToOne), no        #}
+            {# historialmedico_set. Usamos cita.historial_directo asignado      #}
+            {# desde la view, con fallback a None.                              #}
+            {# ─────────────────────────────────────────────────────────────── #}
+            {% with hist=cita.historial_directo %}
+
+            <div class="clay-card mb-4 border-0 p-0" style="overflow:hidden;">
                 <div class="row g-0">
-                    <!-- Contenedor Izquierdo de la Fecha -->
-                    <div class="col-auto bg-light border-end d-flex align-items-center px-4" style="min-width: 110px;">
+                    <div class="col-auto bg-light border-end d-flex align-items-center px-4" style="min-width:110px;">
                         <div class="text-center w-100">
                             <span class="d-block fw-bold fs-2 text-primary lh-1 mb-1">{{ cita.fecha_hora|date:"d" }}</span>
-                            <span class="text-uppercase text-muted fw-bold d-block" style="font-size: 0.7rem; letter-spacing: 0.5px;">{{ cita.fecha_hora|date:"M Y" }}</span>
+                            <span class="text-uppercase text-muted fw-bold d-block" style="font-size:0.7rem;letter-spacing:0.5px;">{{ cita.fecha_hora|date:"M Y" }}</span>
                         </div>
                     </div>
-                    
-                    <!-- Cuerpo de la Tarjeta -->
                     <div class="col">
                         <div class="card-body p-4">
                             <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
                                 <div>
                                     <h5 class="fw-bold mb-1 text-dark">
-                                        <!-- En las citas de tu bucle original el histórico se llama vía 'cita.historial.all' o 'cita.historial.first' según tu backend, usamos un default seguro -->
-                                        {% for hist in cita.historial.all %}
+                                        {% if hist %}
                                             {{ hist.id_tratamiento.nombre_tratamiento }}
-                                        {% empty %}
+                                        {% else %}
                                             Consulta General / Valoración
-                                        {% endfor %}
+                                        {% endif %}
                                     </h5>
-                                    <p class="text-muted small mb-0"><i class="bi bi-person-md me-1"></i> Atendido por: Dr(a). {{ cita.id_doctor.id_usuario }}</p>
+                                    <p class="text-muted small mb-0">
+                                        <i class="bi bi-person-md me-1"></i> Atendido por: Dr(a). {{ cita.id_doctor.id_usuario }}
+                                    </p>
                                 </div>
                                 <div class="text-md-end">
                                     <span class="badge {% if cita.id_estado_cita.nombre_estado == 'Finalizada' %}bg-success{% else %}bg-warning text-dark{% endif %} rounded-pill mb-2 px-3 fw-bold">
                                         {{ cita.id_estado_cita.nombre_estado }}
                                     </span><br>
-                                    
-                                    <!-- Disparador dinámico del Modal correspondiente -->
-                                    <button class="btn btn-sm {% if cita.id_doctor.id_usuario == request.user and cita.id_estado_cita.nombre_estado != 'Finalizada' %}btn-primary{% else %}btn-outline-secondary{% endif %} rounded-pill px-4 fw-bold shadow-sm" 
-                                            data-bs-toggle="modal" data-bs-target="#modalAnotacion{{ cita.id_cita }}">
-                                        {% if cita.id_doctor.id_usuario == request.user and cita.id_estado_cita.nombre_estado != 'Finalizada' %}Atender{% else %}Ver Detalles{% endif %}
-                                    </button>
+                                    {% if cita.id_doctor.id_usuario == request.user and cita.id_estado_cita.nombre_estado != 'Finalizada' %}
+                                        <button class="btn btn-sm btn-primary rounded-pill px-4 fw-bold shadow-sm"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#modalAnotacion{{ cita.id_cita }}">
+                                            Atender
+                                        </button>
+                                    {% else %}
+                                        <button class="btn btn-sm btn-outline-secondary rounded-pill px-4 fw-bold shadow-sm"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#modalAnotacion{{ cita.id_cita }}">
+                                            Ver Detalles
+                                        </button>
+                                    {% endif %}
                                 </div>
                             </div>
-
-                            <!-- Vista rápida del Diagnóstico previo si existe -->
-                            {% for hist in cita.historial.all %}
-                                <div class="mt-3 p-3 bg-light border-start border-4 border-primary rounded-end">
-                                    <p class="small mb-0 text-dark"><strong>Diagnóstico Anterior:</strong> {{ hist.diagnostico|truncatechars:180 }}</p>
-                                </div>
-                            {% endfor %}
+                            {% if hist %}
+                            <div class="mt-3 p-3 bg-light border-start border-4 border-primary rounded-end">
+                                <p class="small mb-0 text-dark">
+                                    <strong>Diagnóstico Registrado:</strong> {{ hist.diagnostico|truncatechars:180 }}
+                                </p>
+                            </div>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
             </div>
 
+            {# ── Modal de atención ──────────────────────────────────────────── #}
+            {% with puede_editar=cita.puede_editar %}
             <div class="modal fade" id="modalAnotacion{{ cita.id_cita }}" tabindex="-1" aria-hidden="true">
                 <div class="modal-dialog modal-lg modal-dialog-centered">
                     <div class="modal-content clay-modal border-0 shadow-lg">
-                        
-                        <form action="{% url 'guardar_atencion' %}" method="POST" class="form-atencion-modal" novalidate>
+                        <form action="{% url 'guardar_atencion' %}" method="POST"
+                              class="form-atencion-modal" novalidate>
                             {% csrf_token %}
                             <input type="hidden" name="id_cita" value="{{ cita.id_cita }}">
-                            
-                            <div class="modal-header {% if cita.id_doctor.id_usuario == request.user %}bg-primary text-white{% else %}bg-secondary text-white{% endif %} p-4 border-0" style="border-radius: 24px 24px 0 0;">
-                                <h5 class="modal-title fw-bold"><i class="bi bi-folder-symlink me-2"></i>Historial Clínico - Cita {{ cita.fecha_hora|date:"d/m/Y" }}</h5>
+
+                            <div class="modal-header {% if puede_editar %}bg-primary{% else %}bg-secondary{% endif %} text-white p-4 border-0"
+                                 style="border-radius:24px 24px 0 0;">
+                                <h5 class="modal-title fw-bold">
+                                    <i class="bi bi-folder-symlink me-2"></i>
+                                    Historial Clínico — Cita {{ cita.fecha_hora|date:"d/m/Y" }}
+                                </h5>
                                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                             </div>
 
                             <div class="modal-body p-4 bg-white">
                                 <div class="row g-3">
-                                    
+
                                     <div class="col-md-12">
                                         <label class="form-label-custom">Procedimiento Realizado</label>
-                                        <select name="id_tratamiento" class="form-select input-clay id_tratamiento" required {% if cita.id_doctor.id_usuario != request.user or cita.id_estado_cita.nombre_estado == 'Finalizada' %}disabled{% endif %}>
-                                            <option value="">-- Seleccione el tratamiento --</option>
-                                            {% for t in tratamientos %}
-                                                <option value="{{ t.id_tratamiento }}" 
-                                                    {% for h in cita.historial.all %}{% if t.id_tratamiento == h.id_tratamiento.id_tratamiento %}selected{% endif %}{% endfor %}>
-                                                    {{ t.nombre_tratamiento }}
-                                                </option>
-                                            {% endfor %}
-                                        </select>
-                                        <div class="invalid-feedback">Por favor, seleccione un procedimiento médico válido de la lista.</div>
+                                        {# BUG FIX 2: readonly en vez de disabled — los datos SÍ se envían en POST #}
+                                            <select name="id_tratamiento"
+                                                    class="form-select input-clay id_tratamiento"
+                                                    {% if not puede_editar %}disabled{% endif %}
+                                                    required>
+                                                <option value="">-- Seleccione el tratamiento --</option>
+                                                {% for t in tratamientos %}
+                                                    <option value="{{ t.id_tratamiento }}"
+                                                            data-precio="{{ t.precio }}"
+                                                            {% if hist and t.id_tratamiento == hist.id_tratamiento.id_tratamiento %}selected{% endif %}>
+                                                        {{ t.nombre_tratamiento }}
+                                                    </option>
+                                                {% endfor %}
+                                            </select>
+                                        {# Si está deshabilitado, enviar el valor como hidden #}
+                                        {% if not puede_editar and hist %}
+                                            <input type="hidden" name="id_tratamiento" value="{{ hist.id_tratamiento.id_tratamiento }}">
+                                        {% endif %}
+                                        <div class="invalid-feedback">Por favor, seleccione un procedimiento médico válido.</div>
                                     </div>
 
                                     <div class="col-12">
                                         <label class="form-label-custom">Diagnóstico y Hallazgos Patológicos</label>
-                                        <textarea name="diagnostico" class="form-control input-clay diagnostico" rows="3" required {% if cita.id_doctor.id_usuario != request.user or cita.id_estado_cita.nombre_estado == 'Finalizada' %}disabled{% endif %}>{% for h in cita.historial.all %}{{ h.diagnostico }}{% endfor %}</textarea>
-                                        <div class="invalid-feedback">El diagnóstico es obligatorio (mínimo 3 caracteres alfanuméricos).</div>
+                                        <textarea name="diagnostico"
+                                                  class="form-control input-clay diagnostico"
+                                                  rows="3"
+                                                  {% if not puede_editar %}readonly{% endif %}
+                                                  required>{{ hist.diagnostico|default:"" }}</textarea>
+                                        <div class="invalid-feedback">El diagnóstico es obligatorio (mínimo 3 caracteres).</div>
                                     </div>
 
                                     <div class="col-md-6">
                                         <label class="form-label-custom">Síntomas Reportados</label>
-                                        <textarea name="sintomas" class="form-control input-clay sintomas" rows="2" required {% if cita.id_doctor.id_usuario != request.user or cita.id_estado_cita.nombre_estado == 'Finalizada' %}disabled{% endif %}>{% for h in cita.historial.all %}{{ h.sintomas }}{% endfor %}</textarea>
-                                        <div class="invalid-feedback">Los síntomas son obligatorios y no deben contener números ni símbolos.</div>
+                                        <textarea name="sintomas"
+                                                  class="form-control input-clay sintomas"
+                                                  rows="2"
+                                                  {% if not puede_editar %}readonly{% endif %}
+                                                  required>{{ hist.sintomas|default:"" }}</textarea>
+                                        <div class="invalid-feedback">Los síntomas son obligatorios.</div>
                                     </div>
-                                    
+
                                     <div class="col-md-6">
                                         <label class="form-label-custom">Plan de Tratamiento Ejecutado</label>
-                                        <textarea name="plan_tratamiento" class="form-control input-clay plan_tratamiento" rows="2" required {% if cita.id_doctor.id_usuario != request.user or cita.id_estado_cita.nombre_estado == 'Finalizada' %}disabled{% endif %}>{% for h in cita.historial.all %}{{ h.plan_tratamiento }}{% endfor %}</textarea>
-                                        <div class="invalid-feedback">El plan de tratamiento clínico es obligatorio.</div>
+                                        <textarea name="plan_tratamiento"
+                                                  class="form-control input-clay plan_tratamiento"
+                                                  rows="2"
+                                                  {% if not puede_editar %}readonly{% endif %}
+                                                  required>{{ hist.plan_tratamiento|default:"" }}</textarea>
+                                        <div class="invalid-feedback">El plan de tratamiento es obligatorio.</div>
                                     </div>
 
                                     <div class="col-12">
                                         <label class="form-label-custom">Observaciones Médicas Privadas</label>
-                                        <textarea name="observaciones_clinicas" class="form-control input-clay observaciones_clinicas" rows="2" required {% if cita.id_doctor.id_usuario != request.user or cita.id_estado_cita.nombre_estado == 'Finalizada' %}disabled{% endif %}>{% for h in cita.historial.all %}{{ h.observaciones_clinicas }}{% endfor %}</textarea>
-                                        <div class="invalid-feedback">Las observaciones son obligatorias (mínimo 3 caracteres alfanuméricos).</div>
+                                        <textarea name="observaciones_clinicas"
+                                                  class="form-control input-clay observaciones_clinicas"
+                                                  rows="2"
+                                                  {% if not puede_editar %}readonly{% endif %}
+                                                  required>{{ hist.observaciones_clinicas|default:"" }}</textarea>
+                                        <div class="invalid-feedback">Las observaciones son obligatorias.</div>
                                     </div>
 
                                     <div class="col-md-5 offset-md-7">
-                                        <label class="form-label-custom text-success text-md-end w-100">Costo Total Cobrado ($ COP)</label>
+                                        <label class="form-label-custom text-success text-md-end w-100">
+                                            Costo Total Cobrado ($ COP)
+                                        </label>
                                         <div class="input-group">
-                                            <span class="input-group-text bg-success text-white border-0" style="border-radius: 14px 0 0 14px;">$</span>
-                                            <input type="number" step="1" min="0" name="costo_aplicado" class="form-control input-clay text-end fw-bold costo_aplicado" style="border-radius: 0 14px 14px 0 !important;" value="{% for h in cita.historial.all %}{{ h.costo_aplicado }}{% empty %}0{% endfor %}"  {% if cita.id_doctor.id_usuario != request.user or cita.id_estado_cita.nombre_estado == 'Finalizada' %}disabled{% endif %} required>
+                                            <span class="input-group-text bg-success text-white border-0"
+                                                  style="border-radius:14px 0 0 14px;">$</span>
+                                        <input type="number" step="1" min="0"
+                                               name="costo_aplicado"
+                                               class="form-control input-clay text-end fw-bold costo_aplicado"
+                                               style="border-radius:0 14px 14px 0 !important;"
+                                               value="{% if hist %}{{ hist.costo_aplicado }}{% elif cita_actual.id_tratamiento %}{{ cita_actual.id_tratamiento.precio }}{% else %}0{% endif %}"
+                                               {% if not puede_editar %}readonly{% endif %}
+                                               required>
                                         </div>
-                                        <div class="invalid-feedback text-end">Ingrese un valor entero positivo válido.</div>
+                                        <div class="invalid-feedback text-end">Ingrese un valor entero positivo.</div>
                                     </div>
+
                                 </div>
                             </div>
 
-                            <div class="modal-footer border-0 p-4 bg-light" style="border-radius: 0 0 24px 24px;">
-                                <button type="button" class="btn btn-link text-muted fw-bold text-decoration-none" data-bs-dismiss="modal">Cerrar Ventana</button>
-                                
-                                {% if cita.id_doctor.id_usuario == request.user and cita.id_estado_cita.nombre_estado != 'Finalizada' %}
-                                    <button type="submit" class="btn btn-primary rounded-pill px-4 shadow-sm fw-bold" style="background-color: #0ea5e9; border: none;">
-                                        <i class="bi bi-save me-2"></i> Registrar y Finalizar
-                                    </button>
+                            <div class="modal-footer border-0 p-4 bg-light" style="border-radius:0 0 24px 24px;">
+                                <button type="button"
+                                        class="btn btn-link text-muted fw-bold text-decoration-none"
+                                        data-bs-dismiss="modal">Cerrar Ventana</button>
+                                {% if puede_editar %}
+                                <button type="submit"
+                                        class="btn btn-primary rounded-pill px-4 shadow-sm fw-bold"
+                                        style="background-color:#0ea5e9; border:none;">
+                                    <i class="bi bi-save me-2"></i> Registrar y Finalizar
+                                </button>
                                 {% endif %}
                             </div>
                         </form>
                     </div>
                 </div>
             </div>
+            {% endwith %}
+            {% endwith %}
 
             {% empty %}
             <div class="clay-card p-5 text-center">
@@ -273,7 +315,6 @@
                 <h5 class="text-muted fw-bold">No hay registros de evolución clínica para este paciente.</h5>
             </div>
             {% endfor %}
-
         </div>
     </div>
 </div>
@@ -281,76 +322,80 @@
 
 {% block extra_js %}
 <script>
-document.addEventListener("DOMContentLoaded", function() {
-    // Escuchar el envío de cualquier formulario dentro de los Modals
+document.addEventListener("DOMContentLoaded", function () {
     const formularios = document.querySelectorAll('.form-atencion-modal');
 
     formularios.forEach(form => {
-        form.addEventListener('submit', function(event) {
-            let formValido = true;
+        const selectTratamiento = form.querySelector('.id_tratamiento');
+        const inputCosto = form.querySelector('.costo_aplicado');
 
-            // Regex de validaciones del backend
-            const regexLetrasNumeros = /^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\-\_\.\, ]{3,}$/;
-            const regexSoloLetras = /^[a-zA-ZáéíóúÁÉÍÓÚñÑ ]{3,}$/;
+        // Función reutilizable para actualizar el precio
+        function actualizarPrecio() {
+            if (!selectTratamiento || !inputCosto || inputCosto.readOnly) return;
 
-            // 1. Validar Selector
-            const tratamiento = form.querySelector('.id_tratamiento');
-            if (tratamiento && !tratamiento.disabled && !tratamiento.value) {
-                tratamiento.classList.add('is-invalid');
-                formValido = false;
-            }
-
-            // 2. Validar Síntomas
-            const sintomas = form.querySelector('.sintomas');
-            if (sintomas && !sintomas.disabled && !regexSoloLetras.test(sintomas.value.trim())) {
-                sintomas.classList.add('is-invalid');
-                formValido = false;
-            }
-
-            // 3. Validar Diagnóstico
-            const diagnostico = form.querySelector('.diagnostico');
-            if (diagnostico && !diagnostico.disabled && !regexLetrasNumeros.test(diagnostico.value.trim())) {
-                diagnostico.classList.add('is-invalid');
-                formValido = false;
-            }
-
-            // 4. Validar Plan
-            const plan = form.querySelector('.plan_tratamiento');
-            if (plan && !plan.disabled && !regexLetrasNumeros.test(plan.value.trim())) {
-                plan.classList.add('is-invalid');
-                formValido = false;
-            }
-
-            // 5. Validar Observaciones
-            const observaciones = form.querySelector('.observaciones_clinicas');
-            if (observaciones && !observaciones.disabled && !regexLetrasNumeros.test(observaciones.value.trim())) {
-                observaciones.classList.add('is-invalid');
-                formValido = false;
-            }
-
-            // 6. Validar Costo
-            const costo = form.querySelector('.costo_aplicado');
-            if (costo && !costo.disabled) {
-                const val = costo.value.trim();
-                if (val === "" || val.includes('.') || val.includes(',') || parseInt(val) < 0) {
-                    costo.classList.add('is-invalid');
-                    formValido = false;
+            const opcionSeleccionada = selectTratamiento.options[selectTratamiento.selectedIndex];
+            if (opcionSeleccionada) {
+                const precio = opcionSeleccionada.getAttribute('data-precio');
+                // Si hay un precio en la opción y el valor actual del input es 0 o vacío, lo asignamos
+                if (precio && (inputCosto.value === "0" || inputCosto.value === "")) {
+                    inputCosto.value = parseInt(precio);
                 }
             }
+        }
 
-            if (!formValido) {
-                event.preventDefault();
-                event.stopPropagation();
-            }
-        });
+        // 1. Ejecutar al cargar la página por si ya hay un tratamiento seleccionado por defecto
+        actualizarPrecio();
 
-        // Limpiar errores visuales al teclear de nuevo
-        form.querySelectorAll('input, textarea, select').forEach(input => {
-            input.addEventListener('input', function() {
-                if (this.classList.contains('is-invalid')) {
-                    this.classList.remove('is-invalid');
+        // 2. Ejecutar cada vez que el usuario cambie la opción manualmente
+        if (selectTratamiento) {
+            selectTratamiento.addEventListener('change', function() {
+                if (inputCosto && !inputCosto.readOnly) {
+                    const opcion = this.options[this.selectedIndex];
+                    const precio = opcion.getAttribute('data-precio');
+                    inputCosto.value = precio ? parseInt(precio) : 0;
+                    inputCosto.classList.remove('is-invalid');
                 }
             });
+        }
+
+        // ── VALIDACIONES DE FORMULARIO ──────────────────────────
+        form.addEventListener('submit', function (event) {
+            let formValido = true;
+            const regexLetrasNumeros = /^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s\.,;_\-\?:!\r\n]{3,}$/;
+            const regexSoloLetras   = /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s\.,;_\-\?:!\r\n]{3,}$/;
+
+            const tratamiento = form.querySelector('.id_tratamiento');
+            if (tratamiento && !tratamiento.disabled && !tratamiento.value) {
+                tratamiento.classList.add('is-invalid'); formValido = false;
+            }
+            const sintomas = form.querySelector('.sintomas');
+            if (sintomas && !sintomas.readOnly && !regexSoloLetras.test(sintomas.value.trim())) {
+                sintomas.classList.add('is-invalid'); formValido = false;
+            }
+            const diagnostico = form.querySelector('.diagnostico');
+            if (diagnostico && !diagnostico.readOnly && !regexLetrasNumeros.test(diagnostico.value.trim())) {
+                diagnostico.classList.add('is-invalid'); formValido = false;
+            }
+            const plan = form.querySelector('.plan_tratamiento');
+            if (plan && !plan.readOnly && !regexLetrasNumeros.test(plan.value.trim())) {
+                plan.classList.add('is-invalid'); formValido = false;
+            }
+            const obs = form.querySelector('.observaciones_clinicas');
+            if (obs && !obs.readOnly && !regexLetrasNumeros.test(obs.value.trim())) {
+                obs.classList.add('is-invalid'); formValido = false;
+            }
+            const costo = form.querySelector('.costo_aplicado');
+            if (costo && !costo.readOnly) {
+                const val = costo.value.trim();
+                if (val === "" || val.includes('.') || val.includes(',') || parseInt(val) < 0) {
+                    costo.classList.add('is-invalid'); formValido = false;
+                }
+            }
+            if (!formValido) { event.preventDefault(); event.stopPropagation(); }
+        });
+
+        form.querySelectorAll('input, textarea, select').forEach(el => {
+            el.addEventListener('input', () => el.classList.remove('is-invalid'));
         });
     });
 });
