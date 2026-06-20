@@ -130,7 +130,7 @@ def iniciar_atencion(request, cita_id):
 
 @login_required
 def guardar_atencion(request):
-    """Registra el historial médico, finaliza la cita y descuenta insumos del inventario."""
+    """Registra el historial médico con validaciones estrictas, finaliza la cita y descuenta insumos."""
     if request.method == 'POST':
         id_cita = request.POST.get('id_cita')
         id_tratamiento_val = request.POST.get('id_tratamiento')
@@ -138,24 +138,70 @@ def guardar_atencion(request):
         cita = get_object_or_404(Cita, id_cita=id_cita)
         tratamiento = get_object_or_404(Tratamiento, id_tratamiento=id_tratamiento_val)
 
-        # Usamos una transacción atómica para que si falla el inventario, no quede la cita a medias
+        # ---- EXTRACCIÓN Y VALIDACIÓN DE DATOS OBLIGATORIOS ----
+        diagnostico = request.POST.get('diagnostico', '').strip()
+        plan_tratamiento = request.POST.get('plan_tratamiento', '').strip()
+        observaciones_clinicas = request.POST.get('observaciones_clinicas', '').strip()
+        sintomas = request.POST.get('sintomas', '').strip()
+        costo_str = request.POST.get('costo_aplicado', '').strip()
+
+        # 1. Verificar que ningún campo esté vacío
+        if not all([diagnostico, plan_tratamiento, observaciones_clinicas, sintomas, costo_str]):
+            messages.error(request, "❌ Todos los campos del registro clínico son obligatorios.")
+            return redirect('perfil_paciente', paciente_id=cita.id_paciente.id_paciente)
+
+        # Región de expresiones regulares básicas (letras, números y espacios)
+        # ^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ ]{3,}$ -> Mínimo 3 caracteres, sin caracteres especiales como @, $, *, #, etc.
+        regex_letras_numeros = r'^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ ]{3,}$'
+        
+        # ^[a-zA-ZáéíóúÁÉÍÓÚñÑ ]{3,}$ -> Mínimo 3 caracteres, solo letras y espacios (sin números)
+        regex_solo_letras = r'^[a-zA-ZáéíóúÁÉÍÓÚñÑ ]{3,}$'
+
+        # 2. Validar Diagnóstico, Plan de tratamiento y Observaciones clínicas
+        if not re.match(regex_letras_numeros, diagnostico):
+            messages.error(request, "❌ Diagnóstico inválido: Mínimo 3 caracteres (letras/números), sin caracteres especiales.")
+            return redirect('perfil_paciente', paciente_id=cita.id_paciente.id_paciente)
+
+        if not re.match(regex_letras_numeros, plan_treatment := plan_tratamiento):
+            messages.error(request, "❌ Plan de tratamiento inválido: Mínimo 3 caracteres (letras/números), sin caracteres especiales.")
+            return redirect('perfil_paciente', paciente_id=cita.id_paciente.id_paciente)
+
+        if not re.match(regex_letras_numeros, observaciones_clinicas):
+            messages.error(request, "❌ Observaciones médicas inválidas: Mínimo 3 caracteres (letras/números), sin caracteres especiales.")
+            return redirect('perfil_paciente', paciente_id=cita.id_paciente.id_paciente)
+
+        # 3. Validar Síntomas (Solo letras, mínimo 3 caracteres)
+        if not re.match(regex_solo_letras, sintomas):
+            messages.error(request, "❌ Síntomas inválidos: Mínimo 3 letras, no se permiten números ni caracteres especiales.")
+            return redirect('perfil_paciente', paciente_id=cita.id_paciente.id_paciente)
+
+        # 4. Validar Costo Total Cobrado (Entero positivo, no se aceptan negativos ni decimales/double)
+        try:
+            # Si contiene puntos o comas, rechazamos explícitamente para evitar decimales camuflados
+            if '.' in costo_str or ',' in costo_str:
+                raise ValueError()
+                
+            costo_int = int(costo_str)
+            if costo_int < 0:
+                raise ValueError()
+                
+            costo = Decimal(costo_int)
+        except ValueError:
+            messages.error(request, "❌ El costo total cobrado debe ser un número entero positivo (sin decimales ni signos negativos).")
+            return redirect('perfil_paciente', paciente_id=cita.id_paciente.id_paciente)
+
+        # ---- PROCESO DE TRANSACCIÓN ATÓMICA ----
         try:
             with transaction.atomic():
                 # 1. Registrar en Historial Médico
-                try:
-                    costo_str = request.POST.get('costo_aplicado', '0').strip().replace(',', '.')
-                    costo = Decimal(costo_str) if costo_str else Decimal('0.00')
-                except:
-                    costo = Decimal('0.00')
-
                 HistorialMedico.objects.update_or_create(
                     id_cita=cita,
                     defaults={
                         'id_tratamiento': tratamiento,
-                        'diagnostico': request.POST.get('diagnostico'),
-                        'sintomas': request.POST.get('sintomas'),
-                        'plan_tratamiento': request.POST.get('plan_tratamiento'),
-                        'observaciones_clinicas': request.POST.get('observaciones_clinicas'),
+                        'diagnostico': diagnostico,
+                        'sintomas': sintomas,
+                        'plan_tratamiento': plan_tratamiento,
+                        'observaciones_clinicas': observaciones_clinicas,
                         'costo_aplicado': costo,
                         'completado': True
                     }
@@ -166,30 +212,26 @@ def guardar_atencion(request):
                 
                 for item in insumos_receta:
                     try:
-                        # Acceso seguro al producto
                         producto = item.id_producto 
                         if not producto:
-                            continue # Si por alguna razón la relación es nula, saltar
+                            continue
                             
                         cantidad_a_descontar = item.cantidad_requerida
-                        
-                        # Ajuste de stock físico
                         stock_anterior = producto.stock_actual
                         producto.stock_actual -= cantidad_a_descontar
                         producto.save()
                         
-                        # Registro del movimiento
                         MovimientoInventario.objects.create(
-                            producto=producto,
+                            id_producto=producto,
                             id_usuario=request.user,
                             tipo_movimiento='SALIDA',
                             cantidad=int(cantidad_a_descontar),
                             stock_anterior=stock_anterior,
                             stock_nuevo=producto.stock_actual,
-                            motivo=f"Consumo automático: Cita #{cita.id_cita} ({tratamiento.nombre_tratamiento})"
+                            motivo=f"Consumo automático: Cita #{cita.id_cita} ({tratamiento.nombre_tratamiento})",
+                            id_cita=cita
                         )
                     except Producto.DoesNotExist:
-                        # Si el producto vinculado al tratamiento ya no existe en la tabla Producto
                         print(f"Advertencia: El producto vinculado al tratamiento {tratamiento} no existe.")
                         continue 
 
@@ -199,7 +241,7 @@ def guardar_atencion(request):
                     cita.id_estado_cita = estado_fin
                     cita.save()
 
-            messages.success(request, "✅ Atención guardada e inventario actualizado.")
+            messages.success(request, "✅ Atención guardada e inventario actualizado con éxito.")
             return redirect('perfil_paciente', paciente_id=cita.id_paciente.id_paciente)
 
         except Exception as e:

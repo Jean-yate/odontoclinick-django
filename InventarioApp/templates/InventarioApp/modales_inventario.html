@@ -1,55 +1,246 @@
-<div class="modal fade" id="modalEntrada{{ producto.pk }}" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content modal-content-clay p-3">
-            <div class="modal-header border-0">
-                <h5 class="fw-bold text-dark mb-0">Abastecer Inventario</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form action="{% url 'entrada_stock' producto.pk %}" method="POST">
-                {% csrf_token %}
-                <div class="modal-body text-center">
-                    <div class="badge bg-success bg-opacity-10 text-success p-3 rounded-circle mb-3">
-                        <i class="bi bi-box-seam fs-3"></i>
+
+
+{# ── MODAL ENTRADA (Req 1.1.1) ───────────────────────────────────────────── #}
+<div class="modal fade" id="modalEntrada{{ producto.id_producto }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-md">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 24px; overflow: hidden;">
+
+            {# Cabecera coloreada #}
+            <div class="modal-header border-0 px-4 pt-4 pb-2" style="background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 100%);">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="d-flex align-items-center justify-content-center rounded-circle bg-success bg-opacity-10"
+                         style="width:48px; height:48px;">
+                        <i class="bi bi-box-arrow-in-down text-success fs-4"></i>
                     </div>
-                    <h6 class="fw-bold mb-1">{{ producto.nombre_producto }}</h6>
-                    <p class="text-muted small">Stock actual: {{ producto.stock_actual }}</p>
-                    <div class="mb-3 text-start">
-                        <label class="form-label small fw-bold text-muted">CANTIDAD A INGRESAR</label>
-                        <input type="number" name="cantidad" class="form-control input-clay" placeholder="0" required min="1">
+                    <div>
+                        <h5 class="fw-bold mb-0 text-dark">Abastecer Inventario</h5>
+                        <p class="text-muted small mb-0" id="subNombreEntrada{{ producto.id_producto }}">
+                            {{ producto.nombre_producto }}
+                        </p>
                     </div>
                 </div>
-                <div class="modal-footer border-0">
-                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-success rounded-pill px-4 shadow text-white">Confirmar</button>
+                <button type="button" class="btn-close ms-auto" data-bs-dismiss="modal"></button>
+            </div>
+
+            <form method="POST" action="{% url 'entrada_stock' producto.id_producto %}">
+                {% csrf_token %}
+                <div class="modal-body px-4 py-3">
+
+                    {# Stock actual badge #}
+                    <div class="alert alert-light border d-flex align-items-center gap-2 py-2 mb-3"
+                         style="border-radius: 14px;">
+                        <i class="bi bi-boxes text-success"></i>
+                        <span class="small">Stock actual:
+                            <strong class="text-success">{{ producto.stock_actual }} {{ producto.get_unidad_medida_display }}</strong>
+                        </span>
+                    </div>
+
+                    {# Cantidad #}
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-muted text-uppercase ls-1">
+                            Cantidad a ingresar <span class="text-danger">*</span>
+                        </label>
+                        <input type="number" name="cantidad"
+                               class="form-control input-clay"
+                               placeholder="Ej: 10" required min="1" step="1">
+                    </div>
+
+                    {# Empresa proveedora #}
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-muted text-uppercase ls-1">
+                            Empresa proveedora
+                        </label>
+                        <select name="empresa" class="form-select input-clay"
+                                id="selectEmpresaEntrada{{ producto.id_producto }}"
+                                onchange="togglePrecioEntrada(this, '{{ producto.id_producto }}')">
+                            <option value="">— Sin empresa / Ajuste interno —</option>
+                            {% for emp in empresas %}
+                                <option value="{{ emp.id_empresa }}">{{ emp.nombre_empresa }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Si la compra proviene de un proveedor, selecciónalo aquí.
+                        </div>
+                    </div>
+
+                    {# Precio de compra (visible sólo si hay empresa) #}
+                    <div class="mb-3 d-none" id="divPrecioEntrada{{ producto.id_producto }}">
+                        <label class="form-label fw-semibold small text-muted text-uppercase ls-1">
+                            Precio de compra por unidad <span class="text-danger">*</span>
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-0 rounded-start-pill fw-bold text-muted">$</span>
+                            <input type="number" name="precio_transaccion"
+                                   class="form-control input-clay rounded-end-pill"
+                                   placeholder="Ej: 1500" min="0" step="1"
+                                   id="inputPrecioEntrada{{ producto.id_producto }}">
+                        </div>
+                        <div class="form-text text-warning">
+                            <i class="bi bi-tag me-1"></i>
+                            Se registrará en el historial vinculado a la empresa.
+                        </div>
+                    </div>
+
+                    {# Motivo #}
+                    <div class="mb-2">
+                        <label class="form-label fw-semibold small text-muted text-uppercase ls-1">
+                            Motivo
+                        </label>
+                        <input type="text" name="motivo"
+                               class="form-control input-clay"
+                               placeholder="Ej: Compra mensual / Donación / Ajuste">
+                    </div>
+
+                </div>
+                <div class="modal-footer border-0 px-4 pb-4 pt-0 gap-2">
+                    <button type="button" class="btn btn-light rounded-pill px-4"
+                            data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success rounded-pill px-4 fw-bold shadow-sm">
+                        <i class="bi bi-check2 me-1"></i> Confirmar entrada
+                    </button>
                 </div>
             </form>
         </div>
     </div>
 </div>
 
-<div class="modal fade" id="modalSalida{{ producto.pk }}" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content modal-content-clay p-3">
-            <div class="modal-header border-0">
-                <h5 class="fw-bold text-dark mb-0">Registrar Salida</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form action="{% url 'salida_stock' producto.pk %}" method="POST">
-                {% csrf_token %}
-                <div class="modal-body text-center">
-                    <div class="badge bg-danger bg-opacity-10 text-danger p-3 rounded-circle mb-3">
-                        <i class="bi bi-cart-dash fs-3"></i>
+<div class="modal fade" id="modalSalida{{ producto.id_producto }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-md">
+        <div class="modal-content shadow-lg overflow-hidden">
+            <div class="modal-header border-0 px-4 pt-4 pb-2 modal-salida-header">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="modal-icon-circle bg-danger bg-opacity-10">
+                        <i class="bi bi-box-arrow-up text-danger fs-4"></i>
                     </div>
-                    <h6 class="fw-bold mb-1">{{ producto.nombre_producto }}</h6>
-                    <p class="text-muted small">Disponible: {{ producto.stock_actual }}</p>
-                    <div class="mb-3 text-start">
-                        <label class="form-label small fw-bold text-muted">CANTIDAD A RETIRAR</label>
-                        <input type="number" name="cantidad" class="form-control input-clay" required min="1" max="{{ producto.stock_actual }}">
+                    <div>
+                        <h5 class="fw-bold mb-0 text-dark">Registrar Salida</h5>
+                        <p class="text-muted small mb-0">{{ producto.nombre_producto }}</p>
                     </div>
                 </div>
-                <div class="modal-footer border-0">
-                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-danger rounded-pill px-4 shadow">Confirmar</button>
+                <button type="button" class="btn-close ms-auto" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{% url 'salida_stock' producto.id_producto %}"
+                  onsubmit="return validarModalSalida(this, {{ producto.id_producto }})">
+                {% csrf_token %}
+                <div class="modal-body px-4 py-3">
+
+                    {# Alert de validación inline — NO redirige a la lista #}
+                    <div class="d-none alert alert-danger py-2 small rounded-3 mb-3"
+                         id="alertSalida{{ producto.id_producto }}"></div>
+
+                    {# Stock disponible #}
+                    <div class="alert alert-light border d-flex align-items-center gap-2 py-2 mb-3" style="border-radius:14px;">
+                        <i class="bi bi-boxes text-danger"></i>
+                        <span class="small">Stock disponible:
+                            <strong class="text-danger">{{ producto.stock_actual }} {{ producto.get_unidad_medida_display }}</strong>
+                        </span>
+                    </div>
+
+                    {# Cantidad #}
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-muted text-uppercase">
+                            Cantidad a retirar <span class="text-danger">*</span>
+                        </label>
+                        <input type="number" name="cantidad" class="form-control input-clay"
+                               placeholder="Ej: 5" required min="1"
+                               max="{{ producto.stock_actual }}" step="1">
+                    </div>
+
+                    {# Tipo destinatario #}
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-muted text-uppercase">
+                            ¿Quién recibe el insumo?
+                        </label>
+                        <select name="tipo_destino" class="form-select input-clay"
+                                id="selTipoS{{ producto.id_producto }}"
+                                onchange="toggleDestinoSalida(this, {{ producto.id_producto }})">
+                            <option value="">— Solo consumo / sin destinatario —</option>
+                            <option value="empresa">Empresa compradora</option>
+                            <option value="cliente">Cliente / usuario interno</option>
+                        </select>
+                    </div>
+
+                    {# ── Empresa compradora (oculto por defecto) ── #}
+                    <div class="mb-3 d-none" id="divEmpS{{ producto.id_producto }}">
+                        <label class="form-label fw-semibold small text-muted text-uppercase">
+                            Empresa compradora <span class="text-danger">*</span>
+                        </label>
+                        <select name="empresa" class="form-select input-clay"
+                                id="selEmpS{{ producto.id_producto }}">
+                            <option value="">— Selecciona empresa —</option>
+                            {% for emp in empresas %}
+                                <option value="{{ emp.id_empresa }}">{{ emp.nombre_empresa }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    {# ── Buscador de cliente (AJAX) — oculto por defecto ── #}
+                    <div class="mb-3 d-none" id="divCliS{{ producto.id_producto }}">
+                        <label class="form-label fw-semibold small text-muted text-uppercase">
+                            Buscar cliente / usuario <span class="text-danger">*</span>
+                        </label>
+                        {# Campo de búsqueda visible #}
+                        <div class="position-relative">
+                            <input type="text"
+                                   class="form-control input-clay"
+                                   id="buscadorCliente{{ producto.id_producto }}"
+                                   placeholder="Escribe nombre, apellido o usuario…"
+                                   autocomplete="off"
+                                   oninput="buscarCliente(this, {{ producto.id_producto }})">
+                            {# Dropdown de resultados #}
+                            <div class="position-absolute w-100 bg-white border rounded-3 shadow-sm d-none mt-1"
+                                 id="dropCliente{{ producto.id_producto }}"
+                                 style="z-index:9999; max-height:200px; overflow-y:auto;">
+                            </div>
+                        </div>
+                        {# Chip con cliente seleccionado #}
+                        <div class="d-none mt-2 d-flex align-items-center gap-2"
+                             id="chipCliente{{ producto.id_producto }}">
+                            <span class="badge bg-info bg-opacity-15 text-info border border-info px-3 py-2 rounded-pill fw-semibold"
+                                  id="chipNombreCliente{{ producto.id_producto }}"></span>
+                            <button type="button" class="btn btn-sm btn-light rounded-pill border px-2"
+                                    onclick="limpiarCliente({{ producto.id_producto }})">
+                                <i class="bi bi-x-circle me-1"></i>Cambiar
+                            </button>
+                        </div>
+                        {# Campo oculto que se envía al form #}
+                        <input type="hidden" name="cliente_id"
+                               id="inputCliId{{ producto.id_producto }}">
+                        <div class="form-text">
+                            <i class="bi bi-person-badge me-1"></i>
+                            Busca por nombre, apellido o nombre de usuario.
+                        </div>
+                    </div>
+
+                    {# Precio cobrado #}
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-muted text-uppercase">
+                            Precio cobrado por unidad
+                            <span class="badge bg-light text-muted border ms-1" style="font-size:0.62rem;">opcional</span>
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-0 fw-bold text-muted">$</span>
+                            <input type="number" name="precio_transaccion"
+                                   class="form-control input-clay"
+                                   placeholder="Dejar vacío = precio por defecto" min="0" step="1">
+                        </div>
+                    </div>
+
+                    {# Motivo #}
+                    <div class="mb-2">
+                        <label class="form-label fw-semibold small text-muted text-uppercase">Motivo</label>
+                        <input type="text" name="motivo" class="form-control input-clay"
+                               placeholder="Ej: Uso clínico / Venta directa">
+                    </div>
+
+                </div>
+                <div class="modal-footer border-0 px-4 pb-4 pt-0 gap-2">
+                    <button type="button" class="btn btn-light rounded-pill px-4"
+                            data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger rounded-pill px-4 fw-bold shadow-sm text-white">
+                        <i class="bi bi-check2 me-1"></i> Confirmar salida
+                    </button>
                 </div>
             </form>
         </div>

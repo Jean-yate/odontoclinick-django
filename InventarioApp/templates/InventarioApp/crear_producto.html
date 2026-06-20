@@ -21,7 +21,7 @@
                             </div>
 
                             <div class="col-md-12">
-                                <label class="form-label fw-bold">Código del Producto (Obligatorio)</label>
+                                <label class="form-label fw-bold">Código del Producto (Letras-Número)</label>
                                 {{ form.codigo_producto }}
                                 <div class="text-danger small fw-bold">{{ form.codigo_producto.errors }}</div>
                             </div>
@@ -44,32 +44,29 @@
                                 <div class="text-danger small fw-bold">{{ form.stock_minimo.errors }}</div>
                             </div>
 
-                            <div class="col-md-6">
-                                <label class="form-label fw-bold">Precio de Compra (Costo)</label>
-                                {{ form.precio_compra }}
-                                <div class="text-danger small">{{ form.precio_compra.errors }}</div>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label fw-bold">Precio Unitario</label>
+                            <div class="col-md-12">
+                                <label class="form-label fw-bold">Precio Unitario (P. Venta)</label>
                                 {{ form.precio_venta }}
-                                <div class="text-danger small">{{ form.precio_venta.errors }}</div>
+                                <div class="text-danger small fw-bold">{{ form.precio_venta.errors }}</div>
                             </div>
 
                             <div class="col-md-12">
-                                <label class="form-label fw-bold">Notas adicionales</label>
+                                <label class="form-label fw-bold">Notas adicionales (Obligatorio)</label>
                                 {{ form.descripcion }}
-                                <div class="text-danger small">{{ form.descripcion.errors }}</div>
+                                <div class="text-danger small fw-bold">{{ form.descripcion.errors }}</div>
                             </div>
                         </div>
 
                         {% if form.non_field_errors %}
-                            <div class="alert alert-danger mt-3">
+                            <div class="alert alert-danger mt-3 rounded-pill text-center">
                                 {{ form.non_field_errors }}
                             </div>
                         {% endif %}
 
                         <div class="mt-5 d-flex gap-3">
-                            <button type="submit" class="btn btn-primary rounded-pill px-5 py-2 shadow">Guardar Producto</button>
+                            <button type="submit" class="btn btn-primary rounded-pill px-5 py-2 shadow">
+                                {% if editando %}Actualizar Cambios{% else %}Guardar Producto{% endif %}
+                            </button>
                             <a href="{% url 'lista_inventario' %}" class="btn btn-light rounded-pill px-4 py-2 border">Cancelar</a>
                         </div>
                     </form>

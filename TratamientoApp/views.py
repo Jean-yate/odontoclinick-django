@@ -58,36 +58,68 @@ def ver_insumos_clinicos(request, pk):
     return render(request, 'ver_insumos.html', {'tratamiento': tratamiento, 'insumos': insumos})
 
 def gestionar_insumos_medico(request, pk):
-    # 1. Obtenemos el tratamiento o lanzamos 404 si no existe
     tratamiento = get_object_or_404(Tratamiento, pk=pk)
-    
-    # 2. Traemos todos los productos activos para el selector
-    productos = Producto.objects.filter(activo=1) # Asumiendo que 1 es activo
-    
-    # 3. Traemos los insumos que ya tiene este tratamiento
+    productos = Producto.objects.filter(activo=1) 
     insumos = TratamientoProducto.objects.filter(id_tratamiento=tratamiento)
 
-    # 4. Lógica para GUARDAR un nuevo insumo (POST)
     if request.method == 'POST':
         producto_id = request.POST.get('producto')
         cantidad = request.POST.get('cantidad')
-        
-        if producto_id and cantidad:
-            producto = get_object_or_404(Producto, id_producto=producto_id)
-            
-            # Creamos o actualizamos el vínculo
+
+        try:
+            cantidad = int(cantidad)
+
+            if cantidad < 1:
+                messages.error(
+                    request,
+                    'La cantidad debe ser un número entero mayor a cero.'
+                )
+                return redirect('gestionar_insumos_medico', pk=pk)
+
+        except (TypeError, ValueError):
+            messages.error(
+                request,
+                'Solo se permiten números enteros.'
+            )
+            return redirect('gestionar_insumos_medico', pk=pk)
+
+        if producto_id:
+            producto = get_object_or_404(
+                Producto,
+                id_producto=producto_id
+            )
+
             TratamientoProducto.objects.update_or_create(
                 id_tratamiento=tratamiento,
                 id_producto=producto,
-                defaults={'cantidad_requerida': cantidad}
+                defaults={
+                    'cantidad_requerida': cantidad
+                }
             )
-            
-            messages.success(request, f"Se ha añadido {producto.nombre_producto} a la receta.")
-            return redirect('gestionar_insumos_medico', pk=pk)
 
-    # 5. Renderizamos el nuevo template premium
+            messages.success(
+                request,
+                f"Se ha añadido {producto.nombre_producto} a la receta."
+            )
+
+            return redirect(
+                'gestionar_insumos_medico',
+                pk=pk
+            )
     return render(request, 'gestionar_insumos_medico.html', {
         'tratamiento': tratamiento,
         'productos': productos,
         'insumos': insumos
     })
+
+@login_required
+def eliminar_inventario_medico(request, pk):
+    relacion = get_object_or_404(TratamientoProducto, pk=pk)
+    id_trat = (
+        relacion.id_tratamiento.pk
+        if hasattr(relacion, 'id_tratamiento')
+        else relacion.id_treatment.pk
+    )
+    relacion.delete()
+    messages.error(request, "Insumo eliminado del tratamiento.")
+    return redirect('gestionar_insumos_medico', pk=id_trat)

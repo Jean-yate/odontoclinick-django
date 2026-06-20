@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('CitaApp', '0004_alter_cita_unique_together_alter_cita_table_and_more'),
+        ('CitaApp', '0002_initial'),
     ]
 
     operations = [

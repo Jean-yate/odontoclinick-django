@@ -4,112 +4,212 @@
 
 {% block extra_css %}
 <style>
-    .table-container-clay { background: white; border-radius: 30px; box-shadow: var(--clay-shadow); padding: 2rem; border: none; }
-    .table thead th { border-bottom: 2px solid #f0ece9; color: var(--secondary-color); font-weight: 700; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 1px; }
-    .product-name { font-weight: 700; color: var(--primary-color); margin-bottom: 0; }
-    .btn-circle { width: 40px; height: 40px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; transition: all 0.3s; border: none; background: #f8f9fa; text-decoration: none; }
-    .btn-circle:hover { transform: scale(1.1); background: #fff; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-    .badge-stock { padding: 0.6rem 1rem; border-radius: 50px; font-weight: 700; }
-    .filter-card { background: #fff; border-radius: 25px; box-shadow: var(--clay-shadow); border: none; margin-bottom: 2rem; }
-    .input-clay { background-color: #f8f9fa !important; border: none !important; border-radius: 15px !important; padding: 0.6rem 1rem; }
-    .text-entrada { color: #28a745 !important; }
-    .text-salida { color: #dc3545 !important; }
-    .text-editar { color: #007bff !important; }
+:root { --card-radius: 28px; --input-radius: 12px; }
+
+.table-container-clay {
+    background: white;
+    border-radius: var(--card-radius);
+    box-shadow: var(--clay-shadow);
+    padding: 1.75rem;
+    border: none;
+}
+.filter-card {
+    background: #fff;
+    border-radius: 24px;
+    box-shadow: var(--clay-shadow);
+    border: none;
+    margin-bottom: 1.75rem;
+}
+.input-clay {
+    background-color: #f5f3f1 !important;
+    border: 1.5px solid transparent !important;
+    border-radius: var(--input-radius) !important;
+    padding: 0.55rem 0.9rem;
+    font-size: 0.875rem;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+.input-clay:focus {
+    border-color: var(--primary-color) !important;
+    box-shadow: 0 0 0 3px rgba(63,46,35,0.08) !important;
+    background: #fff !important;
+    outline: none;
+}
+.table thead th {
+    border-bottom: 2px solid #f0ece9;
+    color: var(--secondary-color, #7c6f65);
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 0.7rem;
+    letter-spacing: 1.2px;
+    white-space: nowrap;
+    padding: 0.9rem 0.75rem;
+}
+.table tbody tr { transition: background 0.15s; }
+.table tbody tr:hover { background: #fafafa; }
+.table tbody td { padding: 0.75rem; vertical-align: middle; }
+
+.product-name { font-weight: 700; color: var(--primary-color); margin-bottom: 0; font-size: 0.92rem; }
+.badge-stock { padding: 0.45rem 0.85rem; border-radius: 50px; font-weight: 700; font-size: 0.82rem; min-width: 48px; display: inline-block; text-align: center; }
+
+.btn-circle {
+    width: 36px; height: 36px; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    transition: all 0.2s; border: none; background: #f5f3f1;
+    text-decoration: none; cursor: pointer; font-size: 1rem;
+}
+.btn-circle:hover { transform: scale(1.13); background: #fff; box-shadow: 0 4px 14px rgba(0,0,0,0.12); }
+.btn-circle.text-entrada  { color: #28a745; }
+.btn-circle.text-salida   { color: #dc3545; }
+.btn-circle.text-editar   { color: #0d6efd; }
+.btn-circle.text-historia { color: #6f42c1; }
+
+.btn-estado {
+    cursor: pointer; border: none; font-size: 0.78rem; font-weight: 700;
+    letter-spacing: 0.5px; transition: all 0.2s; min-width: 72px;
+}
+.btn-estado:hover { opacity: 0.85; }
+
+.filtro-activo-badge {
+    background: #fff3cd; border: 1.5px solid #ffc107; border-radius: 10px;
+    padding: 0.2rem 0.6rem; font-size: 0.78rem; font-weight: 600; color: #856404;
+    display: inline-block; margin-top: 4px;
+}
+
+/* ── MODALES ─────────────────────────────────────────────────────────────────── */
+.modal-content { border-radius: 24px !important; border: none !important; }
+.modal-entrada-header { background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 100%); }
+.modal-salida-header  { background: linear-gradient(135deg, #fce4e4 0%, #fff3f3 100%); }
+.modal-icon-circle {
+    width: 48px; height: 48px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+
+@keyframes fadeSlideUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+.animate-fsu { animation: fadeSlideUp 0.35s ease both; }
+.animate-fsu-1 { animation-delay: 0.07s; }
 </style>
 {% endblock %}
 
 {% block content %}
 <div id="contenedor-notificaciones" class="position-fixed bottom-0 end-0 p-3" style="z-index: 1060;"></div>
 
-<div class="container mt-5">
-    <div class="d-flex justify-content-between align-items-start mb-4">
+<div class="container mt-5 pb-5">
+
+    {# ── Cabecera ──────────────────────────────────────────────────────────── #}
+    <div class="d-flex justify-content-between align-items-start mb-4 flex-wrap gap-3 animate-fsu">
         <div>
             <h2 class="fw-bold text-dark mb-1">Gestión de Inventario</h2>
-            <p class="text-muted small">Panel Maestro: Filtra, gestiona y exporta reportes en tiempo real.</p>
+            <p class="text-muted small mb-0">
+                Panel Maestro · <strong>{{ total }}</strong> producto{{ total|pluralize }} encontrado{{ total|pluralize }}.
+            </p>
+            {% if request.GET.empresa %}
+                <span class="filtro-activo-badge">
+                    <i class="bi bi-building me-1"></i>Filtrado por empresa
+                    <a href="{% url 'lista_inventario' %}" class="ms-1 text-danger text-decoration-none">✕</a>
+                </span>
+            {% endif %}
         </div>
-        <div class="d-flex gap-2">
+        <div class="d-flex gap-2 flex-wrap">
             <a href="?{{ request.GET.urlencode }}&exportar=excel" class="btn btn-success rounded-pill px-3 fw-bold shadow-sm">
-                <i class="bi bi-file-earmark-excel me-1"></i> EXCEL
+                <i class="bi bi-file-earmark-excel me-1"></i> Excel
             </a>
             <a href="?{{ request.GET.urlencode }}&exportar=pdf" class="btn btn-danger rounded-pill px-3 fw-bold shadow-sm">
                 <i class="bi bi-file-earmark-pdf me-1"></i> PDF
             </a>
             <a href="{% url 'crear_producto' %}" class="btn btn-primary shadow-sm rounded-pill px-4 fw-bold">
-                <i class="bi bi-plus-lg me-2"></i>NUEVO
+                <i class="bi bi-plus-lg me-1"></i> Nuevo
             </a>
         </div>
     </div>
 
-    <div class="filter-card p-4 animate__animated animate__fadeIn">
+    {# ── Filtros ───────────────────────────────────────────────────────────── #}
+    <div class="filter-card p-4 animate-fsu animate-fsu-1">
         <form method="GET" class="row g-3 align-items-end">
-            <div class="col-md-3">
-                <label class="form-label fw-bold small text-muted">Buscar Producto</label>
-                <input type="text" name="nombre" class="form-control input-clay" placeholder="Nombre o código..." value="{{ request.GET.nombre }}">
+            <div class="col-sm-6 col-md-3">
+                <label class="form-label fw-bold small text-muted mb-1">Buscar producto</label>
+                <input type="text" name="nombre" class="form-control input-clay"
+                       placeholder="Nombre, código o #COD…" value="{{ request.GET.nombre }}">
             </div>
-            <div class="col-md-2">
-                <label class="form-label fw-bold small text-muted">Categoría</label>
+            <div class="col-sm-6 col-md-2">
+                <label class="form-label fw-bold small text-muted mb-1">Categoría</label>
                 <select name="categoria" class="form-select input-clay">
                     <option value="">Todas</option>
                     {% for c in categorias %}
-                        <option value="{{ c.id_categoria }}" {% if request.GET.categoria == c.id_categoria|stringformat:"s" %}selected{% endif %}>
+                        <option value="{{ c.id_categoria }}"
+                            {% if request.GET.categoria == c.id_categoria|stringformat:"s" %}selected{% endif %}>
                             {{ c.nombre_categoria }}
                         </option>
                     {% endfor %}
                 </select>
             </div>
-            <div class="col-md-2">
-                <label class="form-label fw-bold small text-muted">Estado</label>
-                <select name="estado" class="form-select input-clay">
-                    <option value="">Todos</option>
-                    <option value="activo" {% if request.GET.estado == 'activo' %}selected{% endif %}>Activo</option>
-                    <option value="inactivo" {% if request.GET.estado == 'inactivo' %}selected{% endif %}>Inactivo</option>
-                    <option value="critico" {% if request.GET.estado == 'critico' %}selected{% endif %}>Stock Crítico</option>
+            <div class="col-sm-6 col-md-2">
+                <label class="form-label fw-bold small text-muted mb-1">
+                    <i class="bi bi-building me-1"></i>Empresa / Proveedor
+                </label>
+                <select name="empresa" class="form-select input-clay">
+                    <option value="">Todas</option>
+                    {% for e in empresas %}
+                        <option value="{{ e.id_empresa }}"
+                            {% if request.GET.empresa == e.id_empresa|stringformat:"s" %}selected{% endif %}>
+                            {{ e.nombre_empresa }}
+                        </option>
+                    {% endfor %}
                 </select>
             </div>
-            <div class="col-md-3">
-                <label class="form-label fw-bold small text-muted">Rango Stock</label>
-                <div class="d-flex gap-2">
-                    <input type="number" name="stock_min" class="form-control input-clay" placeholder="Min" value="{{ request.GET.stock_min }}">
-                    <input type="number" name="stock_max" class="form-control input-clay" placeholder="Max" value="{{ request.GET.stock_max }}">
+            <div class="col-sm-6 col-md-2">
+                <label class="form-label fw-bold small text-muted mb-1">Estado</label>
+                <select name="estado" class="form-select input-clay">
+                    <option value="">Todos</option>
+                    <option value="activo"   {% if request.GET.estado == 'activo'   %}selected{% endif %}>Activo</option>
+                    <option value="inactivo" {% if request.GET.estado == 'inactivo' %}selected{% endif %}>Inactivo</option>
+                    <option value="critico"  {% if request.GET.estado == 'critico'  %}selected{% endif %}>Stock crítico</option>
+                </select>
+            </div>
+            <div class="col-sm-6 col-md-2">
+                <label class="form-label fw-bold small text-muted mb-1">Rango stock</label>
+                <div class="d-flex gap-1">
+                    <input type="number" name="stock_min" class="form-control input-clay"
+                           placeholder="Min" value="{{ request.GET.stock_min }}">
+                    <input type="number" name="stock_max" class="form-control input-clay"
+                           placeholder="Máx" value="{{ request.GET.stock_max }}">
                 </div>
             </div>
-            <div class="col-md-2">
-                <div class="d-flex gap-2">
-                    <button type="submit" class="btn btn-primary rounded-pill w-100 fw-bold shadow-sm">
-                        <i class="bi bi-funnel"></i> Filtrar
-                    </button>
-                    <a href="{% url 'lista_inventario' %}" class="btn btn-light rounded-pill shadow-sm" title="Limpiar">
-                        <i class="bi bi-arrow-clockwise"></i>
-                    </a>
-                </div>
+            <div class="col-sm-12 col-md-1 d-flex gap-2">
+                <button type="submit" class="btn btn-primary rounded-pill flex-grow-1 fw-bold shadow-sm" title="Filtrar">
+                    <i class="bi bi-funnel"></i>
+                </button>
+                <a href="{% url 'lista_inventario' %}" class="btn btn-light rounded-pill shadow-sm" title="Limpiar filtros">
+                    <i class="bi bi-arrow-clockwise"></i>
+                </a>
             </div>
         </form>
     </div>
 
-    <div class="table-container-clay animate__animated animate__fadeInUp">
+    {# ── Tabla ─────────────────────────────────────────────────────────────── #}
+    <div class="table-container-clay animate-fsu" style="animation-delay:0.12s;">
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
                 <thead>
                     <tr>
-                        <th>CÓDIGO</th>
-                        <th>PRODUCTO</th>
-                        <th>CATEGORÍA</th>
-                        <th class="text-center">STOCK</th>
-                        <th>P. VENTA</th>
-                        <th class="text-center">ESTADO</th>
-                        <th class="text-center">ACCIONES</th>
+                        <th style="width:90px;">Código</th>
+                        <th>Producto</th>
+                        <th>Categoría</th>
+                        <th class="text-center" style="width:90px;">Stock</th>
+                        <th style="width:100px;">P. Venta</th>
+                        <th class="text-center" style="width:100px;">Estado</th>
+                        <th class="text-center" style="width:160px;">Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {% for producto in productos %}
+                {% for producto in productos %}
                     <tr>
-                        <td class="small fw-bold text-muted">#{{ producto.codigo_producto|default:producto.id_producto }}</td>
+                        <td><span class="small fw-bold text-muted">#{{ producto.codigo_producto|default:producto.id_producto }}</span></td>
                         <td>
-                            <p class="product-name">{{ producto.nombre_producto }}</p>
-                            <span class="text-muted small">{{ producto.unidad_medida }}</span>
+                            <p class="product-name mb-0">{{ producto.nombre_producto }}</p>
+                            <span class="text-muted" style="font-size:0.78rem;">{{ producto.get_unidad_medida_display }}</span>
                         </td>
                         <td>
-                            <span class="badge bg-light text-dark px-3 py-2 rounded-pill border">
+                            <span class="badge bg-light text-dark px-3 py-2 rounded-pill border" style="font-size:0.78rem;">
                                 {{ producto.id_categoria.nombre_categoria }}
                             </span>
                         </td>
@@ -118,70 +218,248 @@
                                 {{ producto.stock_actual }}
                             </span>
                         </td>
-                        <td class="fw-bold text-primary">${{ producto.precio_venta }}</td>
+                        <td class="fw-bold text-primary" style="font-size:0.88rem;">${{ producto.precio_venta|floatformat:"0" }}</td>
                         <td class="text-center">
-                            <button class="btn-estado badge {% if producto.activo == 1 %}bg-success{% else %}bg-danger{% endif %} border-0 py-2 px-3 rounded-pill shadow-sm text-white" 
+                            <button class="btn-estado badge border-0 py-2 px-3 rounded-pill shadow-sm text-white
+                                {% if producto.activo == 1 %}bg-success{% else %}bg-danger{% endif %}"
                                     data-id="{{ producto.id_producto }}"
                                     id="btn-estado-{{ producto.id_producto }}">
-                                {% if producto.activo == 1 %} Activo {% else %} Inactivo {% endif %}
+                                {% if producto.activo == 1 %}Activo{% else %}Inactivo{% endif %}
                             </button>
                         </td>
                         <td class="text-center">
-                            <div class="d-flex justify-content-center align-items-center gap-2">
-                                <button class="btn-circle text-entrada" data-bs-toggle="modal" data-bs-target="#modalEntrada{{ producto.pk }}" title="Entrada"><i class="bi bi-box-arrow-in-down fs-5"></i></button>
-                                <button class="btn-circle text-salida" data-bs-toggle="modal" data-bs-target="#modalSalida{{ producto.pk }}" title="Salida"><i class="bi bi-box-arrow-up fs-5"></i></button>
-                                <a href="{% url 'editar_producto' producto.id_producto %}" class="btn-circle text-editar" title="Editar"><i class="bi bi-pencil-square fs-5"></i></a>
+                            <div class="d-flex justify-content-center align-items-center gap-1">
+                                {# Entrada — abre modal específico de este producto #}
+                                <button class="btn-circle text-entrada"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#modalEntrada{{ producto.id_producto }}"
+                                        title="Registrar entrada">
+                                    <i class="bi bi-box-arrow-in-down"></i>
+                                </button>
+                                {# Salida — abre modal específico de este producto #}
+                                <button class="btn-circle text-salida"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#modalSalida{{ producto.id_producto }}"
+                                        title="Registrar salida">
+                                    <i class="bi bi-box-arrow-up"></i>
+                                </button>
+                                {# Historial individual (Req 1.1.3) #}
+                                <a href="{% url 'kardex' %}?producto_id={{ producto.id_producto }}"
+                                   class="btn-circle text-historia" title="Historial de este insumo">
+                                    <i class="bi bi-clock-history"></i>
+                                </a>
+                                {# Editar #}
+                                <a href="{% url 'editar_producto' producto.id_producto %}"
+                                   class="btn-circle text-editar" title="Editar producto">
+                                    <i class="bi bi-pencil-square"></i>
+                                </a>
                             </div>
                         </td>
                     </tr>
-                    {% include 'InventarioApp/modales_inventario.html' %}
-                    {% empty %}
-                    <tr><td colspan="7" class="text-center py-5 text-muted">No se encontraron productos con los filtros aplicados.</td></tr>
-                    {% endfor %}
+                {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center py-5">
+                            <i class="bi bi-search fs-2 d-block mb-2 opacity-25 text-muted"></i>
+                            <span class="text-muted">No se encontraron productos con los filtros aplicados.</span><br>
+                            <a href="{% url 'lista_inventario' %}" class="small">Limpiar filtros</a>
+                        </td>
+                    </tr>
+                {% endfor %}
                 </tbody>
             </table>
         </div>
     </div>
-</div>
+
+    {% for producto in productos %}
+
+    {# ── MODAL ENTRADA ──────────────────────────────────────────────────── #}
+    <div class="modal fade" id="modalEntrada{{ producto.id_producto }}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-md">
+            <div class="modal-content shadow-lg overflow-hidden">
+                <div class="modal-header border-0 px-4 pt-4 pb-2 modal-entrada-header">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="modal-icon-circle bg-success bg-opacity-10">
+                            <i class="bi bi-box-arrow-in-down text-success fs-4"></i>
+                        </div>
+                        <div>
+                            <h5 class="fw-bold mb-0 text-dark">Abastecer Inventario</h5>
+                            <p class="text-muted small mb-0">{{ producto.nombre_producto }}</p>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close ms-auto" data-bs-dismiss="modal"></button>
+                </div>
+                <form method="POST" action="{% url 'entrada_stock' producto.id_producto %}">
+                    {% csrf_token %}
+                    <div class="modal-body px-4 py-3">
+                        {# Stock actual #}
+                        <div class="alert alert-light border d-flex align-items-center gap-2 py-2 mb-3" style="border-radius:14px;">
+                            <i class="bi bi-boxes text-success"></i>
+                            <span class="small">Stock actual:
+                                <strong class="text-success">{{ producto.stock_actual }} {{ producto.get_unidad_medida_display }}</strong>
+                            </span>
+                        </div>
+                        {# Cantidad #}
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold small text-muted text-uppercase">Cantidad a ingresar <span class="text-danger">*</span></label>
+                            <input type="number" name="cantidad" class="form-control input-clay" placeholder="Ej: 10" required min="1" step="1">
+                        </div>
+                        {# Empresa proveedora #}
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold small text-muted text-uppercase">Empresa proveedora</label>
+                            <select name="empresa" class="form-select input-clay"
+                                    id="selEmpE{{ producto.id_producto }}"
+                                    onchange="togglePrecioEntrada(this, {{ producto.id_producto }})">
+                                <option value="">— Sin empresa / Ajuste interno —</option>
+                                {% for emp in empresas %}
+                                    <option value="{{ emp.id_empresa }}">{{ emp.nombre_empresa }}</option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text"><i class="bi bi-info-circle me-1"></i>Selecciona si la compra proviene de un proveedor.</div>
+                        </div>
+                        {# Precio compra (oculto hasta seleccionar empresa) #}
+                        <div class="mb-3 d-none" id="divPrecioE{{ producto.id_producto }}">
+                            <label class="form-label fw-semibold small text-muted text-uppercase">Precio de compra / unidad <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-0 fw-bold text-muted">$</span>
+                                <input type="number" name="precio_transaccion"
+                                       id="inputPrecioE{{ producto.id_producto }}"
+                                       class="form-control input-clay" placeholder="Ej: 1500" min="0" step="1">
+                            </div>
+                            <div class="form-text text-warning"><i class="bi bi-tag me-1"></i>Se registrará vinculado a esta empresa.</div>
+                        </div>
+                        {# Motivo #}
+                        <div class="mb-2">
+                            <label class="form-label fw-semibold small text-muted text-uppercase">Motivo</label>
+                            <input type="text" name="motivo" class="form-control input-clay" placeholder="Ej: Compra mensual / Donación / Ajuste">
+                        </div>
+                    </div>
+                    <div class="modal-footer border-0 px-4 pb-4 pt-0 gap-2">
+                        <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-success rounded-pill px-4 fw-bold shadow-sm">
+                            <i class="bi bi-check2 me-1"></i> Confirmar entrada
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    {# ── MODAL SALIDA ───────────────────────────────────────────────────── #}
+    <div class="modal fade" id="modalSalida{{ producto.id_producto }}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-md">
+            <div class="modal-content shadow-lg overflow-hidden">
+                <div class="modal-header border-0 px-4 pt-4 pb-2 modal-salida-header">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="modal-icon-circle bg-danger bg-opacity-10">
+                            <i class="bi bi-box-arrow-up text-danger fs-4"></i>
+                        </div>
+                        <div>
+                            <h5 class="fw-bold mb-0 text-dark">Registrar Salida</h5>
+                            <p class="text-muted small mb-0">{{ producto.nombre_producto }}</p>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close ms-auto" data-bs-dismiss="modal"></button>
+                </div>
+                <form method="POST" action="{% url 'salida_stock' producto.id_producto %}">
+                    {% csrf_token %}
+                    <div class="modal-body px-4 py-3">
+                        {# Stock disponible #}
+                        <div class="alert alert-light border d-flex align-items-center gap-2 py-2 mb-3" style="border-radius:14px;">
+                            <i class="bi bi-boxes text-danger"></i>
+                            <span class="small">Stock disponible:
+                                <strong class="text-danger">{{ producto.stock_actual }} {{ producto.get_unidad_medida_display }}</strong>
+                            </span>
+                        </div>
+                        {# Cantidad #}
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold small text-muted text-uppercase">Cantidad a retirar <span class="text-danger">*</span></label>
+                            <input type="number" name="cantidad" class="form-control input-clay"
+                                   placeholder="Ej: 5" required min="1" max="{{ producto.stock_actual }}" step="1">
+                        </div>
+                        {# Tipo destinatario #}
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold small text-muted text-uppercase">¿Quién recibe el insumo?</label>
+                            <select name="tipo_destino" class="form-select input-clay"
+                                    id="selTipoS{{ producto.id_producto }}"
+                                    onchange="toggleDestinoSalida(this, {{ producto.id_producto }})">
+                                <option value="">— Solo consumo / sin destinatario —</option>
+                                <option value="empresa">Empresa compradora</option>
+                                <option value="cliente">Cliente / usuario interno</option>
+                            </select>
+                        </div>
+                        {# Empresa compradora (oculto por defecto) #}
+                        <div class="mb-3 d-none" id="divEmpS{{ producto.id_producto }}">
+                            <label class="form-label fw-semibold small text-muted text-uppercase">Empresa compradora <span class="text-danger">*</span></label>
+                            <select name="empresa" class="form-select input-clay" id="selEmpS{{ producto.id_producto }}">
+                                <option value="">— Selecciona empresa —</option>
+                                {% for emp in empresas %}
+                                    <option value="{{ emp.id_empresa }}">{{ emp.nombre_empresa }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        {# Cliente interno (oculto por defecto) #}
+                        <div class="mb-3 d-none" id="divCliS{{ producto.id_producto }}">
+                            <label class="form-label fw-semibold small text-muted text-uppercase">ID de usuario / cliente <span class="text-danger">*</span></label>
+                            <input type="number" name="cliente_id" id="inputCliS{{ producto.id_producto }}"
+                                   class="form-control input-clay" placeholder="ID numérico del usuario" min="1" step="1">
+                            <div class="form-text"><i class="bi bi-person-badge me-1"></i>Ingresa el ID del usuario registrado.</div>
+                        </div>
+                        {# Precio cobrado #}
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold small text-muted text-uppercase">
+                                Precio cobrado por unidad
+                                <span class="badge bg-light text-muted border ms-1" style="font-size:0.62rem;">opcional</span>
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-0 fw-bold text-muted">$</span>
+                                <input type="number" name="precio_transaccion"
+                                       class="form-control input-clay" placeholder="Dejar vacío = precio por defecto" min="0" step="1">
+                            </div>
+                        </div>
+                        {# Motivo #}
+                        <div class="mb-2">
+                            <label class="form-label fw-semibold small text-muted text-uppercase">Motivo</label>
+                            <input type="text" name="motivo" class="form-control input-clay" placeholder="Ej: Uso clínico / Venta directa">
+                        </div>
+                    </div>
+                    <div class="modal-footer border-0 px-4 pb-4 pt-0 gap-2">
+                        <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-danger rounded-pill px-4 fw-bold shadow-sm text-white">
+                            <i class="bi bi-check2 me-1"></i> Confirmar salida
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    {% endfor %} {# fin loop modales #}
+
+</div>{# fin container #}
 {% endblock %}
 
 {% block extra_js %}
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const botonesEstado = document.querySelectorAll('.btn-estado');
-
-    botonesEstado.forEach(boton => {
-        boton.addEventListener('click', function() {
-            const productoId = this.getAttribute('data-id');
-            
-            fetch(`/inventario/alternar/${productoId}/`, {
+/* ── Toggle estado (AJAX) ────────────────────────────────────────────────── */
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.btn-estado').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            const id = this.getAttribute('data-id');
+            fetch(`/inventario/alternar/${id}/`, {
                 method: 'POST',
-                headers: {
-                    'X-CSRFToken': '{{ csrf_token }}',
-                    'Content-Type': 'application/json'
-                }
+                headers: { 'X-CSRFToken': '{{ csrf_token }}', 'Content-Type': 'application/json' }
             })
-            .then(response => response.json())
+            .then(r => r.json())
             .then(data => {
                 if (data.status === 'ok') {
-                    // Si el nuevo estado es 1 (ACTIVO)
                     if (data.nuevo_estado === 1) {
-                        // Cambiamos el botón a VERDE
-                        this.classList.remove('bg-secondary', 'bg-danger');
-                        this.classList.add('bg-success');
-                        this.innerText = 'Activo';
-                        this.style.color = 'white';
-                        
-                        mostrarNotificacion("Insumo disponible para uso", "success");
+                        this.classList.replace('bg-danger', 'bg-success');
+                        this.textContent = 'Activo';
+                        mostrarNotificacion('Insumo disponible para uso', 'success');
                     } else {
-                        // Si el nuevo estado es 0 (INACTIVO)
-                        // Cambiamos el botón a ROJO
-                        this.classList.remove('bg-secondary', 'bg-success');
-                        this.classList.add('bg-danger');
-                        this.innerText = 'Inactivo';
-                        this.style.color = 'white';
-                        
-                        mostrarNotificacion("Insumo fuera de servicio", "danger");
+                        this.classList.replace('bg-success', 'bg-danger');
+                        this.textContent = 'Inactivo';
+                        mostrarNotificacion('Insumo fuera de servicio', 'danger');
                     }
                 }
             });
@@ -189,33 +467,58 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-// Función de notificación con colores dinámicos
+/* ── Modal entrada: mostrar precio cuando se elige empresa ───────────────── */
+function togglePrecioEntrada(select, productoId) {
+    const divPrecio   = document.getElementById('divPrecioE'   + productoId);
+    const inputPrecio = document.getElementById('inputPrecioE' + productoId);
+    if (select.value) {
+        divPrecio.classList.remove('d-none');
+        inputPrecio.required = true;
+    } else {
+        divPrecio.classList.add('d-none');
+        inputPrecio.required = false;
+        inputPrecio.value = '';
+    }
+}
+
+/* ── Modal salida: mostrar empresa o cliente según tipo ──────────────────── */
+function toggleDestinoSalida(select, productoId) {
+    const divEmp  = document.getElementById('divEmpS'  + productoId);
+    const divCli  = document.getElementById('divCliS'  + productoId);
+    const selEmp  = document.getElementById('selEmpS'  + productoId);
+    const inpCli  = document.getElementById('inputCliS'+ productoId);
+
+    divEmp.classList.add('d-none');
+    divCli.classList.add('d-none');
+    if (selEmp) selEmp.required = false;
+    if (inpCli) inpCli.required = false;
+
+    if (select.value === 'empresa') {
+        divEmp.classList.remove('d-none');
+        if (selEmp) selEmp.required = true;
+    } else if (select.value === 'cliente') {
+        divCli.classList.remove('d-none');
+        if (inpCli) inpCli.required = true;
+    }
+}
+
+/* ── Toast ───────────────────────────────────────────────────────────────── */
 function mostrarNotificacion(mensaje, tipo) {
     const contenedor = document.getElementById('contenedor-notificaciones');
     const id = Date.now();
-    
-    // El tipo 'danger' pondrá el fondo rojo y 'success' verde
-    const toastHTML = `
-        <div id="toast-${id}" class="toast show align-items-center text-white bg-${tipo} border-0 shadow-lg animate__animated animate__fadeInRight" role="alert" style="border-radius: 15px; min-width: 250px;">
+    contenedor.innerHTML = `
+        <div id="toast-${id}" class="toast show align-items-center text-white bg-${tipo} border-0 shadow-lg"
+             role="alert" style="border-radius:15px; min-width:240px;">
             <div class="d-flex">
                 <div class="toast-body fw-bold p-3">
                     <i class="bi ${tipo === 'success' ? 'bi-check-circle-fill' : 'bi-x-circle-fill'} me-2"></i>
                     ${mensaje}
                 </div>
-                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto"
+                        onclick="this.closest('.toast').remove()"></button>
             </div>
-        </div>
-    `;
-    
-    contenedor.innerHTML = toastHTML;
-    
-    setTimeout(() => {
-        const toast = document.getElementById(`toast-${id}`);
-        if(toast) {
-            toast.classList.replace('animate__fadeInRight', 'animate__fadeOutRight');
-            setTimeout(() => toast.remove(), 500);
-        }
-    }, 3000);
+        </div>`;
+    setTimeout(() => { const t = document.getElementById(`toast-${id}`); if (t) t.remove(); }, 3500);
 }
 </script>
 {% endblock %}

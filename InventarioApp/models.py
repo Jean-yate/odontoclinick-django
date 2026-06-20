@@ -13,6 +13,22 @@ class CategoriaProducto(models.Model):
         managed = True
         db_table = 'categoria_producto'
 
+
+class Empresa(models.Model):
+    id_empresa = models.AutoField(primary_key=True)
+    nombre_empresa = models.CharField(max_length=255, unique=True, verbose_name="Nombre de la Empresa")
+    nit = models.CharField(max_length=50, unique=True, verbose_name="NIT")
+    es_proveedor = models.BooleanField(default=True, verbose_name="¿Es Proveedor?")
+    es_comprador = models.BooleanField(default=False, verbose_name="¿Es Comprador?")
+
+    def __str__(self):
+        return self.nombre_empresa
+
+    class Meta:
+        managed = True
+        db_table = 'empresa'
+
+
 class Producto(models.Model):
     UNIDADES = [
         ('UN', 'Unidad'),
@@ -26,10 +42,7 @@ class Producto(models.Model):
     nombre_producto = models.CharField(max_length=255)
     descripcion = models.TextField(blank=True, null=True)
     id_categoria = models.ForeignKey(CategoriaProducto, models.PROTECT, db_column='id_categoria')
-    
-    # Precios y Stock
-    precio_compra = models.DecimalField(max_digits=10, decimal_places=2)
-    precio_venta = models.DecimalField(max_digits=10, decimal_places=2)
+    precio_venta = models.IntegerField(verbose_name="Precio de Venta Base")
     stock_actual = models.IntegerField(default=0)
     stock_minimo = models.IntegerField(default=5)
     
@@ -45,25 +58,38 @@ class Producto(models.Model):
         managed = True
         db_table = 'producto'
 
+
+class ProductoEmpresa(models.Model):
+    id_producto_empresa = models.AutoField(primary_key=True)
+    id_producto = models.ForeignKey(Producto, on_delete=models.CASCADE, db_column='id_producto', related_name='proveedores_lotes')
+    id_empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, db_column='id_empresa')
+    precio_compra_proveedor = models.IntegerField(verbose_name="Precio de Compra de este Proveedor")
+    stock_proveedor = models.IntegerField(default=0, verbose_name="Stock disponible de este proveedor")
+    fecha_ultimo_abastecimiento = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        managed = True
+        db_table = 'producto_empresa'
+        unique_together = ('id_producto', 'id_empresa', 'precio_compra_proveedor')
+
+    def __str__(self):
+        return f"{self.id_producto.nombre_producto} - {self.id_empresa.nombre_empresa} (${self.precio_compra_proveedor})"
+
+
 class MovimientoInventario(models.Model):
     TIPOS = [
         ('ENTRADA', 'Entrada (Compra/Ajuste)'),
         ('SALIDA', 'Salida (Consumo/Pérdida)'),
     ]
-
     id_movimiento = models.AutoField(primary_key=True)
-    producto = models.ForeignKey(
-        'Producto', 
-        on_delete=models.CASCADE, 
-        db_column='id_producto'
-    )
-    
+    id_producto = models.ForeignKey('Producto', on_delete=models.CASCADE, db_column='id_producto')
     id_usuario = models.ForeignKey(
         'CuentasApp.Usuario', 
         on_delete=models.SET_NULL, 
-        db_column='id_usuario',
+        db_column='id_usuario', 
         null=True, 
-        blank=True
+        blank=True,
+        related_name='movimientos_operados'
     )
     
     tipo_movimiento = models.CharField(max_length=10, choices=TIPOS)
@@ -72,7 +98,35 @@ class MovimientoInventario(models.Model):
     stock_nuevo = models.IntegerField()
     motivo = models.CharField(max_length=255, blank=True, null=True)
     fecha_movimiento = models.DateTimeField(auto_now_add=True, null=True, blank=True)
+    
+    id_cita = models.ForeignKey(
+        'CitaApp.Cita', 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True, 
+        db_column='id_cita',
+        related_name='insumos_consumidos'
+    )
+    empresa_asociada = models.ForeignKey(
+        'Empresa', 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True, 
+        db_column='id_empresa'
+    )
+    cliente_externo = models.ForeignKey(
+        'CuentasApp.Usuario', 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True, 
+        db_column='id_cliente_externo',
+        related_name='compras_materiales_personales'
+    )
+    precio_transaccion = models.IntegerField(null=True, blank=True, help_text="Precio cobrado o pagado por unidad")
 
     class Meta:
         managed = True
         db_table = 'movimiento_inventario'
+
+    def __str__(self):
+        return f"{self.tipo_movimiento} - {self.id_producto.nombre_producto} ({self.cantidad})"

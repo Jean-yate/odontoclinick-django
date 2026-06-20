@@ -1,0 +1,330 @@
+{% extends 'Webapp/base.html' %}
+{% block title %}Empresas - OdontoClinick{% endblock %}
+
+{% block extra_css %}
+<style>
+:root { --card-radius: 28px; }
+.kx-card { background:#fff; border-radius:var(--card-radius); box-shadow:var(--clay-shadow); border:none; }
+.input-clay { background-color:#f5f3f1!important; border:1.5px solid transparent!important; border-radius:12px!important; padding:0.55rem 0.9rem; font-size:0.875rem; transition:border-color 0.2s,box-shadow 0.2s; }
+.input-clay:focus { border-color:var(--primary-color)!important; box-shadow:0 0 0 3px rgba(63,46,35,0.08)!important; background:#fff!important; outline:none; }
+.table thead th { background:#faf8f6; border-bottom:2px solid #f0ece9; color:var(--secondary-color,#7c6f65); font-weight:700; font-size:0.7rem; text-transform:uppercase; letter-spacing:1.2px; padding:0.9rem 0.85rem; white-space:nowrap; }
+.table tbody tr { border-bottom:1px solid #f8f6f4; transition:background 0.12s; }
+.table tbody tr:hover { background:#fdfcfb; }
+.table tbody td { padding:0.75rem 0.85rem; vertical-align:middle; }
+.btn-circle { width:34px; height:34px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; transition:all 0.2s; border:none; background:#f5f3f1; text-decoration:none; cursor:pointer; font-size:0.9rem; }
+.btn-circle:hover { transform:scale(1.12); background:#fff; box-shadow:0 3px 12px rgba(0,0,0,0.12); }
+.modal-content { border-radius:24px!important; border:none!important; }
+.modal-header-empresa { background:linear-gradient(135deg,#e3f0ff 0%,#f0f7ff 100%); }
+@keyframes fsu { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+.anim { animation:fsu 0.3s ease both; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-5 pb-5">
+
+    {# ── Cabecera ──────────────────────────────────────────────────────────── #}
+    <div class="d-flex justify-content-between align-items-start mb-4 flex-wrap gap-3 anim">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <a href="{% url 'lista_inventario' %}" class="btn btn-light btn-sm rounded-pill shadow-sm border">
+                    <i class="bi bi-grid me-1"></i> Inventario
+                </a>
+                <i class="bi bi-chevron-right text-muted small"></i>
+                <span class="small fw-semibold">Empresas</span>
+            </div>
+            <h2 class="fw-bold text-dark mb-0"><i class="bi bi-building me-2" style="color:var(--primary-color)"></i>Gestión de Empresas</h2>
+            <p class="text-muted small mt-1 mb-0"><strong>{{ total }}</strong> empresa{{ total|pluralize }} registrada{{ total|pluralize }}.</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="?{{ request.GET.urlencode }}&exportar=excel" class="btn btn-success rounded-pill px-3 fw-bold shadow-sm">
+                <i class="bi bi-file-earmark-excel me-1"></i> Excel
+            </a>
+            <button class="btn btn-primary rounded-pill px-4 fw-bold shadow-sm"
+                    data-bs-toggle="modal" data-bs-target="#modalCrearEmpresa">
+                <i class="bi bi-plus-lg me-1"></i> Nueva empresa
+            </button>
+        </div>
+    </div>
+
+    {# ── Filtros ───────────────────────────────────────────────────────────── #}
+    <div class="kx-card p-4 mb-4 anim">
+        <form method="GET" class="row g-3 align-items-end">
+            <div class="col-sm-6 col-md-5">
+                <label class="form-label fw-bold small text-muted mb-1">Buscar empresa / NIT</label>
+                <input type="text" name="nombre" class="form-control input-clay"
+                       placeholder="Nombre o NIT…" value="{{ request.GET.nombre }}">
+            </div>
+            <div class="col-sm-6 col-md-3">
+                <label class="form-label fw-bold small text-muted mb-1">Tipo</label>
+                <select name="tipo" class="form-select input-clay">
+                    <option value="">Todos</option>
+                    <option value="proveedor" {% if request.GET.tipo == 'proveedor' %}selected{% endif %}>Proveedores</option>
+                    <option value="comprador" {% if request.GET.tipo == 'comprador' %}selected{% endif %}>Compradores</option>
+                </select>
+            </div>
+            <div class="col-sm-12 col-md-2 d-flex gap-2">
+                <button type="submit" class="btn btn-primary rounded-pill flex-grow-1 fw-bold shadow-sm"><i class="bi bi-funnel"></i></button>
+                <a href="{% url 'lista_empresas' %}" class="btn btn-light rounded-pill shadow-sm border" title="Limpiar"><i class="bi bi-arrow-clockwise"></i></a>
+            </div>
+        </form>
+    </div>
+
+    {# ── Tabla ─────────────────────────────────────────────────────────────── #}
+    <div class="kx-card anim" style="overflow:hidden; animation-delay:0.08s;">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th style="width:60px;">ID</th>
+                        <th>Nombre empresa</th>
+                        <th>NIT</th>
+                        <th class="text-center" style="width:110px;">Proveedor</th>
+                        <th class="text-center" style="width:110px;">Comprador</th>
+                        <th class="text-center" style="width:90px;">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for empresa in empresas %}
+                <tr>
+                    <td><span class="small fw-bold text-muted">#{{ empresa.id_empresa }}</span></td>
+                    <td>
+                        <span class="fw-bold small text-dark">{{ empresa.nombre_empresa }}</span>
+                    </td>
+                    <td><span class="small text-muted">{{ empresa.nit }}</span></td>
+                    <td class="text-center">
+                        <button class="btn btn-sm rounded-pill px-3 fw-bold btn-toggle-tipo
+                            {% if empresa.es_proveedor %}btn-success{% else %}btn-outline-secondary{% endif %}"
+                            data-id="{{ empresa.id_empresa }}"
+                            data-campo="es_proveedor"
+                            onclick="toggleTipoEmpresa(this)">
+                            {% if empresa.es_proveedor %}<i class="bi bi-check-circle me-1"></i>Sí{% else %}No{% endif %}
+                        </button>
+                    </td>
+                    <td class="text-center">
+                        <button class="btn btn-sm rounded-pill px-3 fw-bold btn-toggle-tipo
+                            {% if empresa.es_comprador %}btn-info text-white{% else %}btn-outline-secondary{% endif %}"
+                            data-id="{{ empresa.id_empresa }}"
+                            data-campo="es_comprador"
+                            onclick="toggleTipoEmpresa(this)">
+                            {% if empresa.es_comprador %}<i class="bi bi-check-circle me-1"></i>Sí{% else %}No{% endif %}
+                        </button>
+                    </td>
+                    <td class="text-center">
+                        <button class="btn-circle text-primary"
+                                title="Editar empresa"
+                                onclick="abrirModalEditar({{ empresa.id_empresa }})">
+                            <i class="bi bi-pencil-square"></i>
+                        </button>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center py-5 text-muted">
+                        <i class="bi bi-building fs-2 d-block mb-2 opacity-25"></i>
+                        No se encontraron empresas.
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="d-flex justify-content-between align-items-center px-4 py-3 border-top" style="background:#faf8f6;">
+            <span class="text-muted small">Mostrando <strong>{{ total }}</strong> empresa{{ total|pluralize }}</span>
+        </div>
+    </div>
+</div>
+
+{# ── MODAL CREAR EMPRESA ──────────────────────────────────────────────────── #}
+<div class="modal fade" id="modalCrearEmpresa" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow-lg overflow-hidden">
+            <div class="modal-header border-0 px-4 pt-4 pb-2 modal-header-empresa">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="d-flex align-items-center justify-content-center rounded-circle bg-primary bg-opacity-10"
+                         style="width:46px;height:46px;flex-shrink:0;">
+                        <i class="bi bi-building-add text-primary fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="fw-bold mb-0 text-dark">Nueva Empresa</h5>
+                        <p class="text-muted small mb-0">Registra un proveedor o comprador</p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close ms-auto" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="formCrearEmpresa" method="POST" action="{% url 'crear_empresa' %}">
+                {% csrf_token %}
+                <div class="modal-body px-4 py-3">
+                    <div id="alertCrear" class="d-none alert alert-danger py-2 small rounded-3 mb-3"></div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-muted text-uppercase">Nombre de la empresa <span class="text-danger">*</span></label>
+                        <input type="text" name="nombre_empresa" class="form-control input-clay" placeholder="Ej: Depósito Dental Central" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-muted text-uppercase">NIT <span class="text-danger">*</span></label>
+                        <input type="text" name="nit" class="form-control input-clay" placeholder="Ej: 900123456-1" required>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <div class="form-check form-switch ps-0">
+                                <label class="form-label fw-semibold small text-muted text-uppercase d-block mb-2">¿Es proveedor?</label>
+                                <input type="checkbox" name="es_proveedor" class="form-check-input ms-0" role="switch" checked style="width:2.5rem; height:1.3rem;">
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="form-check form-switch ps-0">
+                                <label class="form-label fw-semibold small text-muted text-uppercase d-block mb-2">¿Es comprador?</label>
+                                <input type="checkbox" name="es_comprador" class="form-check-input ms-0" role="switch" style="width:2.5rem; height:1.3rem;">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 px-4 pb-4 pt-0 gap-2">
+                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold shadow-sm">
+                        <i class="bi bi-check2 me-1"></i> Guardar empresa
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{# ── MODAL EDITAR EMPRESA ─────────────────────────────────────────────────── #}
+<div class="modal fade" id="modalEditarEmpresa" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow-lg overflow-hidden">
+            <div class="modal-header border-0 px-4 pt-4 pb-2 modal-header-empresa">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="d-flex align-items-center justify-content-center rounded-circle bg-primary bg-opacity-10"
+                         style="width:46px;height:46px;flex-shrink:0;">
+                        <i class="bi bi-building-gear text-primary fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="fw-bold mb-0 text-dark">Editar Empresa</h5>
+                        <p class="text-muted small mb-0" id="subtituloEditar">Actualizando datos</p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close ms-auto" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="formEditarEmpresa" method="POST" action="">
+                {% csrf_token %}
+                <input type="hidden" id="editEmpresaId" value="">
+                <div class="modal-body px-4 py-3">
+                    <div id="alertEditar" class="d-none alert alert-danger py-2 small rounded-3 mb-3"></div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-muted text-uppercase">Nombre de la empresa <span class="text-danger">*</span></label>
+                        <input type="text" name="nombre_empresa" id="editNombre" class="form-control input-clay" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-muted text-uppercase">NIT <span class="text-danger">*</span></label>
+                        <input type="text" name="nit" id="editNit" class="form-control input-clay" required>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <div class="form-check form-switch ps-0">
+                                <label class="form-label fw-semibold small text-muted text-uppercase d-block mb-2">¿Es proveedor?</label>
+                                <input type="checkbox" name="es_proveedor" id="editEsProveedor" class="form-check-input ms-0" role="switch" style="width:2.5rem; height:1.3rem;">
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="form-check form-switch ps-0">
+                                <label class="form-label fw-semibold small text-muted text-uppercase d-block mb-2">¿Es comprador?</label>
+                                <input type="checkbox" name="es_comprador" id="editEsComprador" class="form-check-input ms-0" role="switch" style="width:2.5rem; height:1.3rem;">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 px-4 pb-4 pt-0 gap-2">
+                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold shadow-sm">
+                        <i class="bi bi-check2 me-1"></i> Guardar cambios
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const CSRF = '{{ csrf_token }}';
+
+/* ── Crear empresa vía AJAX ──────────────────────────────────────────────── */
+document.getElementById('formCrearEmpresa').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    fetch('{% url "crear_empresa" %}', {
+        method: 'POST',
+        headers: { 'X-CSRFToken': CSRF, 'X-Requested-With': 'XMLHttpRequest' },
+        body: formData,
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.status === 'ok') {
+            location.reload();
+        } else {
+            const alert = document.getElementById('alertCrear');
+            alert.classList.remove('d-none');
+            alert.textContent = Object.values(data.errors).flat().join(' | ');
+        }
+    });
+});
+
+/* ── Abrir modal editar: carga datos vía AJAX ────────────────────────────── */
+function abrirModalEditar(id) {
+    fetch(`/inventario/empresas/editar/${id}/`, {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(r => r.json())
+    .then(data => {
+        document.getElementById('editEmpresaId').value = data.id;
+        document.getElementById('editNombre').value     = data.nombre_empresa;
+        document.getElementById('editNit').value        = data.nit;
+        document.getElementById('editEsProveedor').checked = data.es_proveedor;
+        document.getElementById('editEsComprador').checked = data.es_comprador;
+        document.getElementById('subtituloEditar').textContent = data.nombre_empresa;
+        document.getElementById('formEditarEmpresa').action = `/inventario/empresas/editar/${data.id}/`;
+        new bootstrap.Modal(document.getElementById('modalEditarEmpresa')).show();
+    });
+}
+
+/* ── Guardar edición vía AJAX ────────────────────────────────────────────── */
+document.getElementById('formEditarEmpresa').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const id = document.getElementById('editEmpresaId').value;
+    const formData = new FormData(this);
+    fetch(`/inventario/empresas/editar/${id}/`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': CSRF, 'X-Requested-With': 'XMLHttpRequest' },
+        body: formData,
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.status === 'ok') {
+            location.reload();
+        } else {
+            const alert = document.getElementById('alertEditar');
+            alert.classList.remove('d-none');
+            alert.textContent = Object.values(data.errors).flat().join(' | ');
+        }
+    });
+});
+
+/* ── Toggle proveedor/comprador inline ───────────────────────────────────── */
+function toggleTipoEmpresa(btn) {
+    const id    = btn.getAttribute('data-id');
+    const campo = btn.getAttribute('data-campo');
+    fetch(`/inventario/empresas/alternar-tipo/${id}/`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ campo }),
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.status === 'ok') { location.reload(); }
+    });
+}
+</script>
+{% endblock %}

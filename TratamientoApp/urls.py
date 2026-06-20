@@ -8,4 +8,5 @@ urlpatterns = [
     path('editar/<int:pk>/', views.editar_tratamiento, name='editar_tratamiento'),
     path('toggle/<int:pk>/', views.toggle_tratamiento, name='toggle_tratamiento'),
     path('receta/<int:pk>/', views.gestionar_insumos_medico, name='gestionar_insumos_medico'),
+    path('tratamientos/eliminar-insumo/<int:pk>/', views.eliminar_inventario_medico, name='eliminar_insumo_medico'),
 ]

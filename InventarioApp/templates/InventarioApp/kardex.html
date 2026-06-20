@@ -1,60 +1,231 @@
 {% extends 'Webapp/base.html' %}
-{% block title %}Kardex - Historial de Inventario{% endblock %}
+{% block title %}
+    {% if producto_seleccionado %}Historial · {{ producto_seleccionado.nombre_producto }}
+    {% else %}Kardex — Movimientos{% endif %} · OdontoClinick
+{% endblock %}
+
+{% block extra_css %}
+<style>
+:root { --card-radius: 28px; --input-radius: 14px; --pill-radius: 50px; }
+
+.kx-card {
+    background: #fff;
+    border-radius: var(--card-radius);
+    box-shadow: var(--clay-shadow);
+    border: none;
+}
+.input-clay {
+    background-color: #f5f3f1 !important;
+    border: 1.5px solid transparent !important;
+    border-radius: var(--input-radius) !important;
+    padding: 0.55rem 1rem;
+    font-size: 0.875rem;
+    transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+}
+.input-clay:focus {
+    border-color: var(--primary-color) !important;
+    box-shadow: 0 0 0 3px rgba(63,46,35,0.09) !important;
+    background: #fff !important;
+    outline: none;
+}
+.kx-table thead th {
+    background: #faf8f6;
+    border-bottom: 2px solid #f0ece9;
+    color: var(--secondary-color, #7c6f65);
+    font-weight: 700;
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 1.3px;
+    padding: 1rem 0.85rem;
+    white-space: nowrap;
+}
+.kx-table tbody tr { border-bottom: 1px solid #f8f6f4; transition: background 0.12s; }
+.kx-table tbody tr:hover { background: #fdfcfb; }
+.kx-table tbody td { padding: 0.8rem 0.85rem; vertical-align: middle; }
+
+.pill-entrada {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: #e8f5e9; color: #2e7d32;
+    border: 1.5px solid #c8e6c9; border-radius: 50px;
+    padding: 0.28rem 0.85rem; font-size: 0.73rem; font-weight: 700;
+}
+.pill-salida {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: #fce4e4; color: #c62828;
+    border: 1.5px solid #f5c6c6; border-radius: 50px;
+    padding: 0.28rem 0.85rem; font-size: 0.73rem; font-weight: 700;
+}
+.qty-entrada { color: #2e7d32; font-weight: 800; font-size: 1rem; }
+.qty-salida  { color: #c62828; font-weight: 800; font-size: 1rem; }
+
+.banner-producto {
+    background: linear-gradient(135deg, #ede7e3 0%, #f9f5f2 100%);
+    border-radius: 20px;
+    border-left: 5px solid var(--primary-color, #3f2e23);
+    padding: 1.1rem 1.5rem;
+}
+.stat-chip {
+    background: #f5f3f1; border-radius: 14px;
+    padding: 0.55rem 1rem; font-size: 0.8rem; font-weight: 700;
+    color: var(--primary-color, #3f2e23);
+    display: inline-flex; align-items: center; gap: 6px;
+}
+.stat-chip.entrada { background: #e8f5e9; color: #2e7d32; }
+.stat-chip.salida  { background: #fce4e4; color: #c62828; }
+.filtro-activo-badge {
+    background: #fff3cd; border: 1.5px solid #ffc107; border-radius: 10px;
+    padding: 0.2rem 0.65rem; font-size: 0.75rem; font-weight: 600; color: #856404;
+}
+@keyframes kxFadeUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+.kx-anim   { animation: kxFadeUp 0.3s ease both; }
+.kx-anim-1 { animation-delay: 0.06s; }
+.kx-anim-2 { animation-delay: 0.12s; }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="container mt-5 mb-5 animate__animated animate__fadeIn">
+<div class="container mt-5 pb-5">
 
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <!-- Cabecera -->
+    <div class="d-flex justify-content-between align-items-start mb-4 flex-wrap gap-3 kx-anim">
         <div>
-            <h2 class="fw-bold mb-1" style="color: var(--primary-color); letter-spacing: -1px;">
-                <i class="bi bi-arrow-left-right me-2"></i>Kardex de Inventario
+            <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
+                <a href="{% url 'lista_inventario' %}" class="btn btn-light btn-sm rounded-pill shadow-sm border">
+                    <i class="bi bi-grid me-1"></i> Inventario
+                </a>
+                <i class="bi bi-chevron-right text-muted small"></i>
+                {% if producto_seleccionado %}
+                    <a href="{% url 'kardex' %}" class="text-muted small text-decoration-none">Kardex</a>
+                    <i class="bi bi-chevron-right text-muted small"></i>
+                    <span class="small fw-semibold text-dark">{{ producto_seleccionado.nombre_producto }}</span>
+                {% else %}
+                    <span class="small fw-semibold text-dark">Kardex</span>
+                {% endif %}
+            </div>
+            <h2 class="fw-bold text-dark mb-0" style="letter-spacing:-0.5px;">
+                {% if producto_seleccionado %}
+                    <i class="bi bi-clock-history me-2 text-warning"></i>Historial del insumo
+                {% else %}
+                    <i class="bi bi-arrow-left-right me-2" style="color:var(--primary-color);"></i>Kardex de Inventario
+                {% endif %}
             </h2>
-            <p class="text-muted fw-semibold mb-0">
-                Historial detallado — <strong>{{ total }}</strong> movimiento(s) encontrados.
+            <p class="text-muted small mt-1 mb-0">
+                {% if producto_seleccionado %}
+                    Todos los movimientos de <strong>{{ producto_seleccionado.nombre_producto }}</strong> ·
+                {% else %}
+                    Historial completo de entradas y salidas ·
+                {% endif %}
+                <strong>{{ total }}</strong> registro{{ total|pluralize }}.
             </p>
         </div>
-        <div class="d-flex gap-2">
-            <a href="{% url 'dashboard_auxiliar' %}" class="btn btn-light rounded-pill px-4 border fw-bold">
-                <i class="bi bi-arrow-left me-2"></i>Volver
+        <div class="d-flex gap-2 flex-wrap">
+            <a href="?{{ request.GET.urlencode }}&exportar=excel"
+               class="btn btn-success rounded-pill px-3 fw-bold shadow-sm">
+                <i class="bi bi-file-earmark-excel me-1"></i> Excel
+            </a>
+            <a href="?{{ request.GET.urlencode }}&exportar=pdf"
+               class="btn btn-danger rounded-pill px-3 fw-bold shadow-sm">
+                <i class="bi bi-file-earmark-pdf me-1"></i> PDF
             </a>
         </div>
     </div>
 
-    <div class="mb-4 p-4" style="background: white; border-radius: 30px; box-shadow: var(--clay-shadow);">
-        <h6 class="fw-bold mb-3" style="color: var(--secondary-color); text-transform: uppercase; letter-spacing: 1px; font-size: 0.75rem;">
-            <i class="bi bi-funnel me-2"></i>Filtros de Auditoría
-        </h6>
+    <!-- Banner producto individual -->
+    {% if producto_seleccionado %}
+    <div class="banner-producto kx-anim kx-anim-1 d-flex align-items-center gap-3 flex-wrap mb-4">
+        <div class="d-flex align-items-center justify-content-center rounded-circle bg-white shadow-sm"
+             style="width:52px;height:52px;flex-shrink:0;">
+            <i class="bi bi-box-seam fs-4" style="color:var(--primary-color,#3f2e23);"></i>
+        </div>
+        <div class="flex-grow-1">
+            <p class="fw-bold fs-5 mb-0 text-dark">{{ producto_seleccionado.nombre_producto }}</p>
+            <p class="text-muted small mb-0">
+                Código <strong>#{{ producto_seleccionado.codigo_producto|default:"—" }}</strong>
+                &nbsp;·&nbsp; {{ producto_seleccionado.id_categoria.nombre_categoria }}
+                &nbsp;·&nbsp; Stock actual:
+                <strong class="{% if producto_seleccionado.stock_actual <= producto_seleccionado.stock_minimo %}text-danger{% else %}text-success{% endif %}">
+                    {{ producto_seleccionado.stock_actual }} {{ producto_seleccionado.get_unidad_medida_display }}
+                </strong>
+            </p>
+        </div>
+        <a href="{% url 'kardex' %}" class="btn btn-light btn-sm rounded-pill border">
+            Ver kardex completo
+        </a>
+    </div>
+    {% endif %}
+
+    <!-- Filtros multicriterio -->
+    <div class="kx-card p-4 mb-4 kx-anim kx-anim-1">
+        <p class="fw-bold text-uppercase small mb-3" style="color:var(--secondary-color);letter-spacing:1px;font-size:0.7rem;">
+            <i class="bi bi-funnel me-1"></i> Filtros de auditoría
+            {% if request.GET.fecha_inicio or request.GET.fecha_fin or request.GET.tipo or request.GET.producto or request.GET.usuario or request.GET.empresa %}
+                <span class="filtro-activo-badge ms-2"><i class="bi bi-funnel-fill me-1"></i>Activos</span>
+            {% endif %}
+        </p>
         <form method="GET">
+            {% if producto_seleccionado %}
+                <input type="hidden" name="producto_id" value="{{ producto_seleccionado.id_producto }}">
+            {% endif %}
             <div class="row g-3 align-items-end">
-                <div class="col-md-2">
-                    <label class="form-label fw-bold small">Desde</label>
-                    <input type="date" name="fecha_inicio" class="form-control border-0 rounded-pill bg-light px-3" value="{{ request.GET.fecha_inicio }}">
+                {% if not producto_seleccionado %}
+                <div class="col-sm-6 col-md-3">
+                    <label class="form-label fw-bold small text-muted mb-1">Producto</label>
+                    <input type="text" name="producto" class="form-control input-clay"
+                           placeholder="Nombre o #código…" value="{{ request.GET.producto }}">
                 </div>
-                <div class="col-md-2">
-                    <label class="form-label fw-bold small">Hasta</label>
-                    <input type="date" name="fecha_fin" class="form-control border-0 rounded-pill bg-light px-3" value="{{ request.GET.fecha_fin }}">
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label fw-bold small">Tipo</label>
-                    <select name="tipo" class="form-select border-0 rounded-pill bg-light px-3">
+                {% endif %}
+
+                <div class="col-sm-6 col-md-2">
+                    <label class="form-label fw-bold small text-muted mb-1">Tipo</label>
+                    <select name="tipo" class="form-select input-clay">
                         <option value="">Todos</option>
-                        <option value="ENTRADA" {% if request.GET.tipo == 'ENTRADA' %}selected{% endif %}>Entrada</option>
-                        <option value="SALIDA" {% if request.GET.tipo == 'SALIDA' %}selected{% endif %}>Salida</option>
+                        <option value="ENTRADA" {% if request.GET.tipo == 'ENTRADA' %}selected{% endif %}>↓ Entradas</option>
+                        <option value="SALIDA"  {% if request.GET.tipo == 'SALIDA'  %}selected{% endif %}>↑ Salidas</option>
                     </select>
                 </div>
-                <div class="col-md-2">
-                    <label class="form-label fw-bold small">Producto</label>
-                    <input type="text" name="producto" class="form-control border-0 rounded-pill bg-light px-3" placeholder="Nombre o #" value="{{ request.GET.producto }}">
+
+                <div class="col-sm-6 col-md-2">
+                    <label class="form-label fw-bold small text-muted mb-1">
+                        <i class="bi bi-building me-1"></i>Empresa
+                    </label>
+                    <select name="empresa" class="form-select input-clay">
+                        <option value="">Todas</option>
+                        {% for e in empresas %}
+                            <option value="{{ e.id_empresa }}"
+                                {% if request.GET.empresa == e.id_empresa|stringformat:"s" %}selected{% endif %}>
+                                {{ e.nombre_empresa }}
+                            </option>
+                        {% endfor %}
+                    </select>
                 </div>
-                <div class="col-md-2">
-                    <label class="form-label fw-bold small">Responsable</label>
-                    <input type="text" name="usuario" class="form-control border-0 rounded-pill bg-light px-3" placeholder="Usuario..." value="{{ request.GET.usuario }}">
+
+                <div class="col-sm-6 col-md-2">
+                    <label class="form-label fw-bold small text-muted mb-1">Responsable</label>
+                    <input type="text" name="usuario" class="form-control input-clay"
+                           placeholder="Nombre…" value="{{ request.GET.usuario }}">
                 </div>
-                <div class="col-md-2 d-flex gap-2">
-                    <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold shadow-sm w-100">
+
+                <div class="col-sm-6 col-md-1">
+                    <label class="form-label fw-bold small text-muted mb-1">Desde</label>
+                    <input type="date" name="fecha_inicio" class="form-control input-clay"
+                           value="{{ request.GET.fecha_inicio }}">
+                </div>
+
+                <div class="col-sm-6 col-md-1">
+                    <label class="form-label fw-bold small text-muted mb-1">Hasta</label>
+                    <input type="date" name="fecha_fin" class="form-control input-clay"
+                           value="{{ request.GET.fecha_fin }}">
+                </div>
+
+                <div class="col-sm-12 col-md-1 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary rounded-pill fw-bold shadow-sm flex-grow-1" title="Filtrar">
                         <i class="bi bi-search"></i>
                     </button>
-                    <a href="{% url 'kardex' %}" class="btn btn-light rounded-pill px-3 border fw-bold">
+                    <a href="{% if producto_seleccionado %}{% url 'kardex' %}?producto_id={{ producto_seleccionado.id_producto }}{% else %}{% url 'kardex' %}{% endif %}"
+                       class="btn btn-light rounded-pill shadow-sm border" title="Limpiar">
                         <i class="bi bi-arrow-clockwise"></i>
                     </a>
                 </div>
@@ -62,89 +233,152 @@
         </form>
     </div>
 
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <div class="d-flex align-items-center gap-2">
-            <span class="badge rounded-pill px-3 py-2" style="background: var(--bg-body); color: var(--primary-color); font-weight: 700; font-size: 0.8rem;">
-                {{ total }} registros
-            </span>
-            {% if request.GET.fecha_inicio or request.GET.tipo or request.GET.producto or request.GET.usuario %}
-                <span class="badge bg-primary rounded-pill px-3 py-2" style="font-size: 0.75rem;">
-                    <i class="bi bi-funnel-fill me-1"></i>Filtros activos
-                </span>
-            {% endif %}
-        </div>
-        <div class="d-flex gap-2">
-            <a href="?{{ request.GET.urlencode }}&exportar=excel" class="btn btn-success rounded-pill px-4 fw-bold shadow-sm">
-                <i class="bi bi-file-earmark-excel me-2"></i>Excel
-            </a>
-            <a href="?{{ request.GET.urlencode }}&exportar=pdf" class="btn btn-danger rounded-pill px-4 fw-bold shadow-sm">
-                <i class="bi bi-file-earmark-pdf me-2"></i>PDF
-            </a>
-        </div>
+    <!-- Stats strip -->
+    <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
+        <span class="stat-chip"><i class="bi bi-journal-text"></i> {{ total }} registro{{ total|pluralize }}</span>
+        {% if request.GET.empresa or request.GET.tipo or request.GET.usuario or request.GET.fecha_inicio %}
+        <span class="filtro-activo-badge">
+            <i class="bi bi-funnel-fill me-1"></i>Filtros aplicados &nbsp;·&nbsp;
+            <a href="{% if producto_seleccionado %}{% url 'kardex' %}?producto_id={{ producto_seleccionado.id_producto }}{% else %}{% url 'kardex' %}{% endif %}"
+               class="text-danger text-decoration-none ms-1">✕ limpiar</a>
+        </span>
+        {% endif %}
     </div>
 
-    <div style="background: white; border-radius: 30px; box-shadow: var(--clay-shadow); overflow: hidden;">
+    <!-- Tabla -->
+    <div class="kx-card kx-anim kx-anim-2" style="overflow:hidden;">
         <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead style="background: var(--bg-body);">
+            <table class="table kx-table mb-0">
+                <thead>
                     <tr>
-                        <th class="ps-4" style="font-size: 0.75rem; text-transform: uppercase; color: var(--secondary-color); padding: 1.2rem 1rem;">Fecha / Hora</th>
-                        <th style="font-size: 0.75rem; text-transform: uppercase; color: var(--secondary-color);">Producto</th>
-                        <th style="font-size: 0.75rem; text-transform: uppercase; color: var(--secondary-color);">Tipo</th>
-                        <th class="text-center" style="font-size: 0.75rem; text-transform: uppercase; color: var(--secondary-color);">Cantidad</th>
-                        <th class="text-center" style="font-size: 0.75rem; text-transform: uppercase; color: var(--secondary-color);">Stock Resultante</th>
-                        <th style="font-size: 0.75rem; text-transform: uppercase; color: var(--secondary-color);">Responsable</th>
-                        <th style="font-size: 0.75rem; text-transform: uppercase; color: var(--secondary-color);">Motivo</th>
+                        <th class="ps-4">Fecha / Hora</th>
+                        {% if not producto_seleccionado %}<th>Producto</th>{% endif %}
+                        <th class="text-center">Tipo</th>
+                        <th class="text-center">Cantidad</th>
+                        <th class="text-center">Stock ant.</th>
+                        <th class="text-center">Stock nuevo</th>
+                        <th>Empresa / Cliente</th>
+                        <th class="text-center">Precio / ud.</th>
+                        <th>Motivo</th>
+                        <th>Responsable</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {% for m in movimientos %}
-                    <tr style="border-bottom: 1px solid var(--bg-body);">
-                        <td class="ps-4">
-                            <div class="fw-bold" style="color: var(--primary-color);">{{ m.fecha_movimiento|date:"d/m/Y" }}</div>
-                            <small class="text-muted">{{ m.fecha_movimiento|time:"H:i" }}</small>
-                        </td>
-                        <td>
-                            <div class="fw-bold text-dark">{{ m.producto.nombre_producto }}</div>
-                            <small class="text-muted">#{{ m.producto.codigo_producto|default:"S/C" }}</small>
-                        </td>
-                        <td>
-                            {% if m.tipo_movimiento == 'ENTRADA' %}
-                                <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-3 fw-bold">
-                                    <i class="bi bi-arrow-down-left me-1"></i>ENTRADA
-                                </span>
+                {% for m in movimientos %}
+                <tr>
+                    <td class="ps-4" style="white-space:nowrap;">
+                        <div class="fw-bold small" style="color:var(--primary-color);">
+                            {{ m.fecha_movimiento|date:"d/m/Y" }}
+                        </div>
+                        <div class="text-muted" style="font-size:0.73rem;">
+                            {{ m.fecha_movimiento|date:"H:i" }}
+                        </div>
+                    </td>
+
+                    {% if not producto_seleccionado %}
+                    <td>
+                        <div class="fw-bold small text-dark">{{ m.id_producto.nombre_producto|default:"—" }}</div>
+                        <div class="text-muted" style="font-size:0.72rem;">#{{ m.id_producto.codigo_producto|default:"S/C" }}</div>
+                    </td>
+                    {% endif %}
+
+                    <td class="text-center">
+                        {% if m.tipo_movimiento == 'ENTRADA' %}
+                            <span class="pill-entrada"><i class="bi bi-arrow-down-circle"></i> Entrada</span>
+                        {% else %}
+                            <span class="pill-salida"><i class="bi bi-arrow-up-circle"></i> Salida</span>
+                        {% endif %}
+                    </td>
+
+                    <td class="text-center">
+                        {% if m.tipo_movimiento == 'ENTRADA' %}
+                            <span class="qty-entrada">+{{ m.cantidad }}</span>
+                        {% else %}
+                            <span class="qty-salida">−{{ m.cantidad }}</span>
+                        {% endif %}
+                    </td>
+
+                    <td class="text-center"><span class="text-muted small">{{ m.stock_anterior }}</span></td>
+
+                    <td class="text-center">
+                        <span class="badge bg-light text-dark border rounded-pill px-3 fw-bold small">
+                            {{ m.stock_nuevo }}
+                        </span>
+                    </td>
+
+                    <td>
+                        {% if m.empresa_asociada %}
+                            <div class="d-flex align-items-center gap-1">
+                                <i class="bi bi-building text-primary" style="font-size:0.8rem;"></i>
+                                <span class="small fw-semibold">{{ m.empresa_asociada.nombre_empresa }}</span>
+                            </div>
+                        {% elif m.cliente_externo %}
+                            <div class="d-flex align-items-center gap-1">
+                                <i class="bi bi-person-fill text-info" style="font-size:0.8rem;"></i>
+                                <span class="small">{{ m.cliente_externo }}</span>
+                            </div>
+                        {% else %}
+                            <span class="text-muted small">—</span>
+                        {% endif %}
+                    </td>
+
+                    <td class="text-center">
+                        {% if m.precio_transaccion %}
+                            <span class="fw-bold small text-success">${{ m.precio_transaccion|floatformat:"0" }}</span>
+                        {% else %}
+                            <span class="text-muted small">—</span>
+                        {% endif %}
+                    </td>
+
+                    <td class="small text-muted">{{ m.motivo|default:"Sin motivo" }}</td>
+
+                    <td>
+                        <div class="d-flex align-items-center gap-1">
+                            <i class="bi bi-person-circle text-secondary" style="font-size:0.85rem;"></i>
+                            <span class="small">{{ m.id_usuario|default:"Sistema" }}</span>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="10" class="text-center py-5">
+                        <i class="bi bi-journal-x fs-1 d-block mb-3 text-muted opacity-25"></i>
+                        <p class="text-muted fw-bold mb-1">
+                            {% if producto_seleccionado %}
+                                Sin movimientos para <strong>{{ producto_seleccionado.nombre_producto }}</strong>.
                             {% else %}
-                                <span class="badge bg-warning bg-opacity-10 text-warning rounded-pill px-3 fw-bold">
-                                    <i class="bi bi-arrow-up-right me-1"></i>SALIDA
-                                </span>
+                                No se encontraron movimientos con estos filtros.
                             {% endif %}
-                        </td>
-                        <td class="fw-bold text-center">
-                            {% if m.tipo_movimiento == 'ENTRADA' %}
-                                <span class="text-success">+{{ m.cantidad }}</span>
-                            {% else %}
-                                <span class="text-danger">-{{ m.cantidad }}</span>
-                            {% endif %}
-                        </td>
-                        <td class="text-center">
-                            <span class="badge bg-light text-dark border rounded-pill px-3">{{ m.stock_nuevo }}</span>
-                        </td>
-                        <td class="text-muted small fw-bold">
-                            <i class="bi bi-person-circle me-1"></i>{{ m.id_usuario|default:"Sistema" }}
-                        </td>
-                        <td class="text-muted small">{{ m.motivo|default:"-" }}</td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="7" class="text-center py-5">
-                            <i class="bi bi-journal-x fs-1 opacity-25 d-block mb-3"></i>
-                            <p class="text-muted fw-bold">No se encontraron movimientos con estos filtros.</p>
-                        </td>
-                    </tr>
-                    {% endfor %}
+                        </p>
+                        <a href="{% url 'kardex' %}" class="btn btn-light btn-sm rounded-pill border mt-2">
+                            Ver todos los movimientos
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
                 </tbody>
             </table>
         </div>
+
+        {% if movimientos %}
+        <div class="d-flex justify-content-between align-items-center px-4 py-3 border-top"
+             style="background:#faf8f6;">
+            <span class="text-muted small">
+                Mostrando <strong>{{ total }}</strong> registro{{ total|pluralize }}
+                {% if producto_seleccionado %}de <strong>{{ producto_seleccionado.nombre_producto }}</strong>{% endif %}
+            </span>
+            {% if producto_seleccionado %}
+            <a href="{% url 'lista_inventario' %}" class="btn btn-light btn-sm rounded-pill shadow-sm border">
+                <i class="bi bi-grid me-1"></i> Volver al inventario
+            </a>
+            {% else %}
+            <a href="{% url 'dashboard_auxiliar' %}" class="btn btn-light btn-sm rounded-pill shadow-sm border">
+                <i class="bi bi-arrow-left me-1"></i> Dashboard
+            </a>
+            {% endif %}
+        </div>
+        {% endif %}
     </div>
+
 </div>
 {% endblock %}
