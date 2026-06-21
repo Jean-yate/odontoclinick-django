@@ -27,7 +27,6 @@
             color: #4a4a4a;
         }
 
-        /* Navbar Estilo Claymorphic */
         .navbar { padding: 1.5rem 0; background: transparent !important; }
         
         .nav-main-wrapper {
@@ -56,7 +55,6 @@
             transform: translateY(-1px);
         }
 
-        /* Avatares y Dropdowns */
         .user-avatar-circle {
             width: 35px; height: 35px;
             background: var(--accent-color);
@@ -74,7 +72,6 @@
             margin-top: 10px !important;
         }
 
-        /* Alertas y Botones */
         .alert-clay {
             background: white;
             border-radius: 20px;
@@ -114,7 +111,6 @@
 
         .pqrs-btn:hover { transform: translateY(-3px); }
 
-        /* ESTILOS MODAL CERRAR SESIÓN */
         .modal-content.clay-modal {
             border: none;
             border-radius: 35px;
@@ -123,7 +119,7 @@
             padding: 1rem;
         }
         .btn-logout-confirm {
-            background: #f1948a; /* Rojo suave */
+            background: #f1948a;
             color: white;
             border-radius: 50px;
             padding: 0.6rem 2rem;
@@ -154,25 +150,60 @@
             <div class="nav-main-wrapper">
                 <a class="navbar-brand" href="{% url 'home' %}">ODONTOCLINICK</a>
                 
-                <button class="navbar-toggler border-0 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <button class="navbar-toggler border-0 shadow-none" type="button"
+                        data-bs-toggle="collapse" data-bs-target="#navbarNav">
                     <i class="bi bi-list fs-3"></i>
                 </button>
 
                 <div class="collapse navbar-collapse" id="navbarNav">
                     <ul class="navbar-nav mx-auto align-items-center">
-                        <li class="nav-item"><a class="nav-link" href="{% url 'home' %}">Inicio</a></li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'home' %}">Inicio</a>
+                        </li>
                         
                         {% if user.is_authenticated %}
-                            {% if user.id_rol.nombre_rol == 'Secretaria' or user.id_rol.nombre_rol == 'Administrador' %}
-                                <li class="nav-item"><a class="nav-link" href="{% url 'panel_secretaria' %}">Dashboard</a></li>
-                                <li class="nav-item"><a class="nav-link" href="{% url 'lista_pacientes' %}">Pacientes</a></li>
+
+                            {% if user.id_rol.nombre_rol == 'Secretaria' %}
+                                <li class="nav-item">
+                                    <a class="nav-link" href="{% url 'panel_secretaria' %}">Dashboard</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" href="{% url 'lista_pacientes' %}">Pacientes</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" href="{% url 'lista_citas' %}">Citas</a>
+                                </li>
+
+                            {% elif user.id_rol.nombre_rol == 'Administrador' %}
+                                <li class="nav-item">
+                                    <a class="nav-link" href="{% url 'admin_app:dashboard_admin' %}">Dashboard</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link active fw-bold" href="{% url 'admin_app:lista_usuarios' %}">Usuarios</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" href="{% url 'lista_citas' %}">Citas</a>
+                                </li>
+
                             {% elif user.id_rol.nombre_rol == 'Doctor' %}
-                                <li class="nav-item"><a class="nav-link" href="{% url 'dashboard_medico' %}">Mi Panel</a></li>
-                                <li class="nav-item"><a class="nav-link" href="{% url 'ver_citas' %}">Mi Agenda</a></li>
+                                <li class="nav-item">
+                                    <a class="nav-link" href="{% url 'dashboard_medico' %}">Mi Panel</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" href="{% url 'ver_citas' %}">Mi Agenda</a>
+                                </li>
+
                             {% elif "Auxiliar" in user.id_rol.nombre_rol %}
-                                <li class="nav-item"><a class="nav-link" href="{% url 'dashboard_auxiliar' %}">Bodega</a></li>
-                                <li class="nav-item"><a class="nav-link" href="{% url 'lista_inventario' %}">Inventario</a></li>
-                                <li class="nav-item"><a class="nav-link" href="{% url 'kardex' %}">Movimientos</a></li>
+                                <li class="nav-item">
+                                    <a class="nav-link" href="{% url 'dashboard_auxiliar' %}">Bodega</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" href="{% url 'lista_inventario' %}">Inventario</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" href="{% url 'kardex' %}">Movimientos</a>
+                                </li>
+
                             {% endif %}
                         {% endif %}
                     </ul>
@@ -180,27 +211,54 @@
                     <div class="d-flex align-items-center">
                         {% if user.is_authenticated %}
                             <div class="dropdown">
-                                <a class="nav-link dropdown-toggle fw-bold d-flex align-items-center gap-2" href="#" data-bs-toggle="dropdown" style="color: var(--primary-color) !important;">
-                                    <div class="user-avatar-circle">{{ user.nombre|slice:":1"|upper }}</div>
+                                <a class="nav-link dropdown-toggle fw-bold d-flex align-items-center gap-2"
+                                   href="#" data-bs-toggle="dropdown"
+                                   style="color: var(--primary-color) !important;">
+                                    <div class="user-avatar-circle">
+                                        {{ user.nombre|slice:":1"|upper }}
+                                    </div>
                                     <span class="d-none d-md-inline">{{ user.nombre|upper }}</span>
                                 </a>
                                 <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0">
                                     <li class="px-3 py-2 text-center">
                                         <p class="mb-0 small text-muted">Sesión iniciada como:</p>
-                                        <p class="mb-0 fw-bold text-primary small">{{ user.id_rol.nombre_rol }}</p>
+                                        <p class="mb-0 fw-bold text-primary small">
+                                            {{ user.id_rol.nombre_rol }}
+                                        </p>
                                     </li>
                                     <li><hr class="dropdown-divider"></li>
-                                    
-                                    {% if user.id_rol.nombre_rol == 'Doctor' %}
-                                        <li><a class="dropdown-item" href="{% url 'perfil_medico' %}"><i class="bi bi-person-badge me-2"></i>Perfil Médico</a></li>
-                                    {% elif user.id_rol.nombre_rol == 'Paciente' %}
-                                        <li><a class="dropdown-item" href="{% url 'perfil_paciente' %}"><i class="bi bi-person-circle me-2"></i>Mi Perfil</a></li>
+
+                                    {% if user.id_rol.nombre_rol == 'Administrador' %}
+                                        <li>
+                                            <a class="dropdown-item" href="{% url 'admin_app:dashboard_admin' %}">
+                                                <i class="bi bi-speedometer2 me-2"></i>Mi Panel
+                                            </a>
+                                        </li>
                                     {% elif user.id_rol.nombre_rol == 'Secretaria' %}
-                                        <li><a class="dropdown-item" href="{% url 'perfil_secretaria' %}"><i class="bi bi-shield-lock me-2"></i>Mi Perfil</a></li>
+                                        <li>
+                                            <a class="dropdown-item" href="{% url 'perfil_secretaria' %}">
+                                                <i class="bi bi-shield-lock me-2"></i>Mi Perfil
+                                            </a>
+                                        </li>
+                                    {% elif user.id_rol.nombre_rol == 'Doctor' %}
+                                        <li>
+                                            <a class="dropdown-item" href="{% url 'perfil_medico' %}">
+                                                <i class="bi bi-person-badge me-2"></i>Perfil Médico
+                                            </a>
+                                        </li>
+                                    {% elif user.id_rol.nombre_rol == 'Paciente' %}
+                                        <li>
+                                            <a class="dropdown-item" href="{% url 'perfil_paciente' %}">
+                                                <i class="bi bi-person-circle me-2"></i>Mi Perfil
+                                            </a>
+                                        </li>
                                     {% endif %}
 
                                     <li>
-                                        <button type="button" class="dropdown-item text-danger fw-bold" data-bs-toggle="modal" data-bs-target="#confirmLogoutModal">
+                                        <button type="button"
+                                                class="dropdown-item text-danger fw-bold"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#confirmLogoutModal">
                                             <i class="bi bi-door-open me-2"></i>Cerrar Sesión
                                         </button>
                                     </li>
@@ -219,7 +277,8 @@
         {% if messages %}
             <div class="mt-3">
                 {% for message in messages %}
-                    <div class="alert alert-clay alert-dismissible fade show d-flex align-items-center p-3 mb-4" role="alert">
+                    <div class="alert alert-clay alert-dismissible fade show d-flex align-items-center p-3 mb-4"
+                         role="alert">
                         <i class="bi bi-info-circle-fill me-3 fs-5 text-primary"></i>
                         <div class="fw-bold small">{{ message }}</div>
                         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
@@ -231,6 +290,7 @@
         {% block content %}{% endblock %}
     </main>
 
+    <!-- Modal Cerrar Sesión -->
     <div class="modal fade" id="confirmLogoutModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content clay-modal text-center">
@@ -239,10 +299,12 @@
                         <i class="bi bi-unlock text-muted" style="font-size: 3.5rem; opacity: 0.5;"></i>
                     </div>
                     <h5 class="fw-bold mb-2" style="color: var(--primary-color);">¿Terminar sesión?</h5>
-                    <p class="text-muted small px-4">Si cierras sesión, tendrás que ingresar tus credenciales nuevamente para acceder.</p>
-                    
+                    <p class="text-muted small px-4">
+                        Si cierras sesión, tendrás que ingresar tus credenciales nuevamente para acceder.
+                    </p>
                     <div class="d-flex justify-content-center gap-3 mt-4">
-                        <button type="button" class="btn-logout-cancel" data-bs-dismiss="modal">Seguir aquí</button>
+                        <button type="button" class="btn-logout-cancel"
+                                data-bs-dismiss="modal">Seguir aquí</button>
                         <form action="{% url 'logout' %}" method="post" class="m-0">
                             {% csrf_token %}
                             <button type="submit" class="btn-logout-confirm">Cerrar sesión</button>
@@ -258,7 +320,8 @@
             <i class="bi bi-pencil-square me-2"></i>Radicar PQRS
         </a>
         <div class="footer-card">
-            <p class="mb-1 fw-bold text-uppercase opacity-75" style="letter-spacing: 2px; color: var(--primary-color);">OdontoClinick</p>
+            <p class="mb-1 fw-bold text-uppercase opacity-75"
+               style="letter-spacing: 2px; color: var(--primary-color);">OdontoClinick</p>
             <p class="small text-muted mb-0">© 2026 · Gestión Dental Profesional</p>
             <p class="small text-muted">Medellín, Colombia</p>
         </div>

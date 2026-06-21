@@ -10,4 +10,4 @@ urlpatterns = [
     path('pqrs/', views.contacto_pqrs, name='pqrs'),
     path('pacientes/carga-masiva/', views.carga_masiva_pacientes, name='carga_masiva_pacientes'),
     path('pacientes/descargar-plantilla/', views.descargar_plantilla_pacientes, name='descargar_plantilla'),
-]
+    ]

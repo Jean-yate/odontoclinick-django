@@ -1,0 +1,205 @@
+{% extends 'Webapp/base.html' %}
+{% block title %}Registrar Colaborador | OdontoClinick{% endblock %}
+
+{% block content %}
+<div class="container mt-5 mb-5" style="max-width: 600px;">
+    <div class="card border-0 shadow p-4" style="border-radius: 20px; background: #ffffff;">
+        <h3 class="fw-bold text-primary mb-1"><i class="bi bi-person-plus me-2"></i>Registrar Nuevo Usuario</h3>
+        <p class="text-muted mb-4">Crea una cuenta de acceso para el personal clínico u operativo.</p>
+        
+        <form method="POST" id="usuarioForm">
+            {% csrf_token %}
+
+            {% for field in form %}
+            <div class="mb-3">
+                <label class="form-label fw-bold text-secondary">
+                    {{ field.label }}
+                </label>
+
+                {{ field }}
+
+                {% if field.errors %}
+                <div class="text-danger small mt-1">
+                    {{ field.errors }}
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+
+            <div id="campos-especiales"
+                class="mt-4 p-4 border rounded-4 bg-light shadow-sm"
+                style="display:none;">
+
+                <div id="campos-medico" style="display:none;">
+                    <hr>
+                    <h5 class="text-primary fw-bold mb-4">
+                        <i class="bi bi-heart-pulse me-2"></i>
+                        Información Médica
+                    </h5>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-secondary">Especialidad</label>
+                        {{ medico_form.id_especialidad }}
+                        {% if medico_form.id_especialidad.errors %}
+                            <div class="text-danger small">{{ medico_form.id_especialidad.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-secondary">Licencia Médica</label>
+                        {{ medico_form.licencia_medica }}
+                        {% if medico_form.licencia_medica.errors %}
+                            <div class="text-danger small">{{ medico_form.licencia_medica.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-secondary">Años de experiencia</label>
+                        {{ medico_form.anos_experiencia }}
+                        {% if medico_form.anos_experiencia.errors %}
+                            <div class="text-danger small">{{ medico_form.anos_experiencia.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-secondary">Fecha de ingreso</label>
+                        {{ medico_form.fecha_ingreso }}
+                        {% if medico_form.fecha_ingreso.errors %}
+                            <div class="text-danger small">{{ medico_form.fecha_ingreso.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div id="campos-secretaria" style="display:none;">
+                    <hr>
+                    <h5 class="text-success fw-bold mb-4">
+                        <i class="bi bi-calendar-check me-2"></i>
+                        Información de Secretaria
+                    </h5>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-secondary">Fecha de ingreso</label>
+                        {{ secretaria_form.fecha_ingreso }}
+                        {% if secretaria_form.fecha_ingreso.errors %}
+                            <div class="text-danger small">{{ secretaria_form.fecha_ingreso.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-secondary">Turno</label>
+                        {{ secretaria_form.turno }}
+                        {% if secretaria_form.turno.errors %}
+                            <div class="text-danger small">{{ secretaria_form.turno.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div id="campos-paciente" style="display:none;">
+                    <hr>
+                    <h5 class="text-warning fw-bold mb-4">
+                        <i class="bi bi-person-vcard me-2"></i>
+                        Información del Paciente
+                    </h5>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-secondary">Fecha de nacimiento</label>
+                        {{ paciente_form.fecha_nacimiento }}
+                        {% if paciente_form.fecha_nacimiento.errors %}
+                            <div class="text-danger small">{{ paciente_form.fecha_nacimiento.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-secondary">Dirección</label>
+                        {{ paciente_form.direccion }}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-secondary">EPS</label>
+                        {{ paciente_form.eps }}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-secondary">RH</label>
+                        {{ paciente_form.rh }}
+                        {% if paciente_form.rh.errors %}
+                            <div class="text-danger small">{{ paciente_form.rh.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-secondary">Contacto Emergencia (Nombre)</label>
+                        {{ paciente_form.contacto_emergencia_nombre }}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-secondary">Contacto Emergencia (Teléfono)</label>
+                        {{ paciente_form.contacto_emergencia_telefono }}
+                        {% if paciente_form.contacto_emergencia_telefono.errors %}
+                            <div class="text-danger small">{{ paciente_form.contacto_emergencia_telefono.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="d-grid mt-4">
+                <button type="submit" class="btn btn-primary btn-lg rounded-pill">
+                    <i class="bi bi-check-circle me-2"></i>Guardar Usuario
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const rolSelect = document.getElementById('id_id_rol');
+        const especiales = document.getElementById('campos-especiales');
+        const medico = document.getElementById('campos-medico');
+        const secretaria = document.getElementById('campos-secretaria');
+        const paciente = document.getElementById('campos-paciente');
+
+        function actualizarCampos() {
+            especiales.style.display = 'none';
+            medico.style.display = 'none';
+            secretaria.style.display = 'none';
+            paciente.style.display = 'none';
+
+            if (!rolSelect || rolSelect.selectedIndex === -1) return;
+
+            const texto = rolSelect.options[rolSelect.selectedIndex].text.toLowerCase();
+
+            if (texto.includes('doctor') || texto.includes('medico')) {
+                especiales.style.display = 'block';
+                medico.style.display = 'block';
+            } else if (texto.includes('secretaria')) {
+                especiales.style.display = 'block';
+                secretaria.style.display = 'block';
+            } else if (texto.includes('paciente')) {
+                especiales.style.display = 'block';
+                paciente.style.display = 'block';
+            }
+        }
+
+        actualizarCampos();
+        rolSelect.addEventListener('change', actualizarCampos);
+    });
+</script>
+
+{% if messages %}
+    <script>
+        {% for message in messages %}
+            Swal.fire({
+                icon: "{% if message.tags == 'error' %}error{% elif message.tags == 'success' %}success{% else %}info{% endif %}",
+                title: "{% if message.tags == 'error' %}¡Atención!{% else %}Éxito{% endif %}",
+                text: "{{ message|escapejs }}",
+                confirmButtonColor: '#3085d6',
+                confirmButtonText: 'Entendido'
+            });
+        {% endfor %}
+    </script>
+{% endif %}
+{% endblock %}

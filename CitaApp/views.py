@@ -28,7 +28,9 @@ from .utils import enviar_sms_twilio, generar_qr_cita  # CORRECCIÓN: Nombre uni
 
 @login_required
 def agendar_cita(request):
-    if request.user.id_rol.nombre_rol not in ['Secretaria', 'Administrador']:
+    # AJUSTE: Solo el rol operativo (Secretaria) puede agendar la cita directamente
+    if request.user.id_rol.nombre_rol != 'Secretaria':
+        messages.error(request, "❌ No tienes permisos para agendar citas. Acción exclusiva de Secretaría.")
         return redirect('home')
 
     paciente_id = request.GET.get('paciente_id')
@@ -59,13 +61,11 @@ def agendar_cita(request):
                 try:
                     telefono_paciente = cita.id_paciente.id_usuario.telefono
                     if telefono_paciente:
-                        # Limpieza y formateo regional directo
                         telefono_str = str(telefono_paciente).strip()
                         if not telefono_str.startswith('+') and len(telefono_str) == 10:
                             telefono_str = f"+57{telefono_str}"
                         
-                        # Ejecución de la petición HTTP directa a Twilio
-                        cita.id_paciente.id_usuario.telefono = telefono_str  # Asignación temporal para la función
+                        cita.id_paciente.id_usuario.telefono = telefono_str  
                         sms_enviado = enviar_sms_twilio(cita)
                         
                         if sms_enviado:
@@ -101,9 +101,12 @@ def agendar_cita(request):
 
 @login_required
 def lista_citas(request):
+    # AJUSTE: Tanto Secretaria como Administrador pueden VER la lista y generar reportes (Excel/PDF)
+    if request.user.id_rol.nombre_rol not in ['Secretaria', 'Administrador']:
+        return redirect('home')
+
     estados_disponibles = EstadoCita.objects.all()
 
-    # Ordenamiento por prioridad dinámica de atención del tablero
     citas = Cita.objects.all().select_related(
         'id_paciente__id_usuario',
         'id_doctor__id_usuario',
@@ -119,7 +122,7 @@ def lista_citas(request):
         )
     ).order_by('fecha_hora__date', 'prioridad_estado', 'fecha_hora__time')
 
-    # Filtros
+    # ... [Mantienes intacta toda tu lógica de filtros y exportación Excel/PDF] ...
     busqueda = request.GET.get('buscar')
     fecha_inicio = request.GET.get('fecha_inicio')
     fecha_fin = request.GET.get('fecha_fin')
@@ -156,13 +159,14 @@ def lista_citas(request):
         citas = citas.filter(id_estado_cita__id_estado_cita=estado)
 
     if pago == 'pendiente':
-        citas = citas.filter(total_abonado=0, costo_final__gt=0)
+        citas = citas.filter(monto_estimado__gt=0, pago__isnull=True)
     elif pago == 'parcial':
-        citas = citas.filter(total_abonado__gt=0, total_abonado__lt=F('costo_final'))
+        citas = citas.filter(monto_estimado__gt=0, pago__isnull=False).exclude(
+            pago__monto__gte=F('monto_estimado')
+        )
     elif pago == 'pagado':
-        citas = citas.filter(total_abonado__gte=F('costo_final'), costo_final__gt=0)
+        citas = citas.filter(pago__monto__gte=F('monto_estimado'))
 
-    # Exportar Reporte Excel
     if request.GET.get('exportar') == 'excel':
         wb = Workbook()
         ws = wb.active
@@ -182,7 +186,6 @@ def lista_citas(request):
         wb.save(response)
         return response
 
-    # Exportar Reporte PDF
     if request.GET.get('exportar') == 'pdf':
         buffer = BytesIO()
         doc = SimpleDocTemplate(buffer, pagesize=letter)
@@ -229,7 +232,8 @@ def lista_citas(request):
 
 @login_required
 def agenda_diaria(request):
-    if request.user.id_rol.nombre_rol not in ['Secretaria', 'Administrador']:
+    # AJUSTE: El tablero diario operativo de la sala de espera queda restringido a Secretaría
+    if request.user.id_rol.nombre_rol != 'Secretaria':
         return redirect('home')
 
     hoy = timezone.now().date()
@@ -242,14 +246,15 @@ def agenda_diaria(request):
 
 @login_required
 def actualizar_estado_gestion(request, id_cita):
-    if request.user.id_rol.nombre_rol not in ['Secretaria', 'Administrador']:
+    # AJUSTE: El movimiento de horas o reprogramaciones lo realiza la Secretaría
+    if request.user.id_rol.nombre_rol != 'Secretaria':
         return redirect('home')
 
     if request.method == 'POST':
         cita = get_object_or_404(Cita, pk=id_cita)
         nuevo_estado_id = request.POST.get('id_estado')
         nueva_fecha = request.POST.get('nueva_fecha')
-        nueva_hora  = request.POST.get('nueva_hora')   # ← NUEVO
+        nueva_hora  = request.POST.get('nueva_hora')   
 
         try:
             with transaction.atomic():
@@ -261,7 +266,7 @@ def actualizar_estado_gestion(request, id_cita):
                     if nueva_hora:
                         hora_obj = datetime.strptime(nueva_hora, '%H:%M').time()
                     else:
-                        hora_obj = cita.fecha_hora.time()   # conserva la hora actual
+                        hora_obj = cita.fecha_hora.time()   
 
                     nueva_fecha_obj  = datetime.strptime(nueva_fecha, '%Y-%m-%d').date()
                     nueva_fecha_hora = datetime.combine(nueva_fecha_obj, hora_obj)
@@ -292,7 +297,7 @@ def actualizar_estado_gestion(request, id_cita):
 
 @login_required
 def cancelar_cita(request, id_cita):
-    if request.user.id_rol.nombre_rol not in ['Secretaria', 'Administrador']:
+    if request.user.id_rol.nombre_rol != 'Secretaria':
         return redirect('home')
 
     cita = get_object_or_404(Cita, pk=id_cita)
@@ -310,7 +315,8 @@ def cancelar_cita(request, id_cita):
 
 @login_required
 def registrar_pago_cita(request, id_cita):
-    if request.user.id_rol.nombre_rol not in ['Secretaria', 'Administrador']:
+    # AJUSTE: El flujo de caja/recaudo en counter también queda para la Secretaría (o cajero si aplica)
+    if request.user.id_rol.nombre_rol != 'Secretaria':
         return redirect('home')
 
     cita = get_object_or_404(Cita, pk=id_cita)

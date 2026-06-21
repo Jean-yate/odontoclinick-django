@@ -89,9 +89,12 @@
             <a href="?{{ request.GET.urlencode }}&exportar=pdf" class="btn btn-danger rounded-pill px-3 fw-bold shadow-sm">
                 <i class="bi bi-file-earmark-pdf me-1"></i>PDF
             </a>
-            <a href="{% url 'agendar_cita' %}" class="btn btn-primary rounded-pill px-4 fw-bold shadow-sm">
-                <i class="bi bi-plus-lg me-1"></i>Nueva Cita
-            </a>
+            
+            {% if user.id_rol.nombre_rol == 'Secretaria' %}
+                <a href="{% url 'agendar_cita' %}" class="btn btn-primary rounded-pill px-4 fw-bold shadow-sm">
+                    <i class="bi bi-plus-lg me-1"></i>Nueva Cita
+                </a>
+            {% endif %}
         </div>
     </div>
 
@@ -287,44 +290,46 @@
                                             <i class="bi bi-printer text-info"></i>
                                         </a>
                                         
-                                        {% if cita.saldo_pendiente > 0 and cita.id_estado_cita.nombre_estado|lower != 'cancelada' %}
-                                            <a href="{% url 'registrar_pago_cita' cita.id_cita %}" class="btn-action-clay" title="Registrar pago">
-                                                <i class="bi bi-cash-coin {% if cita.total_abonado > 0 %}text-warning{% else %}text-success{% endif %}"></i>
-                                            </a>
-                                        {% else %}
-                                            <span class="btn-action-clay disabled" title="Sin saldo pendiente">
-                                                <i class="bi bi-check-all text-success"></i>
-                                            </span>
-                                        {% endif %}
-                                        
-                                        {% if cita.id_estado_cita.nombre_estado|lower != 'cancelada' and cita.id_estado_cita.nombre_estado|lower != 'finalizada' %}
-                                            <button type="button" class="btn-action-clay" data-bs-toggle="modal" data-bs-target="#modal{{ cita.id_cita }}" title="Gestionar cita">
-                                                <i class="bi bi-pencil-square text-primary"></i>
-                                            </button>
-                                        {% else %}
-                                            <span class="btn-action-clay disabled" title="No editable">
-                                                <i class="bi bi-lock text-muted"></i>
-                                            </span>
-                                        {% endif %}
-                                        
-                                        {% if cita.id_estado_cita.nombre_estado|lower == 'cancelada' %}
-                                            <span class="btn-action-clay disabled" title="Ya cancelada">
-                                                <i class="bi bi-x-circle text-muted"></i>
-                                            </span>
-                                        {% elif cita.id_estado_cita.nombre_estado|lower == 'finalizada' %}
-                                            <span class="btn-action-clay disabled" title="Cita finalizada">
-                                                <i class="bi bi-check-circle text-muted"></i>
-                                            </span>
-                                        {% else %}
-                                            <a href="{% url 'cancelar_cita' cita.id_cita %}" class="btn-action-clay" onclick="return confirm('¿Estás seguro de cancelar esta cita?')" title="Cancelar cita">
-                                                <i class="bi bi-trash3 text-danger"></i>
-                                            </a>
+                                        {% if user.id_rol.nombre_rol == 'Secretaria' %}
+                                            {% if cita.saldo_pendiente > 0 and cita.id_estado_cita.nombre_estado|lower != 'cancelada' %}
+                                                <a href="{% url 'registrar_pago_cita' cita.id_cita %}" class="btn-action-clay" title="Registrar pago">
+                                                    <i class="bi bi-cash-coin {% if cita.total_abonado > 0 %}text-warning{% else %}text-success{% endif %}"></i>
+                                                </a>
+                                            {% else %}
+                                                <span class="btn-action-clay disabled" title="Sin saldo pendiente">
+                                                    <i class="bi bi-check-all text-success"></i>
+                                                </span>
+                                            {% endif %}
+                                            
+                                            {% if cita.id_estado_cita.nombre_estado|lower != 'cancelada' and cita.id_estado_cita.nombre_estado|lower != 'finalizada' %}
+                                                <button type="button" class="btn-action-clay" data-bs-toggle="modal" data-bs-target="#modal{{ cita.id_cita }}" title="Gestionar cita">
+                                                    <i class="bi bi-pencil-square text-primary"></i>
+                                                </button>
+                                            {% else %}
+                                                <span class="btn-action-clay disabled" title="No editable">
+                                                    <i class="bi bi-lock text-muted"></i>
+                                                </span>
+                                            {% endif %}
+                                            
+                                            {% if cita.id_estado_cita.nombre_estado|lower == 'cancelada' %}
+                                                <span class="btn-action-clay disabled" title="Ya cancelada">
+                                                    <i class="bi bi-x-circle text-muted"></i>
+                                                </span>
+                                            {% elif cita.id_estado_cita.nombre_estado|lower == 'finalizada' %}
+                                                <span class="btn-action-clay disabled" title="Cita finalizada">
+                                                    <i class="bi bi-check-circle text-muted"></i>
+                                                </span>
+                                            {% else %}
+                                                <a href="{% url 'cancelar_cita' cita.id_cita %}" class="btn-action-clay" onclick="return confirm('¿Estás seguro de cancelar esta cita de {{ cita.id_paciente.id_usuario.nombre }}?')" title="Cancelar cita">
+                                                    <i class="bi bi-trash3 text-danger"></i>
+                                                </a>
+                                            {% endif %}
                                         {% endif %}
                                     </div>
                                 </td>
                             </tr>
 
-                            {% if cita.id_estado_cita.nombre_estado|lower != 'cancelada' and cita.id_estado_cita.nombre_estado|lower != 'finalizada' %}
+                            {% if user.id_rol.nombre_rol == 'Secretaria' and cita.id_estado_cita.nombre_estado|lower != 'cancelada' and cita.id_estado_cita.nombre_estado|lower != 'finalizada' %}
                             <div class="modal fade" id="modal{{ cita.id_cita }}" tabindex="-1" aria-hidden="true">
                                 <div class="modal-dialog modal-dialog-centered">
                                     <div class="modal-content p-2">
@@ -390,6 +395,7 @@
                                 </div>
                             </div>
                             {% endif %}
+                            
                             {% endfor %}
                         </tbody>
                     </table>
@@ -408,20 +414,17 @@
 
 {% block extra_js %}
 <script>
-// ─── Cambiar pestaña y reenviar filtros ────────────────────────────────────
 function cambiarVista(nombreVista) {
     document.getElementById('inputVista').value = nombreVista;
     document.getElementById('filterForm').submit();
 }
 
 document.addEventListener("DOMContentLoaded", function () {
-    // ─── Fecha mínima hoy en todos los inputs de fecha ────────────────────
     const hoy = new Date().toISOString().split('T')[0];
     document.querySelectorAll('.fecha-reprogramar').forEach(input => {
         input.setAttribute('min', hoy);
     });
 
-    // ─── Impresión automática si viene parámetro imprimir_id ──────────────
     const urlParams  = new URLSearchParams(window.location.search);
     const imprimirId = urlParams.get('imprimir_id');
     if (imprimirId) {
@@ -435,7 +438,6 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     }
 
-    // ─── Carga de slots al cambiar la fecha en un modal ───────────────────
     document.querySelectorAll('.fecha-reprogramar').forEach(function (inputFecha) {
         inputFecha.addEventListener('change', function () {
             const fecha      = this.value;
@@ -448,12 +450,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
             if (!fecha || !doctorId) return;
 
-            // Mostrar estado de carga
             spinner.classList.remove('d-none');
             selectHora.disabled = true;
             info.textContent    = '';
 
-            // Consulta dinámica al endpoint de disponibilidad
             fetch(`/medico/slots/?fecha=${fecha}&doctor_id=${doctorId}`)
                 .then(r => r.json())
                 .then(data => {
@@ -468,7 +468,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
                     const slotSet = new Set(slots);
 
-                    // Agregar la hora actual si está disponible en la nueva fecha
                     if (horaActual && slotSet.has(horaActual)) {
                         const optActual      = document.createElement('option');
                         optActual.value      = horaActual;
@@ -477,7 +476,6 @@ document.addEventListener("DOMContentLoaded", function () {
                         selectHora.appendChild(optActual);
                     }
 
-                    // Agregar el resto de slots disponibles
                     slots.forEach(slot => {
                         if (slot === horaActual) return;
                         const opt       = document.createElement('option');

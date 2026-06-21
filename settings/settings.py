@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'InventarioApp',     # Stock de insumos
     'FacturacionApp',    # Pagos y recibos
     'EmpresaApp',        # Empresas
+    'AdminApp'           # Administración
 ]
 
 MIDDLEWARE = [

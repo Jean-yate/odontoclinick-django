@@ -1,8 +1,16 @@
 {% extends 'Webapp/base.html' %}
+{% load static %}
+
 {% block title %}Panel Administrador | OdontoClinick{% endblock %}
 
 {% block extra_css %}
 <style>
+  :root {
+    --clay-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+    --bg-body: #f8f9fa;
+    --primary-color: #0d6efd;
+    --secondary-color: #6c757d;
+  }
   .kpi-card {
     background: white;
     border-radius: 25px;
@@ -81,8 +89,9 @@
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid mt-4 mb-5 px-4">
+<div class="container-fluid mt-4 mb-5 px-4" style="background-color: var(--bg-body); min-height: 100vh;">
 
+  <!-- ENCABEZADO -->
   <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
     <div>
       <h2 class="fw-bold mb-1" style="color: var(--primary-color); letter-spacing: -1px;">
@@ -102,58 +111,51 @@
     </div>
   </div>
 
+  <!-- MENSAJES DE NOTIFICACIÓN -->
+  {% if messages %}
+  <div class="row mb-3">
+    <div class="col-12">
+      {% for message in messages %}
+      <div class="alert alert-{{ message.tags }} alert-dismissible fade show border-0 shadow-sm" role="alert" style="border-radius: 12px;">
+        {{ message }}
+        <button type="button" class="btn-close" data-dismiss="alert" aria-label="Close"></button>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- PRIMERA FILA DE CARDINALIDADES (Usuarios y Roles) -->
   <div class="row g-3 mb-4">
     <div class="col-6 col-md-3">
       <div class="kpi-card">
-        <div class="kpi-label">
-          <i class="bi bi-people-fill me-1"></i>Usuarios
-        </div>
-        <div class="kpi-val text-primary">
-          {{ total_usuarios }}
-        </div>
-        <div class="kpi-delta text-success">
-          +{{ usuarios_mes }} este mes
-        </div>
+        <div class="kpi-label"><i class="bi bi-people-fill me-1"></i>Usuarios</div>
+        <div class="kpi-val text-primary">{{ total_usuarios }}</div>
+        <div class="kpi-delta text-success">+{{ usuarios_mes|default:0 }} este mes</div>
       </div>
     </div>
-
     <div class="col-6 col-md-3">
       <div class="kpi-card">
-        <div class="kpi-label">
-          <i class="bi bi-person-badge me-1"></i>Doctores
-        </div>
-        <div class="kpi-val text-info">
-          {{ total_doctores }}
-        </div>
+        <div class="kpi-label"><i class="bi bi-person-badge me-1"></i>Doctores</div>
+        <div class="kpi-val text-info">{{ total_doctores }}</div>
       </div>
     </div>
-
     <div class="col-6 col-md-3">
       <div class="kpi-card">
-        <div class="kpi-label">
-          <i class="bi bi-person-workspace me-1"></i>Secretarias
-        </div>
-        <div class="kpi-val text-success">
-          {{ total_secretarias }}
-        </div>
+        <div class="kpi-label"><i class="bi bi-person-workspace me-1"></i>Secretarias</div>
+        <div class="kpi-val text-success">{{ total_secretarias }}</div>
       </div>
     </div>
-
     <div class="col-6 col-md-3">
       <div class="kpi-card">
-        <div class="kpi-label">
-          <i class="bi bi-shield-check me-1"></i>Usuarios activos
-        </div>
-        <div class="kpi-val text-success">
-          {{ usuarios_activos }}
-        </div>
-        <div class="kpi-delta text-danger">
-          {{ usuarios_inactivos }} inactivos
-        </div>
+        <div class="kpi-label"><i class="bi bi-shield-check me-1"></i>Usuarios activos</div>
+        <div class="kpi-val text-success">{{ usuarios_activos|default:total_usuarios }}</div>
+        <div class="kpi-delta text-danger">{{ usuarios_inactivos|default:0 }} inactivos</div>
       </div>
     </div>
   </div>
 
+  <!-- SEGUNDA FILA DE CARDINALIDADES (Métricas de Operación y Clínicas) -->
   <div class="row g-3 mb-4">
     <div class="col-6 col-md-4 col-xl-2">
       <div class="kpi-card">
@@ -167,7 +169,7 @@
     <div class="col-6 col-md-4 col-xl-2">
       <div class="kpi-card">
         <div class="kpi-label"><i class="bi bi-cash-coin me-1"></i>Ingresos mes</div>
-        <div class="kpi-val text-success">${{ ingresos_mes|floatformat:0 }}</div>
+        <div class="kpi-val text-success">${{ ingresos_mes|default:recaudado_mes_actual|floatformat:0 }}</div>
         <div class="kpi-delta {% if delta_ingresos >= 0 %}text-success{% else %}text-danger{% endif %}">
           {% if delta_ingresos >= 0 %}▲{% else %}▼{% endif %} {{ delta_ingresos|default:0 }}% vs mes ant.
         </div>
@@ -205,59 +207,53 @@
     </div>
   </div>
 
+  <!-- SECCIÓN GRÁFICAS INTEGRADA -->
   <div class="row g-3 mb-4">
-    <div class="col-lg-7">
+    <!-- Flujo Financiero Anual -->
+    <div class="col-12 col-xl-6">
       <div class="panel-card">
-        <div class="panel-card-title">
-          <i class="bi bi-bar-chart me-1"></i>Citas esta semana
-        </div>
-        <div class="d-flex gap-3 mb-3" style="font-size:0.75rem; font-weight:700;">
-          <span>
-            <span style="display:inline-block;width:10px;height:10px; border-radius:2px;background:#378ADD;margin-right:4px;"></span>
-            Realizadas
-          </span>
-          <span>
-            <span style="display:inline-block;width:10px;height:10px; border-radius:2px;background:#D3D1C7;margin-right:4px;"></span>
-            Canceladas
-          </span>
-        </div>
-        <div style="position: relative; width: 100%;">
-          <canvas id="chartCitas" height="110" role="img" aria-label="Citas realizadas y canceladas por día de la semana"></canvas>
+        <div class="panel-card-title"><i class="bi bi-graph-up-arrow me-1"></i>Flujo Financiero Anual</div>
+        <div style="position: relative; height: 180px; width: 100%;">
+          <canvas id="canvasIngresos"></canvas>
         </div>
       </div>
     </div>
-    <div class="col-lg-5">
+
+    <!-- Citas de la Semana -->
+    <div class="col-12 md-6 col-xl-3">
       <div class="panel-card">
-        <div class="panel-card-title">
-          <i class="bi bi-pie-chart me-1"></i>Estado de pagos
+        <div class="panel-card-title"><i class="bi bi-bar-chart me-1"></i>Citas esta semana</div>
+        <div class="d-flex gap-2 mb-2" style="font-size:0.68rem; font-weight:700;">
+          <span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#378ADD;margin-right:3px;"></span>Realizadas</span>
+          <span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#D3D1C7;margin-right:3px;"></span>Canceladas</span>
         </div>
-        <div class="d-flex gap-3 mb-3 flex-wrap" style="font-size:0.75rem; font-weight:700;">
-          <span>
-            <span style="display:inline-block;width:10px;height:10px; border-radius:2px;background:#639922;margin-right:4px;"></span>
-            Saldado {{ pct_pagadas|default:0 }}%
-          </span>
-          <span>
-            <span style="display:inline-block;width:10px;height:10px; border-radius:2px;background:#BA7517;margin-right:4px;"></span>
-            Con abono {{ pct_con_abono|default:0 }}%
-          </span>
-          <span>
-            <span style="display:inline-block;width:10px;height:10px; border-radius:2px;background:#E24B4A;margin-right:4px;"></span>
-            Sin pagar {{ pct_sin_pagar|default:0 }}%
-          </span>
+        <div style="position: relative; height: 150px; width: 100%;">
+          <canvas id="chartCitas"></canvas>
         </div>
-        <div style="position: relative; width: 100%;">
-          <canvas id="chartPagos" height="160" role="img" aria-label="Distribución de estados de pago"></canvas>
+      </div>
+    </div>
+
+    <!-- Distribución de Pagos -->
+    <div class="col-12 md-6 col-xl-3">
+      <div class="panel-card">
+        <div class="panel-card-title"><i class="bi bi-pie-chart me-1"></i>Estado de pagos</div>
+        <div class="d-flex gap-2 mb-2 flex-wrap" style="font-size:0.65rem; font-weight:700;">
+          <span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#639922;margin-right:3px;"></span>Saldado {{ pct_pagadas|default:0 }}%</span>
+          <span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#BA7517;margin-right:3px;"></span>Abono {{ pct_con_abono|default:0 }}%</span>
+        </div>
+        <div style="position: relative; height: 150px; width: 100%;">
+          <canvas id="chartPagos"></canvas>
         </div>
       </div>
     </div>
   </div>
 
+  <!-- SECCIÓN DE DETALLES, ALERTAS Y LOGS -->
   <div class="row g-3">
+    <!-- Próximas Citas -->
     <div class="col-lg-4">
       <div class="panel-card">
-        <div class="panel-card-title">
-          <i class="bi bi-calendar-day me-1"></i>Próximas citas hoy
-        </div>
+        <div class="panel-card-title"><i class="bi bi-calendar-day me-1"></i>Próximas citas hoy</div>
         {% for cita in citas_proximas %}
         <div class="cita-item d-flex align-items-center gap-2">
           <div class="avatar-circle">
@@ -295,11 +291,22 @@
       </div>
     </div>
 
+    <!-- Alertas de Stock e Insumos Críticos -->
     <div class="col-lg-4">
       <div class="panel-card">
-        <div class="panel-card-title">
-          <i class="bi bi-bell me-1"></i>Alertas del sistema
+        <div class="panel-card-title"><i class="bi bi-bell me-1"></i>Alertas del sistema</div>
+        
+        <!-- Renderizado dinámico de productos críticos desde base de datos -->
+        {% for prod in productos_criticos %}
+        <div class="alerta-item d-flex gap-2 align-items-start">
+          <i class="bi bi-exclamation-triangle text-danger" style="font-size:1rem; margin-top:2px; flex-shrink:0;"></i>
+          <div>
+            <div class="fw-bold text-danger" style="font-size:0.85rem;">Stock Crítico: {{ prod.nombre_producto }}</div>
+            <div class="text-muted" style="font-size:0.72rem;">Quedan solo {{ prod.stock_actual }} unidades en inventario.</div>
+          </div>
         </div>
+        {% endfor %}
+
         {% for alerta in alertas %}
         <div class="alerta-item d-flex gap-2 align-items-start">
           <i class="bi bi-{{ alerta.icono }}
@@ -314,21 +321,20 @@
           </div>
         </div>
         {% empty %}
+          {% if not productos_criticos %}
           <p class="text-muted small text-center py-3">
             <i class="bi bi-check-circle d-block fs-3 mb-2 text-success opacity-50"></i>
-            El sistema no reporta novedades.
+            El sistema no reporta novedades de stock ni alertas.
           </p>
+          {% endif %}
         {% endfor %}
       </div>
     </div>
 
+    <!-- Últimos Usuarios Registrados -->
     <div class="col-lg-4">
       <div class="panel-card">
-        <div class="panel-card-title">
-          <i class="bi bi-person-plus me-1"></i>
-          Últimos usuarios registrados
-        </div>
-
+        <div class="panel-card-title"><i class="bi bi-person-plus me-1"></i>Últimos usuarios registrados</div>
         {% for usuario in ultimos_usuarios %}
         <div class="alerta-item d-flex justify-content-between align-items-center">
           <div>
@@ -345,87 +351,44 @@
         </div>
         {% empty %}
         <p class="text-muted small text-center py-3">
-          No hay usuarios registrados.
+          No hay usuarios registrados recientemente.
         </p>
         {% endfor %}
       </div>
     </div>
 
+    <!-- Accesos Rápidos Operativos y Carga Laboral -->
     <div class="col-lg-12 mt-3">
       <div class="panel-card">
-        <div class="panel-card-title">
-          <i class="bi bi-grid me-1"></i>Accesos rápidos
-        </div>
+        <div class="panel-card-title"><i class="bi bi-grid me-1"></i>Accesos rápidos</div>
         <div class="row g-2 mb-4">
           <div class="col-6 col-md-3">
             <a href="{% url 'lista_citas' %}" class="acceso-btn">
-              <div class="acceso-icon" style="background:#E6F1FB; color:#185FA5;">
-                <i class="bi bi-calendar3"></i>
-              </div>
+              <div class="acceso-icon" style="background:#E6F1FB; color:#185FA5;"><i class="bi bi-calendar3"></i></div>
               Ver citas
             </a>
           </div>
           <div class="col-6 col-md-3">
             <a href="{% url 'lista_pacientes' %}" class="acceso-btn">
-              <div class="acceso-icon" style="background:#EAF3DE; color:#3B6D11;">
-                <i class="bi bi-people"></i>
-              </div>
+              <div class="acceso-icon" style="background:#EAF3DE; color:#3B6D11;"><i class="bi bi-people"></i></div>
               Pacientes
             </a>
           </div>
           <div class="col-6 col-md-3">
             <a href="{% url 'lista_citas' %}?pago=pendiente" class="acceso-btn">
-              <div class="acceso-icon" style="background:#FCEBEB; color:#791F1F;">
-                <i class="bi bi-cash-coin"></i>
-              </div>
+              <div class="acceso-icon" style="background:#FCEBEB; color:#791F1F;"><i class="bi bi-cash-coin"></i></div>
               Pagos pendientes
             </a>
           </div>
           <div class="col-6 col-md-3">
             <a href="{% url 'lista_inventario' %}" class="acceso-btn">
-              <div class="acceso-icon" style="background:#FFF3CD; color:#664D03;">
-                <i class="bi bi-box-seam"></i>
-              </div>
+              <div class="acceso-icon" style="background:#FFF3CD; color:#664D03;"><i class="bi bi-box-seam"></i></div>
               Inventario
-            </a>
-          </div>
-          <div class="col-6 col-md-3">
-            <a href="{% url 'lista_inventario' %}?estado=critico" class="acceso-btn">
-              <div class="acceso-icon" style="background:#FCEBEB; color:#791F1F;">
-                <i class="bi bi-exclamation-triangle"></i>
-              </div>
-              Stock crítico
-            </a>
-          </div>
-          <div class="col-6 col-md-3">
-            <a href="{% url 'kardex' %}" class="acceso-btn">
-              <div class="acceso-icon" style="background:#EEEDFE; color:#3C3489;">
-                <i class="bi bi-journal-text"></i>
-              </div>
-              Kardex
-            </a>
-          </div>
-          <div class="col-6 col-md-3">
-            <a href="{% url 'lista_citas' %}?exportar=excel" class="acceso-btn">
-              <div class="acceso-icon" style="background:#EAF3DE; color:#3B6D11;">
-                <i class="bi bi-file-earmark-excel"></i>
-              </div>
-              Exportar citas
-            </a>
-          </div>
-          <div class="col-6 col-md-3">
-            <a href="{% url 'lista_inventario' %}?exportar=excel" class="acceso-btn">
-              <div class="acceso-icon" style="background:#EAF3DE; color:#3B6D11;">
-                <i class="bi bi-file-earmark-spreadsheet"></i>
-              </div>
-              Exportar inventario
             </a>
           </div>
         </div>
 
-        <div class="panel-card-title">
-          <i class="bi bi-person-badge me-1"></i>Carga por doctor hoy
-        </div>
+        <div class="panel-card-title"><i class="bi bi-person-badge me-1"></i>Carga por doctor hoy</div>
         <div class="row">
           {% for doc in doctores_hoy %}
           <div class="col-md-4 d-flex align-items-center gap-2 mb-2">
@@ -444,7 +407,7 @@
           </div>
           {% empty %}
             <div class="col-12">
-              <p class="text-muted small">Sin citas asignadas hoy.</p>
+              <p class="text-muted small">Sin citas asignadas a doctores el día de hoy.</p>
             </div>
           {% endfor %}
         </div>
@@ -457,63 +420,95 @@
 {% endblock %}
 
 {% block extra_js %}
+<!-- Librería Chart.js Integrada -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
-  new Chart(document.getElementById('chartCitas'), {
-    type: 'bar',
-    data: {
-      labels: {{ labels_semana|safe|default:"[]" }},
-      datasets: [
-        {
-          label: 'Realizadas',
-          data: {{ realizadas_sem|safe|default:"[]" }},
-          backgroundColor: '#378ADD',
-          borderRadius: 8,
+  document.addEventListener("DOMContentLoaded", function() {
+    
+    // 1. Gráfica de Línea: Flujo Financiero Anual
+    const ctxIngresos = document.getElementById('canvasIngresos').getContext('2d');
+    new Chart(ctxIngresos, {
+        type: 'line',
+        data: {
+            labels: {{ chart_labels|safe|default:"['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']" }},
+            datasets: [{
+                label: 'Ingresos ($)',
+                data: {{ chart_data|safe|default:"[]" }},
+                borderColor: '#0d6efd',
+                backgroundColor: 'rgba(13, 110, 253, 0.04)',
+                borderWidth: 3,
+                fill: true,
+                tension: 0.3,
+                pointBackgroundColor: '#0d6efd',
+                pointRadius: 3
+            }]
         },
-        {
-          label: 'Canceladas',
-          data: {{ canceladas_sem|safe|default:"[]" }},
-          backgroundColor: '#D3D1C7',
-          borderRadius: 8,
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.03)' } },
+                x: { grid: { display: false } }
+            }
         }
-      ]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-      scales: {
-        x: { grid: { display: false } },
-        y: {
-          beginAtZero: true,
-          grid: { color: 'rgba(0,0,0,0.04)' },
-          ticks: { precision: 0 }
+    });
+
+    // 2. Gráfica de Barras: Citas de la Semana
+    new Chart(document.getElementById('chartCitas'), {
+      type: 'bar',
+      data: {
+        labels: {{ labels_semana|safe|default:"[]" }},
+        datasets: [
+          {
+            label: 'Realizadas',
+            data: {{ realizadas_sem|safe|default:"[]" }},
+            backgroundColor: '#378ADD',
+            borderRadius: 6,
+          },
+          {
+            label: 'Canceladas',
+            data: {{ canceladas_sem|safe|default:"[]" }},
+            backgroundColor: '#D3D1C7',
+            borderRadius: 6,
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { display: false } },
+          y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.03)' }, ticks: { precision: 0 } }
         }
       }
-    }
-  });
+    });
 
-  new Chart(document.getElementById('chartPagos'), {
-    type: 'doughnut',
-    data: {
-      labels: ['Saldado', 'Con abono', 'Sin pagar'],
-      datasets: [{
-        data: [
-          {{ pct_pagadas|default:0 }}, 
-          {{ pct_con_abono|default:0 }}, 
-          {{ pct_sin_pagar|default:0 }}
-        ],
-        backgroundColor: ['#639922', '#BA7517', '#E24B4A'],
-        borderWidth: 0,
-        hoverOffset: 6
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      cutout: '65%',
-      plugins: { legend: { display: false } }
-    }
+    // 3. Gráfica Circular: Estado de Pagos
+    new Chart(document.getElementById('chartPagos'), {
+      type: 'doughnut',
+      data: {
+        labels: ['Saldado', 'Con abono', 'Sin pagar'],
+        datasets: [{
+          data: [
+            {{ pct_pagadas|default:0 }}, 
+            {{ pct_con_abono|default:0 }}, 
+            {{ pct_sin_pagar|default:0 }}
+          ],
+          backgroundColor: ['#639922', '#BA7517', '#E24B4A'],
+          borderWidth: 0,
+          hoverOffset: 4
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '70%',
+        plugins: { legend: { display: false } }
+      }
+    });
+
   });
 </script>
 {% endblock %}

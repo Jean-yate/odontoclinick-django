@@ -9,6 +9,9 @@ class Especialidad(models.Model):
         managed = True
         db_table = 'especialidad'
 
+    def __str__(self):
+        return self.nombre_especialidad
+
 class Medico(models.Model):
     id_doctor = models.AutoField(primary_key=True)
     id_usuario = models.OneToOneField('CuentasApp.Usuario', models.DO_NOTHING, db_column='id_usuario')

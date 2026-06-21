@@ -1,0 +1,101 @@
+{% extends 'Webapp/base.html' %}
+{% block title %}Bitácora de Auditoría | OdontoClinick{% endblock %}
+
+{% block content %}
+<div class="container mt-4 mb-5">
+    <!-- ENCABEZADO -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold text-dark mb-0"><i class="bi bi-shield-shaded me-2 text-primary"></i>Bitácora de Auditoría</h2>
+            <p class="text-muted mb-0">Registro histórico, inmutable y cronológico de operaciones del software.</p>
+        </div>
+        <div>
+            <a href="{% url 'admin_app:dashboard_admin' %}" class="btn btn-light rounded-pill px-3 border fw-semibold">
+                <i class="bi bi-arrow-left me-1"></i> Panel de Control
+            </a>
+        </div>
+    </div>
+
+    <!-- FILTRO DE BÚSQUEDA -->
+    <div class="card border-0 shadow-sm p-3 mb-4" style="border-radius: 15px; background: #ffffff;">
+        <form method="GET" action="{% url 'admin_app:lista_auditoria' %}" class="row g-2">
+            <div class="col-md-10">
+                <div class="input-group">
+                    <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-funnel"></i></span>
+                    <input type="text" name="q" class="form-control border-start-0" placeholder="Filtrar por operador, acción o palabra clave..." value="{{ query }}">
+                </div>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100 fw-bold rounded-3">Buscar</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- REGISTROS DE AUDITORÍA -->
+    <div class="card border-0 shadow-sm" style="border-radius: 20px; overflow: hidden; background: #ffffff;">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light text-secondary fw-bold" style="font-size: 0.85rem;">
+                    <tr>
+                        <th class="ps-4">FECHA Y HORA</th>
+                        <th>OPERADOR</th>
+                        <th>ACCIÓN REALIZADA</th>
+                        <th>DETALLES ESPECÍFICOS</th>
+                        <th class="text-end pe-4">DIRECCIÓN IP</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in registros %}
+                    <tr>
+                        <td class="ps-4 text-secondary small fw-semibold">
+                            <i class="bi bi-clock-history me-1 text-muted"></i> {{ r.fecha_hora|date:"Y-m-d H:i:s" }}
+                        </td>
+                        <td>
+                            <span class="fw-bold text-dark">{{ r.id_usuario.nombre }} {{ r.id_usuario.apellidos }}</span>
+                            <div class="small text-muted">@{{ r.id_usuario.nombre_usuario }}</div>
+                        </td>
+                        <td>
+                            {% if 'Login' in r.accion or 'Inicio' in r.accion %}
+                                <span class="badge bg-success-subtle text-success px-2.5 py-1.5 rounded-3 fw-bold"><i class="bi bi-box-arrow-in-right me-1"></i> {{ r.accion }}</span>
+                            {% elif 'Eliminar' in r.accion or 'Desactivar' in r.accion %}
+                                <span class="badge bg-danger-subtle text-danger px-2.5 py-1.5 rounded-3 fw-bold"><i class="bi bi-trash3 me-1"></i> {{ r.accion }}</span>
+                            {% else %}
+                                <span class="badge bg-info-subtle text-info-dark px-2.5 py-1.5 rounded-3 fw-bold"><i class="bi bi-lightning me-1"></i> {{ r.accion }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-muted small" style="max-width: 350px; white-space: normal; word-break: break-all;">
+                            {{ r.detalles }}
+                        </td>
+                        <td class="text-end pe-4 text-monospace text-secondary small">
+                            {{ r.ip_direccion|default:"0.0.0.0" }}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center py-5 text-muted">
+                            <i class="bi bi-shield-check fs-1 d-block mb-2 text-secondary"></i>
+                            No se registran eventos bajo los criterios de búsqueda actuales.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- PAGINACIÓN -->
+    {% if registros.has_other_pages %}
+    <nav class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if registros.has_previous %}
+            <li class="page-item"><a class="page-link" href="?q={{ query }}&page={{ registros.previous_page_number }}">Anterior</a></li>
+            {% endif %}
+            <li class="page-item active"><span class="page-link">{{ registros.number }} de {{ registros.paginator.num_pages }}</span></li>
+            {% if registros.has_next %}
+            <li class="page-item"><a class="page-link" href="?q={{ query }}&page={{ registros.next_page_number }}">Siguiente</a></li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+{% endblock %}

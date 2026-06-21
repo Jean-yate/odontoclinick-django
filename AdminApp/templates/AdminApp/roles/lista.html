@@ -1,0 +1,86 @@
+{% extends 'Webapp/base.html' %}
+{% load static %}
+
+{% block title %}Gestión de Roles - OdontoClinick{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="background-color: #f8f9fa; min-height: 100vh;">
+    
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1 fw-bold text-dark">Roles del Sistema</h1>
+            <p class="text-muted mb-0">Configuración y visualización de los perfiles de acceso globales.</p>
+        </div>
+        <div>
+            <a href="{% url 'admin_app:dashboard_admin' %}" class="btn btn-outline-secondary rounded-3 me-2">
+                <i class="bi bi-arrow-left me-1"></i> Volver al Panel
+            </a>
+            <a href="{% url 'admin_app:crear_rol' %}" class="btn btn-success rounded-3 px-3">
+                <i class="bi bi-plus-circle me-1"></i> Nuevo Rol
+            </a>
+        </div>
+    </div>
+
+    {% if messages %}
+    <div class="row mb-3">
+        <div class="col-12">
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show border-0 shadow-sm" role="alert" style="border-radius: 12px;">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="card border-0 shadow-sm" style="border-radius: 16px; overflow: hidden;">
+        <div class="table-responsive">
+            <table class="table align-middle mb-0 bg-white">
+                <thead class="table-light text-uppercase fs-7 fw-bold text-secondary">
+                    <tr>
+                        <th class="ps-4">ID</th>
+                        <th>Nombre del Rol</th>
+                        <th>Personal Asignado</th>
+                        <th class="text-end pe-4">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in roles %}
+                    <tr>
+                        <td class="ps-4 text-muted fw-semibold">#{{ r.id_rol }}</td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-sm bg-primary-subtle rounded-3 p-2 me-3 text-primary text-center" style="width: 40px; height: 40px;">
+                                    <i class="bi bi-shield-lock fs-5"></i>
+                                </div>
+                                <div>
+                                    <h6 class="mb-0 fw-bold text-dark">{{ r.nombre_rol }}</h6>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge bg-primary-subtle text-primary rounded-pill px-3 py-2 fw-semibold">
+                                <i class="bi bi-people-fill me-1"></i> {{ r.total_usuarios }} Colaboradores
+                            </span>
+                        </td>
+                        <td class="text-end pe-4">
+                            <a href="{% url 'admin_app:editar_rol' r.id_rol %}" class="btn btn-sm btn-outline-primary border-0 rounded-3 px-3">
+                                <i class="bi bi-pencil-square me-1"></i> Editar
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="text-center text-muted py-5">
+                            <i class="bi bi-exclamation-circle d-block fs-2 mb-2 text-warning"></i>
+                            No se encontraron roles configurados en el sistema actualmente.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

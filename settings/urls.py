@@ -18,9 +18,17 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from Webapp import views as webapp_views
+from AdminApp import views as admin_views
+
+
+
+# settings/urls.py
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    path('admin/', include('AdminApp.urls', namespace='admin_app')),
+    
+    path('django-admin/', admin.site.urls),
     path('', include('Webapp.urls')),
     path('cuentas/', include('CuentasApp.urls')),
     path('paciente/', include('PacienteApp.urls')),
