@@ -1,0 +1,48 @@
+{% extends 'Webapp/base.html' %}
+{% load static %}
+
+{% block title %}{% if estado_cita %}Editar Estado de Cita{% else %}Nuevo Estado de Cita{% endif %} | OdontoClinick{% endblock %}
+
+{% block content %}
+<div class="container py-5" style="max-width: 500px;">
+    <div class="card border-0 shadow-sm p-4" style="border-radius: 16px;">
+        <h3 class="fw-bold text-dark mb-1">
+            <i class="bi bi-calendar-check me-2 text-primary"></i>
+            {% if estado_cita %}Modificar Estado{% else %}Nuevo Estado de Cita{% endif %}
+        </h3>
+        <p class="text-muted mb-4">
+            {% if estado_cita %}Editando el estado: <strong>{{ estado_cita.nombre_estado }}</strong>{% else %}Define un nuevo estado para el ciclo de vida de las citas.{% endif %}
+        </p>
+
+        <form method="POST">
+            {% csrf_token %}
+
+            <div class="mb-3">
+                <label class="form-label fw-bold text-secondary">Nombre del Estado</label>
+                <input type="text" name="nombre_estado" class="form-control bg-light border-0 py-2"
+                       placeholder="Ej: Programada, En Espera, Atendida..."
+                       required value="{{ estado_cita.nombre_estado|default:'' }}">
+            </div>
+
+            <div class="mb-4">
+                <label class="form-label fw-bold text-secondary">Color del badge</label>
+                <div class="d-flex align-items-center gap-2">
+                    <input type="color" name="color" class="form-control form-control-color border-0"
+                           style="width: 50px; height: 42px;"
+                           value="{{ estado_cita.color|default:'#6c757d' }}">
+                    <span class="text-muted small">Se usa para mostrar el estado como una etiqueta de color en citas y dashboards.</span>
+                </div>
+            </div>
+
+            <div class="d-grid gap-2">
+                <button type="submit" class="btn btn-primary fw-bold py-2 rounded-3">
+                    {% if estado_cita %}Guardar Cambios{% else %}Crear Estado{% endif %}
+                </button>
+                <a href="{% url 'admin_app:lista_estados_cita' %}" class="btn btn-outline-secondary border-0 py-2 rounded-3">
+                    Cancelar
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

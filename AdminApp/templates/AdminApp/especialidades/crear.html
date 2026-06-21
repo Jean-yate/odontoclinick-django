@@ -1,0 +1,44 @@
+{% extends 'Webapp/base.html' %}
+{% load static %}
+
+{% block title %}{% if especialidad %}Editar Especialidad{% else %}Nueva Especialidad{% endif %} | OdontoClinick{% endblock %}
+
+{% block content %}
+<div class="container py-5" style="max-width: 500px;">
+    <div class="card border-0 shadow-sm p-4" style="border-radius: 16px;">
+        <h3 class="fw-bold text-dark mb-1">
+            <i class="bi bi-heart-pulse me-2 text-primary"></i>
+            {% if especialidad %}Modificar Especialidad{% else %}Nueva Especialidad Médica{% endif %}
+        </h3>
+        <p class="text-muted mb-4">
+            {% if especialidad %}Editando la especialidad: <strong>{{ especialidad.nombre_especialidad }}</strong>{% else %}Define una nueva especialidad para asignar a doctores.{% endif %}
+        </p>
+
+        <form method="POST">
+            {% csrf_token %}
+
+            <div class="mb-3">
+                <label class="form-label fw-bold text-secondary">Nombre de la Especialidad</label>
+                <input type="text" name="nombre_especialidad" class="form-control bg-light border-0 py-2"
+                       placeholder="Ej: Ortodoncia, Endodoncia..."
+                       required value="{{ especialidad.nombre_especialidad|default:'' }}">
+            </div>
+
+            <div class="mb-4">
+                <label class="form-label fw-bold text-secondary">Descripción (opcional)</label>
+                <textarea name="descripcion" class="form-control bg-light border-0 py-2" rows="3"
+                          placeholder="Breve descripción de la especialidad...">{{ especialidad.descripcion|default:'' }}</textarea>
+            </div>
+
+            <div class="d-grid gap-2">
+                <button type="submit" class="btn btn-primary fw-bold py-2 rounded-3">
+                    {% if especialidad %}Guardar Cambios{% else %}Crear Especialidad{% endif %}
+                </button>
+                <a href="{% url 'admin_app:lista_especialidades' %}" class="btn btn-outline-secondary border-0 py-2 rounded-3">
+                    Cancelar
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

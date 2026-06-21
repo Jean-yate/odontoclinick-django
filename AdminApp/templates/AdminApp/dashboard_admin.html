@@ -442,6 +442,40 @@
           </div>
         </div>
 
+        <div class="panel-card-title"><i class="bi bi-sliders me-1"></i>Catálogos del sistema</div>
+        <div class="row g-2 mb-4">
+          <div class="col-6 col-md-3">
+            <a href="{% url 'admin_app:lista_estados_cita' %}" class="acceso-btn">
+              <div class="acceso-icon" style="background:#DCEFFB; color:#0B6FA8;"><i class="bi bi-calendar-event"></i></div>
+              Estados de cita
+            </a>
+          </div>
+          <div class="col-6 col-md-3">
+            <a href="{% url 'admin_app:lista_especialidades' %}" class="acceso-btn">
+              <div class="acceso-icon" style="background:#E1F4ED; color:#157A56;"><i class="bi bi-heart-pulse"></i></div>
+              Especialidades
+            </a>
+          </div>
+          <div class="col-6 col-md-3">
+            <a href="{% url 'admin_app:lista_estados_usuario' %}" class="acceso-btn">
+              <div class="acceso-icon" style="background:#FBEEDC; color:#A8650B;"><i class="bi bi-toggle-on"></i></div>
+              Estados de usuario
+            </a>
+          </div>
+          <div class="col-6 col-md-3">
+            <a href="{% url 'admin_app:lista_categorias_producto' %}" class="acceso-btn">
+              <div class="acceso-icon" style="background:#FDF1DC; color:#A87A0B;"><i class="bi bi-box-seam"></i></div>
+              Categorías de producto
+            </a>
+          </div>
+          <div class="col-6 col-md-3">
+            <a href="{% url 'admin_app:lista_metodos_pago' %}" class="acceso-btn">
+              <div class="acceso-icon" style="background:#E1F7E1; color:#157A2E;"><i class="bi bi-credit-card"></i></div>
+              Métodos de pago
+            </a>
+          </div>
+        </div>
+
         <div class="panel-card-title"><i class="bi bi-person-badge me-1"></i>Carga por doctor hoy</div>
         <div class="row">
           {% for doc in doctores_hoy %}

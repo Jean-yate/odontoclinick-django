@@ -1,0 +1,98 @@
+{% extends 'Webapp/base.html' %}
+{% load static %}
+
+{% block title %}Métodos de Pago - OdontoClinick{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="background-color: #f8f9fa; min-height: 100vh;">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1 fw-bold text-dark">Métodos de Pago</h1>
+            <p class="text-muted mb-0">Configura los métodos de pago aceptados por la clínica.</p>
+        </div>
+        <div>
+            <a href="{% url 'admin_app:dashboard_admin' %}" class="btn btn-outline-secondary rounded-3 me-2">
+                <i class="bi bi-arrow-left me-1"></i> Volver al Panel
+            </a>
+            <a href="{% url 'admin_app:crear_metodo_pago' %}" class="btn btn-success rounded-3 px-3">
+                <i class="bi bi-plus-circle me-1"></i> Nuevo Método
+            </a>
+        </div>
+    </div>
+
+    {% if messages %}
+    <div class="row mb-3">
+        <div class="col-12">
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show border-0 shadow-sm" role="alert" style="border-radius: 12px;">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="card border-0 shadow-sm" style="border-radius: 16px; overflow: hidden;">
+        <div class="table-responsive">
+            <table class="table align-middle mb-0 bg-white">
+                <thead class="table-light text-uppercase fs-7 fw-bold text-secondary">
+                    <tr>
+                        <th class="ps-4">ID</th>
+                        <th>Método de Pago</th>
+                        <th>Estado</th>
+                        <th>Pagos registrados</th>
+                        <th class="text-end pe-4">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for metodo in metodos_pago %}
+                    <tr>
+                        <td class="ps-4 text-muted fw-semibold">#{{ metodo.id_metodo_pago }}</td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-sm bg-success-subtle rounded-3 p-2 me-3 text-success text-center" style="width: 40px; height: 40px;">
+                                    <i class="bi bi-credit-card fs-5"></i>
+                                </div>
+                                <div>
+                                    <h6 class="mb-0 fw-bold text-dark">{{ metodo.nombre_metodo }}</h6>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            {% if metodo.activo %}
+                                <span class="badge bg-success-subtle text-success rounded-pill px-3 py-2 fw-semibold">
+                                    <i class="bi bi-check-circle me-1"></i> Activo
+                                </span>
+                            {% else %}
+                                <span class="badge bg-secondary-subtle text-secondary rounded-pill px-3 py-2 fw-semibold">
+                                    <i class="bi bi-x-circle me-1"></i> Inactivo
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge bg-primary-subtle text-primary rounded-pill px-3 py-2 fw-semibold">
+                                <i class="bi bi-cash-coin me-1"></i> {{ metodo.total_pagos }} Pagos
+                            </span>
+                        </td>
+                        <td class="text-end pe-4">
+                            <a href="{% url 'admin_app:editar_metodo_pago' metodo.id_metodo_pago %}" class="btn btn-sm btn-outline-primary border-0 rounded-3 px-3">
+                                <i class="bi bi-pencil-square me-1"></i> Editar
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center text-muted py-5">
+                            <i class="bi bi-exclamation-circle d-block fs-2 mb-2 text-warning"></i>
+                            No se encontraron métodos de pago configurados actualmente.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,49 @@
+{% extends 'Webapp/base.html' %}
+{% load static %}
+
+{% block title %}{% if metodo_pago %}Editar Método de Pago{% else %}Nuevo Método de Pago{% endif %} | OdontoClinick{% endblock %}
+
+{% block content %}
+<div class="container py-5" style="max-width: 500px;">
+    <div class="card border-0 shadow-sm p-4" style="border-radius: 16px;">
+        <h3 class="fw-bold text-dark mb-1">
+            <i class="bi bi-credit-card me-2 text-primary"></i>
+            {% if metodo_pago %}Modificar Método de Pago{% else %}Nuevo Método de Pago{% endif %}
+        </h3>
+        <p class="text-muted mb-4">
+            {% if metodo_pago %}Editando el método: <strong>{{ metodo_pago.nombre_metodo }}</strong>{% else %}Define un nuevo método de pago aceptado por la clínica.{% endif %}
+        </p>
+
+        <form method="POST">
+            {% csrf_token %}
+
+            <div class="mb-3">
+                <label class="form-label fw-bold text-secondary">Nombre del Método</label>
+                <input type="text" name="nombre_metodo" class="form-control bg-light border-0 py-2"
+                       placeholder="Ej: Efectivo, Tarjeta, Transferencia..."
+                       required value="{{ metodo_pago.nombre_metodo|default:'' }}">
+            </div>
+
+            <div class="mb-4 form-check form-switch ps-0">
+                <div class="d-flex align-items-center gap-2">
+                    <input type="checkbox" name="activo" id="activoCheck" class="form-check-input ms-0" role="switch"
+                           style="width: 2.5em; height: 1.4em;"
+                           {% if metodo_pago.activo or not metodo_pago %}checked{% endif %}>
+                    <label class="form-check-label fw-bold text-secondary" for="activoCheck">
+                        Método activo (disponible para usar en pagos)
+                    </label>
+                </div>
+            </div>
+
+            <div class="d-grid gap-2">
+                <button type="submit" class="btn btn-primary fw-bold py-2 rounded-3">
+                    {% if metodo_pago %}Guardar Cambios{% else %}Crear Método{% endif %}
+                </button>
+                <a href="{% url 'admin_app:lista_metodos_pago' %}" class="btn btn-outline-secondary border-0 py-2 rounded-3">
+                    Cancelar
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

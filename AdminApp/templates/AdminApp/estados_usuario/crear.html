@@ -1,0 +1,38 @@
+{% extends 'Webapp/base.html' %}
+{% load static %}
+
+{% block title %}{% if estado_usuario %}Editar Estado de Usuario{% else %}Nuevo Estado de Usuario{% endif %} | OdontoClinick{% endblock %}
+
+{% block content %}
+<div class="container py-5" style="max-width: 500px;">
+    <div class="card border-0 shadow-sm p-4" style="border-radius: 16px;">
+        <h3 class="fw-bold text-dark mb-1">
+            <i class="bi bi-toggle-on me-2 text-primary"></i>
+            {% if estado_usuario %}Modificar Estado{% else %}Nuevo Estado de Usuario{% endif %}
+        </h3>
+        <p class="text-muted mb-4">
+            {% if estado_usuario %}Editando el estado: <strong>{{ estado_usuario.nombre_estado }}</strong>{% else %}Define un nuevo estado para las cuentas de usuario.{% endif %}
+        </p>
+
+        <form method="POST">
+            {% csrf_token %}
+
+            <div class="mb-4">
+                <label class="form-label fw-bold text-secondary">Nombre del Estado</label>
+                <input type="text" name="nombre_estado" class="form-control bg-light border-0 py-2"
+                       placeholder="Ej: Activo, Inactivo, Suspendido..."
+                       required value="{{ estado_usuario.nombre_estado|default:'' }}">
+            </div>
+
+            <div class="d-grid gap-2">
+                <button type="submit" class="btn btn-primary fw-bold py-2 rounded-3">
+                    {% if estado_usuario %}Guardar Cambios{% else %}Crear Estado{% endif %}
+                </button>
+                <a href="{% url 'admin_app:lista_estados_usuario' %}" class="btn btn-outline-secondary border-0 py-2 rounded-3">
+                    Cancelar
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

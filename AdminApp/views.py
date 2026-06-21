@@ -9,11 +9,11 @@ from django.db.models.functions import ExtractMonth, TruncDate, ExtractHour, Ext
  
 # Modelos globales
 from CuentasApp.models import Usuario, Secretaria, Rol, Estado
-from MedicoApp.models import Medico, Disponibilidad
+from MedicoApp.models import Medico, Disponibilidad, Especialidad
 from PacienteApp.models import Paciente
-from CitaApp.models import Cita
-from FacturacionApp.models import Pago
-from InventarioApp.models import Producto, MovimientoInventario
+from CitaApp.models import Cita, EstadoCita
+from FacturacionApp.models import Pago, MetodoPago
+from InventarioApp.models import Producto, MovimientoInventario, CategoriaProducto
  
 from .forms import (
     UsuarioForm,
@@ -566,3 +566,336 @@ def editar_rol(request, id_rol):
                 messages.error(request, f"❌ Error al intentar guardar los cambios: {e}")
                 
     return render(request, 'AdminApp/roles/crear.html', {'rol': rol})
+
+
+# =========================================================================
+# --- CRUD DE CATÁLOGOS DEL SISTEMA ---
+# Mismo patrón que Roles: validación manual por POST.get(), sin ModelForm,
+# para mantener consistencia con el resto del panel de Administración.
+# =========================================================================
+
+# --- Estados de Cita (CitaApp.EstadoCita) ---
+
+@login_required
+def lista_estados_cita(request):
+    """Lista los estados posibles de una cita (Programada, En Espera, Atendida, etc.)"""
+    if not es_administrador(request.user):
+        return redirect('home')
+
+    estados_cita = EstadoCita.objects.annotate(total_citas=Count('cita')).order_by('nombre_estado')
+    return render(request, 'AdminApp/estados_cita/lista.html', {'estados_cita': estados_cita})
+
+
+@login_required
+def crear_estado_cita(request):
+    """Da de alta un nuevo estado de cita, con su color para los badges del sistema"""
+    if not es_administrador(request.user):
+        return redirect('home')
+
+    if request.method == 'POST':
+        nombre_estado = request.POST.get('nombre_estado', '').strip()
+        color = request.POST.get('color', '').strip() or '#6c757d'
+
+        if not nombre_estado:
+            messages.error(request, "⚠ El nombre del estado no puede enviarse vacío.")
+        elif EstadoCita.objects.filter(nombre_estado__iexact=nombre_estado).exists():
+            messages.error(request, f"❌ El estado '{nombre_estado}' ya se encuentra registrado.")
+        else:
+            try:
+                EstadoCita.objects.create(nombre_estado=nombre_estado, color=color)
+                messages.success(request, f"✅ El estado '{nombre_estado}' ha sido creado con éxito.")
+                return redirect('admin_app:lista_estados_cita')
+            except Exception as e:
+                messages.error(request, f"❌ Ocurrió un error al guardar el estado: {e}")
+
+    return render(request, 'AdminApp/estados_cita/crear.html')
+
+
+@login_required
+def editar_estado_cita(request, id_estado_cita):
+    """Modifica el nombre o color de un estado de cita existente"""
+    if not es_administrador(request.user):
+        return redirect('home')
+
+    estado_cita = get_object_or_404(EstadoCita, id_estado_cita=id_estado_cita)
+
+    if request.method == 'POST':
+        nombre_estado = request.POST.get('nombre_estado', '').strip()
+        color = request.POST.get('color', '').strip() or '#6c757d'
+
+        if not nombre_estado:
+            messages.error(request, "⚠ El nombre del estado es obligatorio.")
+        elif EstadoCita.objects.filter(nombre_estado__iexact=nombre_estado).exclude(id_estado_cita=id_estado_cita).exists():
+            messages.error(request, "❌ Ya existe otro estado con ese mismo nombre.")
+        else:
+            try:
+                estado_cita.nombre_estado = nombre_estado
+                estado_cita.color = color
+                estado_cita.save()
+                messages.success(request, f"✅ El estado se ha actualizado a '{nombre_estado}'.")
+                return redirect('admin_app:lista_estados_cita')
+            except Exception as e:
+                messages.error(request, f"❌ Error al intentar guardar los cambios: {e}")
+
+    return render(request, 'AdminApp/estados_cita/crear.html', {'estado_cita': estado_cita})
+
+
+# --- Especialidades (MedicoApp.Especialidad) ---
+
+@login_required
+def lista_especialidades(request):
+    """Lista las especialidades médicas disponibles para asignar a doctores"""
+    if not es_administrador(request.user):
+        return redirect('home')
+
+    especialidades = Especialidad.objects.annotate(total_doctores=Count('medico')).order_by('nombre_especialidad')
+    return render(request, 'AdminApp/especialidades/lista.html', {'especialidades': especialidades})
+
+
+@login_required
+def crear_especialidad(request):
+    """Da de alta una nueva especialidad médica"""
+    if not es_administrador(request.user):
+        return redirect('home')
+
+    if request.method == 'POST':
+        nombre_especialidad = request.POST.get('nombre_especialidad', '').strip()
+        descripcion = request.POST.get('descripcion', '').strip()
+
+        if not nombre_especialidad:
+            messages.error(request, "⚠ El nombre de la especialidad no puede enviarse vacío.")
+        elif Especialidad.objects.filter(nombre_especialidad__iexact=nombre_especialidad).exists():
+            messages.error(request, f"❌ La especialidad '{nombre_especialidad}' ya se encuentra registrada.")
+        else:
+            try:
+                Especialidad.objects.create(nombre_especialidad=nombre_especialidad, descripcion=descripcion or None)
+                messages.success(request, f"✅ La especialidad '{nombre_especialidad}' ha sido creada con éxito.")
+                return redirect('admin_app:lista_especialidades')
+            except Exception as e:
+                messages.error(request, f"❌ Ocurrió un error al guardar la especialidad: {e}")
+
+    return render(request, 'AdminApp/especialidades/crear.html')
+
+
+@login_required
+def editar_especialidad(request, id_especialidad):
+    """Modifica el nombre o descripción de una especialidad existente"""
+    if not es_administrador(request.user):
+        return redirect('home')
+
+    especialidad = get_object_or_404(Especialidad, id_especialidad=id_especialidad)
+
+    if request.method == 'POST':
+        nombre_especialidad = request.POST.get('nombre_especialidad', '').strip()
+        descripcion = request.POST.get('descripcion', '').strip()
+
+        if not nombre_especialidad:
+            messages.error(request, "⚠ El nombre de la especialidad es obligatorio.")
+        elif Especialidad.objects.filter(nombre_especialidad__iexact=nombre_especialidad).exclude(id_especialidad=id_especialidad).exists():
+            messages.error(request, "❌ Ya existe otra especialidad con ese mismo nombre.")
+        else:
+            try:
+                especialidad.nombre_especialidad = nombre_especialidad
+                especialidad.descripcion = descripcion or None
+                especialidad.save()
+                messages.success(request, f"✅ La especialidad se ha actualizado a '{nombre_especialidad}'.")
+                return redirect('admin_app:lista_especialidades')
+            except Exception as e:
+                messages.error(request, f"❌ Error al intentar guardar los cambios: {e}")
+
+    return render(request, 'AdminApp/especialidades/crear.html', {'especialidad': especialidad})
+
+
+# --- Estados de Usuario (CuentasApp.Estado) ---
+
+@login_required
+def lista_estados_usuario(request):
+    """Lista los estados posibles de un usuario (Activo, Inactivo, etc.)"""
+    if not es_administrador(request.user):
+        return redirect('home')
+
+    estados_usuario = Estado.objects.annotate(total_usuarios=Count('usuario')).order_by('nombre_estado')
+    return render(request, 'AdminApp/estados_usuario/lista.html', {'estados_usuario': estados_usuario})
+
+
+@login_required
+def crear_estado_usuario(request):
+    """Da de alta un nuevo estado de usuario"""
+    if not es_administrador(request.user):
+        return redirect('home')
+
+    if request.method == 'POST':
+        nombre_estado = request.POST.get('nombre_estado', '').strip()
+
+        if not nombre_estado:
+            messages.error(request, "⚠ El nombre del estado no puede enviarse vacío.")
+        elif Estado.objects.filter(nombre_estado__iexact=nombre_estado).exists():
+            messages.error(request, f"❌ El estado '{nombre_estado}' ya se encuentra registrado.")
+        else:
+            try:
+                Estado.objects.create(nombre_estado=nombre_estado)
+                messages.success(request, f"✅ El estado '{nombre_estado}' ha sido creado con éxito.")
+                return redirect('admin_app:lista_estados_usuario')
+            except Exception as e:
+                messages.error(request, f"❌ Ocurrió un error al guardar el estado: {e}")
+
+    return render(request, 'AdminApp/estados_usuario/crear.html')
+
+
+@login_required
+def editar_estado_usuario(request, id_estado):
+    """Modifica el nombre de un estado de usuario existente"""
+    if not es_administrador(request.user):
+        return redirect('home')
+
+    estado_usuario = get_object_or_404(Estado, id_estado=id_estado)
+
+    if request.method == 'POST':
+        nombre_estado = request.POST.get('nombre_estado', '').strip()
+
+        if not nombre_estado:
+            messages.error(request, "⚠ El nombre del estado es obligatorio.")
+        elif Estado.objects.filter(nombre_estado__iexact=nombre_estado).exclude(id_estado=id_estado).exists():
+            messages.error(request, "❌ Ya existe otro estado con ese mismo nombre.")
+        else:
+            try:
+                estado_usuario.nombre_estado = nombre_estado
+                estado_usuario.save()
+                messages.success(request, f"✅ El estado se ha actualizado a '{nombre_estado}'.")
+                return redirect('admin_app:lista_estados_usuario')
+            except Exception as e:
+                messages.error(request, f"❌ Error al intentar guardar los cambios: {e}")
+
+    return render(request, 'AdminApp/estados_usuario/crear.html', {'estado_usuario': estado_usuario})
+
+
+# --- Categorías de Producto (InventarioApp.CategoriaProducto) ---
+
+@login_required
+def lista_categorias_producto(request):
+    """Lista las categorías de productos del inventario"""
+    if not es_administrador(request.user):
+        return redirect('home')
+
+    categorias = CategoriaProducto.objects.annotate(total_productos=Count('producto')).order_by('nombre_categoria')
+    return render(request, 'AdminApp/categorias_producto/lista.html', {'categorias': categorias})
+
+
+@login_required
+def crear_categoria_producto(request):
+    """Da de alta una nueva categoría de producto"""
+    if not es_administrador(request.user):
+        return redirect('home')
+
+    if request.method == 'POST':
+        nombre_categoria = request.POST.get('nombre_categoria', '').strip()
+        descripcion = request.POST.get('descripcion', '').strip()
+
+        if not nombre_categoria:
+            messages.error(request, "⚠ El nombre de la categoría no puede enviarse vacío.")
+        elif CategoriaProducto.objects.filter(nombre_categoria__iexact=nombre_categoria).exists():
+            messages.error(request, f"❌ La categoría '{nombre_categoria}' ya se encuentra registrada.")
+        else:
+            try:
+                CategoriaProducto.objects.create(nombre_categoria=nombre_categoria, descripcion=descripcion or None)
+                messages.success(request, f"✅ La categoría '{nombre_categoria}' ha sido creada con éxito.")
+                return redirect('admin_app:lista_categorias_producto')
+            except Exception as e:
+                messages.error(request, f"❌ Ocurrió un error al guardar la categoría: {e}")
+
+    return render(request, 'AdminApp/categorias_producto/crear.html')
+
+
+@login_required
+def editar_categoria_producto(request, id_categoria):
+    """Modifica el nombre o descripción de una categoría de producto existente"""
+    if not es_administrador(request.user):
+        return redirect('home')
+
+    categoria = get_object_or_404(CategoriaProducto, id_categoria=id_categoria)
+
+    if request.method == 'POST':
+        nombre_categoria = request.POST.get('nombre_categoria', '').strip()
+        descripcion = request.POST.get('descripcion', '').strip()
+
+        if not nombre_categoria:
+            messages.error(request, "⚠ El nombre de la categoría es obligatorio.")
+        elif CategoriaProducto.objects.filter(nombre_categoria__iexact=nombre_categoria).exclude(id_categoria=id_categoria).exists():
+            messages.error(request, "❌ Ya existe otra categoría con ese mismo nombre.")
+        else:
+            try:
+                categoria.nombre_categoria = nombre_categoria
+                categoria.descripcion = descripcion or None
+                categoria.save()
+                messages.success(request, f"✅ La categoría se ha actualizado a '{nombre_categoria}'.")
+                return redirect('admin_app:lista_categorias_producto')
+            except Exception as e:
+                messages.error(request, f"❌ Error al intentar guardar los cambios: {e}")
+
+    return render(request, 'AdminApp/categorias_producto/crear.html', {'categoria': categoria})
+
+
+# --- Métodos de Pago (FacturacionApp.MetodoPago) ---
+
+@login_required
+def lista_metodos_pago(request):
+    """Lista los métodos de pago aceptados (Efectivo, Tarjeta, Transferencia, etc.)"""
+    if not es_administrador(request.user):
+        return redirect('home')
+
+    metodos_pago = MetodoPago.objects.annotate(total_pagos=Count('pago')).order_by('nombre_metodo')
+    return render(request, 'AdminApp/metodos_pago/lista.html', {'metodos_pago': metodos_pago})
+
+
+@login_required
+def crear_metodo_pago(request):
+    """Da de alta un nuevo método de pago"""
+    if not es_administrador(request.user):
+        return redirect('home')
+
+    if request.method == 'POST':
+        nombre_metodo = request.POST.get('nombre_metodo', '').strip()
+        activo = request.POST.get('activo') == 'on'
+
+        if not nombre_metodo:
+            messages.error(request, "⚠ El nombre del método de pago no puede enviarse vacío.")
+        elif MetodoPago.objects.filter(nombre_metodo__iexact=nombre_metodo).exists():
+            messages.error(request, f"❌ El método '{nombre_metodo}' ya se encuentra registrado.")
+        else:
+            try:
+                MetodoPago.objects.create(nombre_metodo=nombre_metodo, activo=int(activo))
+                messages.success(request, f"✅ El método de pago '{nombre_metodo}' ha sido creado con éxito.")
+                return redirect('admin_app:lista_metodos_pago')
+            except Exception as e:
+                messages.error(request, f"❌ Ocurrió un error al guardar el método de pago: {e}")
+
+    return render(request, 'AdminApp/metodos_pago/crear.html')
+
+
+@login_required
+def editar_metodo_pago(request, id_metodo_pago):
+    """Modifica el nombre o estado activo de un método de pago existente"""
+    if not es_administrador(request.user):
+        return redirect('home')
+
+    metodo_pago = get_object_or_404(MetodoPago, id_metodo_pago=id_metodo_pago)
+
+    if request.method == 'POST':
+        nombre_metodo = request.POST.get('nombre_metodo', '').strip()
+        activo = request.POST.get('activo') == 'on'
+
+        if not nombre_metodo:
+            messages.error(request, "⚠ El nombre del método de pago es obligatorio.")
+        elif MetodoPago.objects.filter(nombre_metodo__iexact=nombre_metodo).exclude(id_metodo_pago=id_metodo_pago).exists():
+            messages.error(request, "❌ Ya existe otro método de pago con ese mismo nombre.")
+        else:
+            try:
+                metodo_pago.nombre_metodo = nombre_metodo
+                metodo_pago.activo = int(activo)
+                metodo_pago.save()
+                messages.success(request, f"✅ El método de pago se ha actualizado a '{nombre_metodo}'.")
+                return redirect('admin_app:lista_metodos_pago')
+            except Exception as e:
+                messages.error(request, f"❌ Error al intentar guardar los cambios: {e}")
+
+    return render(request, 'AdminApp/metodos_pago/crear.html', {'metodo_pago': metodo_pago})

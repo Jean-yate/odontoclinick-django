@@ -1,0 +1,44 @@
+{% extends 'Webapp/base.html' %}
+{% load static %}
+
+{% block title %}{% if categoria %}Editar Categoría{% else %}Nueva Categoría{% endif %} | OdontoClinick{% endblock %}
+
+{% block content %}
+<div class="container py-5" style="max-width: 500px;">
+    <div class="card border-0 shadow-sm p-4" style="border-radius: 16px;">
+        <h3 class="fw-bold text-dark mb-1">
+            <i class="bi bi-box-seam me-2 text-primary"></i>
+            {% if categoria %}Modificar Categoría{% else %}Nueva Categoría de Producto{% endif %}
+        </h3>
+        <p class="text-muted mb-4">
+            {% if categoria %}Editando la categoría: <strong>{{ categoria.nombre_categoria }}</strong>{% else %}Define una nueva categoría para clasificar productos.{% endif %}
+        </p>
+
+        <form method="POST">
+            {% csrf_token %}
+
+            <div class="mb-3">
+                <label class="form-label fw-bold text-secondary">Nombre de la Categoría</label>
+                <input type="text" name="nombre_categoria" class="form-control bg-light border-0 py-2"
+                       placeholder="Ej: Insumos dentales, Materiales de protección..."
+                       required value="{{ categoria.nombre_categoria|default:'' }}">
+            </div>
+
+            <div class="mb-4">
+                <label class="form-label fw-bold text-secondary">Descripción (opcional)</label>
+                <textarea name="descripcion" class="form-control bg-light border-0 py-2" rows="3"
+                          placeholder="Breve descripción de la categoría...">{{ categoria.descripcion|default:'' }}</textarea>
+            </div>
+
+            <div class="d-grid gap-2">
+                <button type="submit" class="btn btn-primary fw-bold py-2 rounded-3">
+                    {% if categoria %}Guardar Cambios{% else %}Crear Categoría{% endif %}
+                </button>
+                <a href="{% url 'admin_app:lista_categorias_producto' %}" class="btn btn-outline-secondary border-0 py-2 rounded-3">
+                    Cancelar
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
