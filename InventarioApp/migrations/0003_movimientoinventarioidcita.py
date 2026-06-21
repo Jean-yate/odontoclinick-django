@@ -1,12 +1,17 @@
-# Generated manually — agrega el FK id_cita que quedó fuera de 0001_initial
-# porque CitaApp.Cita no estaba disponible en ese momento o hubo un error de orden.
+# Esta migración originalmente agregaba el campo id_cita a MovimientoInventario,
+# asumiendo que 0001_initial no lo incluía todavía.
 #
-# INSTRUCCIONES:
-#   1. Guarda este archivo como:
-#      InventarioApp/migrations/0003_movimientoinventario_id_cita.py
-#   2. Ejecuta:  python manage.py migrate InventarioApp
+# FIX: en el código actual, InventarioApp.0001_initial YA incluye el campo
+# id_cita en MovimientoInventario (línea ~78 de ese archivo). Esta migración
+# solo tenía sentido para bases de datos viejas creadas ANTES de que
+# 0001_initial se corrigiera para incluir el campo. En una base de datos
+# nueva (como Railway), correr el AddField original choca con
+# "Duplicate column name 'id_cita'", porque la columna ya existe.
 #
-# Si ya existe una migración 0003, cambia el nombre a 0004 y ajusta dependencies.
+# La convertimos en SeparateDatabaseAndState: el estado de Django se
+# actualiza igual (mantiene compatibilidad con bases viejas que ya tenían
+# esta migración aplicada en su django_migrations), pero no se ejecuta
+# SQL real, porque la columna ya existe desde 0001_initial.
 
 import django.db.models.deletion
 from django.db import migrations, models
@@ -15,23 +20,26 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        # Ajusta '0002_...' al nombre real de tu última migración en InventarioApp
         ('InventarioApp', '0002_productoempresa'),
-        # CitaApp debe estar migrado antes que este
         ('CitaApp', '0001_initial'),
     ]
 
     operations = [
-        migrations.AddField(
-            model_name='movimientoinventario',
-            name='id_cita',
-            field=models.ForeignKey(
-                blank=True,
-                db_column='id_cita',
-                null=True,
-                on_delete=django.db.models.deletion.SET_NULL,
-                related_name='insumos_consumidos',
-                to='CitaApp.cita',
-            ),
+        migrations.SeparateDatabaseAndState(
+            state_operations=[
+                migrations.AddField(
+                    model_name='movimientoinventario',
+                    name='id_cita',
+                    field=models.ForeignKey(
+                        blank=True,
+                        db_column='id_cita',
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name='insumos_consumidos',
+                        to='CitaApp.cita',
+                    ),
+                ),
+            ],
+            database_operations=[],  # sin SQL real: la columna id_cita ya existe, creada por InventarioApp.0001_initial
         ),
     ]
