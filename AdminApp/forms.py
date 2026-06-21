@@ -179,9 +179,6 @@ class SecretariaExtraForm(forms.ModelForm):
 
     def clean_turno(self):
         turno = self.cleaned_data.get('turno')
-        if not turno:
-            raise ValidationError("Debe seleccionar un turno.")
-        return turno
 
 
 class PacienteExtraForm(forms.ModelForm):

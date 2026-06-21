@@ -1,0 +1,10 @@
+# Railway usa Nixpacks para detectar y construir el proyecto automáticamente.
+# mysqlclient (el driver de MySQL que usa Django) necesita compilar contra
+# las librerías de desarrollo de MySQL/MariaDB del sistema operativo — sin
+# esto, el build falla con un error de "mysql_config not found" o similar.
+
+[phases.setup]
+nixPkgs = ["...", "mysql80", "pkg-config"]
+
+[phases.build]
+cmds = ["python manage.py collectstatic --noinput"]

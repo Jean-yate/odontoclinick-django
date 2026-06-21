@@ -354,8 +354,6 @@ def crear_usuario(request):
 
                 elif 'secretaria' in rol:
                     turno = request.POST.get('turno', '').strip()
-                    if not turno:
-                        raise Exception("Debe seleccionar un turno.")
                     perfil = Secretaria(
                         fecha_ingreso=request.POST.get('fecha_ingreso') or None,
                         turno=turno
