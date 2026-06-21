@@ -7,10 +7,27 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('InventarioApp', '0004_alter_productoempresa_id_empresa_and_more'),
+        # Aseguramos que EmpresaApp.0001 ya corrió (y ya "adoptó" en su
+        # estado el modelo Empresa) antes de quitarlo del estado de
+        # InventarioApp — así no hay una ventana donde ningún app lo
+        # reconozca como suyo.
+        ('EmpresaApp', '0001_initial'),
     ]
 
+    # FIX: igual que en EmpresaApp.0001_initial, este DeleteModel original
+    # emitía un DROP TABLE real sobre 'empresa' — pero esa tabla sigue
+    # existiendo y en uso, ahora bajo el modelo Empresa de EmpresaApp. Un
+    # DROP TABLE real aquí borraría los datos de EmpresaApp.Empresa por
+    # error. Con SeparateDatabaseAndState, solo le decimos a Django "deja
+    # de rastrear este modelo como tuyo" (ya lo rastrea EmpresaApp), sin
+    # tocar el SQL real.
     operations = [
-        migrations.DeleteModel(
-            name='Empresa',
+        migrations.SeparateDatabaseAndState(
+            state_operations=[
+                migrations.DeleteModel(
+                    name='Empresa',
+                ),
+            ],
+            database_operations=[],  # sin SQL real: la tabla sigue existiendo, ahora la usa EmpresaApp.Empresa
         ),
     ]

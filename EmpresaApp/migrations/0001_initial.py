@@ -7,28 +7,45 @@ class Migration(migrations.Migration):
 
     initial = True
 
-    # FIX: sin esta dependencia explícita, Django no sabe que InventarioApp
-    # ya tuvo (y borró) su propio modelo Empresa con db_table='empresa'.
-    # Sin esto, esta migración puede correr ANTES de que InventarioApp
-    # termine de crear y eliminar su tabla 'empresa', chocando con un
-    # CREATE TABLE duplicado en la misma tabla física.
+    # FIX REAL: este modelo Empresa es EXACTAMENTE el mismo (mismos campos,
+    # mismo db_table='empresa') que InventarioApp creó en su 0001_initial y
+    # luego "borra" en su 0005_delete_empresa. No son dos tablas distintas
+    # que compiten — es la MISMA tabla física, solo que Django la rastrea
+    # desde dos apps distintas en dos puntos de la historia de migraciones.
+    #
+    # Usar CreateModel aquí hace que Django emita un CREATE TABLE real,
+    # chocando con la tabla que InventarioApp.0001_initial ya creó (error
+    # 1050 "table already exists"). Y si esta migración corriera DESPUÉS
+    # del DeleteModel de InventarioApp.0005, se forma un ciclo, porque
+    # InventarioApp.0004 ya depende de EmpresaApp.0001 para crear su FK.
+    #
+    # La solución correcta es SeparateDatabaseAndState: le decimos a Django
+    # "actualiza tu estado interno (ahora el modelo Empresa vive en
+    # EmpresaApp)" sin ejecutar ningún SQL real (database_operations=[]).
+    # InventarioApp.0005_delete_empresa, más adelante, tampoco debe borrar
+    # la tabla física real — ver el comentario equivalente en ese archivo.
     dependencies = [
-        ('InventarioApp', '0005_delete_empresa'),
+        ('InventarioApp', '0001_initial'),
     ]
 
     operations = [
-        migrations.CreateModel(
-            name='Empresa',
-            fields=[
-                ('id_empresa', models.AutoField(primary_key=True, serialize=False)),
-                ('nombre_empresa', models.CharField(max_length=255, unique=True, verbose_name='Nombre de la Empresa')),
-                ('nit', models.CharField(max_length=50, unique=True, verbose_name='NIT')),
-                ('es_proveedor', models.BooleanField(default=True, verbose_name='¿Es Proveedor?')),
-                ('es_comprador', models.BooleanField(default=False, verbose_name='¿Es Comprador?')),
+        migrations.SeparateDatabaseAndState(
+            state_operations=[
+                migrations.CreateModel(
+                    name='Empresa',
+                    fields=[
+                        ('id_empresa', models.AutoField(primary_key=True, serialize=False)),
+                        ('nombre_empresa', models.CharField(max_length=255, unique=True, verbose_name='Nombre de la Empresa')),
+                        ('nit', models.CharField(max_length=50, unique=True, verbose_name='NIT')),
+                        ('es_proveedor', models.BooleanField(default=True, verbose_name='¿Es Proveedor?')),
+                        ('es_comprador', models.BooleanField(default=False, verbose_name='¿Es Comprador?')),
+                    ],
+                    options={
+                        'db_table': 'empresa',
+                        'managed': True,
+                    },
+                ),
             ],
-            options={
-                'db_table': 'empresa',
-                'managed': True,
-            },
+            database_operations=[],  # sin SQL real: la tabla 'empresa' ya existe, creada por InventarioApp.0001_initial
         ),
     ]
