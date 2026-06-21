@@ -7,7 +7,13 @@ class Migration(migrations.Migration):
 
     initial = True
 
+    # FIX: sin esta dependencia explícita, Django no sabe que InventarioApp
+    # ya tuvo (y borró) su propio modelo Empresa con db_table='empresa'.
+    # Sin esto, esta migración puede correr ANTES de que InventarioApp
+    # termine de crear y eliminar su tabla 'empresa', chocando con un
+    # CREATE TABLE duplicado en la misma tabla física.
     dependencies = [
+        ('InventarioApp', '0005_delete_empresa'),
     ]
 
     operations = [
