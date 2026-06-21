@@ -9,15 +9,27 @@ def generar_qr_cita(cita):
     Genera un código QR único para el check-in de la cita
     y lo almacena en el modelo.
     """
-    # URL local o de producción para el Check-In
-    url = f"http://127.0.0.1:8000/citas/checkin/{cita.id_cita}/"
+    # FIX: antes tenía 'http://127.0.0.1:8000' hardcodeado — cualquier QR
+    # generado en producción apuntaba a localhost, inútil al escanearlo
+    # desde un celular real. Ahora usa settings.SITE_URL (configurable por
+    # variable de entorno: distinto en local vs Railway).
+    url = f"{settings.SITE_URL}/citas/checkin/{cita.id_cita}/"
     qr = qrcode.make(url)
-    
+
     buffer = BytesIO()
     qr.save(buffer, format="PNG")
-    
+
+    # FIX REAL del error "Empty file": después de escribir en el buffer con
+    # qr.save(), el cursor queda posicionado al FINAL del stream. Si no se
+    # rebobina con seek(0) antes de pasarlo a File(), cualquier storage que
+    # lea desde la posición actual (como cloudinary_storage) encuentra el
+    # cursor ya al final y lee 0 bytes — de ahí "Empty file". Con
+    # FileSystemStorage local esto no fallaba porque Django maneja ese caso
+    # de otra forma internamente, pero con Cloudinary sí es necesario.
+    buffer.seek(0)
+
     nombre_archivo = f"cita_{cita.id_cita}.png"
-    
+
     cita.qr_code.save(
         nombre_archivo,
         File(buffer),

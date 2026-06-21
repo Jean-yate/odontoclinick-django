@@ -55,8 +55,14 @@ def agendar_cita(request):
 
             if form.is_valid():
                 with transaction.atomic():
+                    # NOTA: Cita.save() ya genera el QR automáticamente la
+                    # primera vez que se guarda (ver CitaApp/models.py).
+                    # Antes aquí se llamaba también a generar_qr_cita(cita),
+                    # una función duplicada en utils.py que regeneraba el QR
+                    # innecesariamente y, al no rebobinar el buffer con
+                    # seek(0), causaba el error "Empty file" al subir a
+                    # Cloudinary. Se quita la llamada redundante.
                     cita = form.save()
-                    generar_qr_cita(cita)
 
                 try:
                     telefono_paciente = cita.id_paciente.id_usuario.telefono
