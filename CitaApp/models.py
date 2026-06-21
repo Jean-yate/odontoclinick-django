@@ -1,5 +1,6 @@
 from django.db import models
 from django.db.models import Sum
+from django.conf import settings
 import qrcode
 from io import BytesIO
 from django.core.files import File
@@ -40,7 +41,13 @@ class Cita(models.Model):
         super().save(*args, **kwargs)
 
         if not self.qr_code:
-            qr_data = f"http://127.0.0.1:8000/citas/checkin/{self.id_cita}/"
+            # FIX: antes esto tenía 'http://127.0.0.1:8000' hardcodeado, lo
+            # que hacía que CUALQUIER QR generado en producción apuntara a
+            # localhost — inútil al escanearlo desde un celular real. Ahora
+            # usa settings.SITE_URL, que se configura por entorno (variable
+            # de entorno SITE_URL): localhost en desarrollo, el dominio real
+            # de Railway en producción.
+            qr_data = f"{settings.SITE_URL}/citas/checkin/{self.id_cita}/"
 
             qr = qrcode.make(qr_data)
 

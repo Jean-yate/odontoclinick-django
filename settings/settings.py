@@ -29,22 +29,28 @@ SECRET_KEY = config('SECRET_KEY')
 DEBUG = config('DEBUG', default=False, cast=bool)
 
 # ALLOWED_HOSTS viene de una variable de entorno, separada por comas.
-# Railway asigna un dominio tipo *.up.railway.app — lo agregamos abajo
-# automáticamente además de lo que pongas en la variable.
+# Pon ahí el dominio real de tu servicio (ej. en Railway, el que ves en
+# Settings > Networking > Public Networking), sin "https://" y sin barra
+# al final.
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=Csv())
 
-# Railway expone el dominio público en esta variable de entorno automática.
-# La agregamos a ALLOWED_HOSTS sin que tengas que escribirla a mano.
-RAILWAY_PUBLIC_DOMAIN = config('RAILWAY_PUBLIC_DOMAIN', default='')
-if RAILWAY_PUBLIC_DOMAIN:
-    ALLOWED_HOSTS.append(RAILWAY_PUBLIC_DOMAIN)
+# NOTA: Railway NO inyecta automáticamente una variable de entorno con el
+# dominio público dentro del contenedor (a diferencia de otras plataformas
+# como Heroku). Por eso ALLOWED_HOSTS y CSRF_TRUSTED_ORIGINS deben
+# configurarse a mano en el panel de Variables con el dominio real.
 
 # Necesario para que Django confíe en peticiones POST (formularios, login)
 # que llegan a través del dominio HTTPS de Railway. Sin esto, vas a ver
 # errores de "CSRF verification failed" en producción aunque todo esté bien.
 CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', default='', cast=Csv())
-if RAILWAY_PUBLIC_DOMAIN:
-    CSRF_TRUSTED_ORIGINS.append(f'https://{RAILWAY_PUBLIC_DOMAIN}')
+
+# URL pública completa del sitio (con esquema), usada para construir enlaces
+# absolutos fuera del contexto de una petición HTTP — por ejemplo, el QR de
+# check-in de citas, o links en correos electrónicos. Sin esto, el código
+# tendría que adivinar o hardcodear localhost, lo cual rompe en producción.
+# En local: SITE_URL=http://127.0.0.1:8000 (o se usa ese valor por defecto).
+# En Railway: SITE_URL=https://tu-dominio-real.up.railway.app
+SITE_URL = config('SITE_URL', default='http://127.0.0.1:8000').rstrip('/')
 
 # Railway sirve todo detrás de un proxy HTTPS. Esto le dice a Django que
 # confíe en el header que indica que la conexión original era HTTPS,
@@ -68,6 +74,10 @@ INSTALLED_APPS = [
     'django.contrib.sites',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'cloudinary_storage',  # debe ir ANTES de staticfiles según la doc de cloudinary, pero
+                           # como staticfiles ya está arriba, esto sigue funcionando bien
+                           # para MEDIA (que es lo único que usamos cloudinary para)
+    'cloudinary',
     'data_wizard',
     'data_wizard.sources',
     'rest_framework',
@@ -213,9 +223,20 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 # Comprime y le pone hash al nombre de cada archivo estático (cache-busting
 # automático: si cambias un CSS, el navegador no sirve la versión vieja
 # cacheada).
+#
+# El storage "default" (usado por ImageField/FileField, como el QR de Cita)
+# usa Cloudinary cuando hay credenciales configuradas — necesario porque
+# Railway no tiene almacenamiento persistente: cualquier archivo guardado en
+# disco se borra en cada redeploy. Si CLOUDINARY_URL no está seteada (ej. en
+# desarrollo local sin querer usar Cloudinary), cae de vuelta a
+# FileSystemStorage normal, guardando en MEDIA_ROOT como antes.
+_using_cloudinary = bool(config('CLOUDINARY_URL', default=''))
+
 STORAGES = {
     "default": {
-        "BACKEND": "django.core.files.storage.FileSystemStorage",
+        "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage"
+        if _using_cloudinary
+        else "django.core.files.storage.FileSystemStorage",
     },
     "staticfiles": {
         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
@@ -226,13 +247,13 @@ STORAGES = {
 # =============================================================================
 # ARCHIVOS MULTIMEDIA (fotos, QR codes, comprobantes)
 # =============================================================================
-# ADVERTENCIA IMPORTANTE: Railway NO tiene almacenamiento persistente por
-# defecto. Cualquier archivo guardado aquí (incluyendo los QR de citas que
-# genera el modelo Cita) se BORRA en cada redeploy. Esto requiere una
-# solución aparte (almacenamiento en la nube tipo S3/Cloudinary, o un
-# volumen de Railway). Lo resolvemos en un paso posterior — por ahora dejamos
-# la configuración local funcionando para que el resto del deploy no se
-# bloquee.
+# Cloudinary se configura completo mediante la variable de entorno
+# CLOUDINARY_URL (formato: cloudinary://API_KEY:API_SECRET@CLOUD_NAME),
+# que el propio paquete cloudinary lee automáticamente del entorno — no
+# hace falta declarar CLOUDINARY_STORAGE aquí manualmente.
+#
+# Si no hay CLOUDINARY_URL (ej. desarrollo local), los archivos se guardan
+# en disco local normalmente, igual que antes.
 
 MEDIA_URL = 'media/'
 MEDIA_ROOT = BASE_DIR / 'media'
