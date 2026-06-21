@@ -16,6 +16,7 @@ from CitaApp.models import Cita, EstadoCita
 from PacienteApp.models import Paciente
 from TratamientoApp.models import Tratamiento, TratamientoProducto
 from InventarioApp.models import Producto, MovimientoInventario
+from .forms import DisponibilidadForm
 
 # --- VISTAS DE PANEL Y GESTIÓN ---
 
@@ -41,20 +42,25 @@ def dashboard_medico(request):
 def mis_horarios(request):
     """Gestiona la visualización y creación de jornadas de disponibilidad."""
     medico = get_object_or_404(Medico, id_usuario=request.user)
-
     if request.method == 'POST':
-        Disponibilidad.objects.create(
-            id_medico=medico,
-            dia_semana=request.POST.get('dia_semana'),
-            hora_inicio=request.POST.get('hora_inicio'),
-            hora_fin=request.POST.get('hora_fin'),
-            duracion_cita=request.POST.get('duracion_cita')
-        )
-        messages.success(request, "✅ Jornada de atención agregada correctamente.")
-        return redirect('mis_horarios')
-
-    horarios = Disponibilidad.objects.filter(id_medico=medico).order_by('dia_semana', 'hora_inicio')
-    return render(request, 'mi_horario.html', {'horarios': horarios})
+        form = DisponibilidadForm(request.POST)
+        if form.is_valid():
+            disponibilidad = form.save(commit=False)
+            disponibilidad.id_medico = medico
+            disponibilidad.save()
+            messages.success(request, "✅ Jornada creada correctamente.")
+            return redirect('mis_horarios')
+        else:
+            messages.error(request, "❌ Revisa los datos del formulario.")
+    else:
+        form = DisponibilidadForm()
+    horarios = Disponibilidad.objects.filter(
+        id_medico=medico
+    ).order_by('dia_semana', 'hora_inicio')
+    return render(request, 'mi_horario.html', {
+        'horarios': horarios,
+        'form': form
+    })
 
 @login_required
 def eliminar_horario(request, horario_id):
