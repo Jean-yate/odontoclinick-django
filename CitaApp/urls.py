@@ -2,6 +2,7 @@ from django.urls import path
 from . import views
 from MedicoApp import views as medico_views
 
+
 urlpatterns = [
     path('agendar/', views.agendar_cita, name='agendar_cita'),
     path('lista/', views.lista_citas, name='lista_citas'),
@@ -11,4 +12,6 @@ urlpatterns = [
     path('enviar-recordatorio/<int:cita_id>/', views.enviar_recordatorio_manual, name='enviar_recordatorio_manual'),
     path('checkin/<int:cita_id>/',views.checkin_qr,name='checkin_qr'),
     path('horas-disponibles/', views.horas_disponibles, name='horas_disponibles'),
+    path('llamar/<int:cita_id>/', views.llamar_paciente, name='llamar_paciente'),
+    path('monitor-sala/', views.monitor_sala, name='monitor_sala'),
 ]

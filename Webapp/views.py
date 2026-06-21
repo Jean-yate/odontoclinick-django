@@ -83,7 +83,7 @@ def contacto_pqrs(request):
 
 @login_required
 def panel_secretaria(request):
-    """Dashboard para el rol de Secretaria"""
+    """Dashboard para el rol de Secretaria con Sala de Espera"""
     if request.user.id_rol.nombre_rol not in ['Secretaria', 'Administrador']:
         return redirect('home')
         
@@ -95,11 +95,22 @@ def panel_secretaria(request):
     ).exclude(
         id_estado_cita__nombre_estado__icontains='Cancelada'
     ).count()
+
+    # NUEVA CONSULTA: Pacientes actualmente en sala de espera ordenados por llegada
+    pacientes_espera = Cita.objects.filter(
+        id_estado_cita__nombre_estado__icontains='En Espera',
+        fecha_hora__date=hoy
+    ).select_related(
+        'id_paciente__id_usuario', 
+        'id_doctor__id_usuario',
+        'id_estado_cita'
+    ).order_by('hora_llegada')
     
     contexto = {
         'total_pacientes': total_pacientes,
         'citas_hoy_count': citas_hoy_count,
         'nombre_usuario': request.user.nombre,
+        'pacientes_espera': pacientes_espera,  # Inyectado al template
     }
     
     return render(request, 'Webapp/panel_secretaria.html', contexto)

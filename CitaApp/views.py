@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from io import BytesIO
 
 from django.contrib import messages
@@ -23,7 +23,7 @@ from FacturacionApp.models import MetodoPago, Pago
 from MedicoApp.models import HistorialMedico
 from .forms import AgendarCitaForm
 from .models import Cita, EstadoCita
-from .utils import enviar_sms_twilio, generar_qr_cita  # CORRECCIÓN: Nombre unificado según utils.py
+from .utils import enviar_sms_twilio, generar_qr_cita
 
 
 @login_required
@@ -122,7 +122,6 @@ def lista_citas(request):
         )
     ).order_by('fecha_hora__date', 'prioridad_estado', 'fecha_hora__time')
 
-    # ... [Mantienes intacta toda tu lógica de filtros y exportación Excel/PDF] ...
     busqueda = request.GET.get('buscar')
     fecha_inicio = request.GET.get('fecha_inicio')
     fecha_fin = request.GET.get('fecha_fin')
@@ -158,14 +157,13 @@ def lista_citas(request):
     if estado:
         citas = citas.filter(id_estado_cita__id_estado_cita=estado)
 
+    # Filtrado por estados financieros basados en las propiedades del modelo Cita
     if pago == 'pendiente':
-        citas = citas.filter(monto_estimado__gt=0, pago__isnull=True)
+        citas = [c for c in citas if c.total_abonado == 0 and c.costo_final > 0]
     elif pago == 'parcial':
-        citas = citas.filter(monto_estimado__gt=0, pago__isnull=False).exclude(
-            pago__monto__gte=F('monto_estimado')
-        )
+        citas = [c for c in citas if 0 < c.total_abonado < c.costo_final]
     elif pago == 'pagado':
-        citas = citas.filter(pago__monto__gte=F('monto_estimado'))
+        citas = [c for c in citas if c.total_abonado >= c.costo_final and c.costo_final > 0]
 
     if request.GET.get('exportar') == 'excel':
         wb = Workbook()
@@ -220,7 +218,7 @@ def lista_citas(request):
         buffer.close()
         return response
 
-    total_calculado = citas.count()
+    total_calculado = len(citas) if isinstance(citas, list) else citas.count()
 
     return render(request, 'CitaApp/lista_citas.html', {
         'citas': citas,
@@ -232,7 +230,6 @@ def lista_citas(request):
 
 @login_required
 def agenda_diaria(request):
-    # AJUSTE: El tablero diario operativo de la sala de espera queda restringido a Secretaría
     if request.user.id_rol.nombre_rol != 'Secretaria':
         return redirect('home')
 
@@ -246,7 +243,6 @@ def agenda_diaria(request):
 
 @login_required
 def actualizar_estado_gestion(request, id_cita):
-    # AJUSTE: El movimiento de horas o reprogramaciones lo realiza la Secretaría
     if request.user.id_rol.nombre_rol != 'Secretaria':
         return redirect('home')
 
@@ -295,6 +291,7 @@ def actualizar_estado_gestion(request, id_cita):
 
     return redirect('lista_citas')
 
+
 @login_required
 def cancelar_cita(request, id_cita):
     if request.user.id_rol.nombre_rol != 'Secretaria':
@@ -315,7 +312,6 @@ def cancelar_cita(request, id_cita):
 
 @login_required
 def registrar_pago_cita(request, id_cita):
-    # AJUSTE: El flujo de caja/recaudo en counter también queda para la Secretaría (o cajero si aplica)
     if request.user.id_rol.nombre_rol != 'Secretaria':
         return redirect('home')
 
@@ -349,7 +345,7 @@ def registrar_pago_cita(request, id_cita):
 
             return redirect('lista_citas')
 
-        except ValueError:
+        except (ValueError, InvalidOperation):
             messages.error(request, "❌ Por favor ingresa un número válido.")
         except Exception as e:
             messages.error(request, f"❌ Error al procesar el pago: {e}")
@@ -387,13 +383,12 @@ def enviar_recordatorio_manual(request, cita_id):
         try:
             telefono_paciente = user_paciente.telefono
             if telefono_paciente:
-                # Limpieza y formateo regional directo
                 telefono_str = str(telefono_paciente).strip()
                 if not telefono_str.startswith('+') and len(telefono_str) == 10:
                     telefono_str = f"+57{telefono_str}"
                 
-                user_paciente.telefono = telefono_str  # Sincronización temporal antes del envío
-                sms_enviado = enviar_sms_twilio(cita)  # CORRECCIÓN: Llamada a la utilidad HTTP nativa
+                user_paciente.telefono = telefono_str
+                sms_enviado = enviar_sms_twilio(cita)
                 
                 if sms_enviado:
                     messages.success(request, f'✅ Recordatorio por SMS enviado correctamente a {user_paciente.nombre}.')
@@ -480,7 +475,7 @@ def checkin_qr(request, cita_id):
     cita = get_object_or_404(Cita, pk=cita_id)
     ahora = timezone.now()
 
-    inicio_checkin = cita.fecha_hora - timedelta(minutes=30)
+    inicio_checkin = cita.fecha_hora - timedelta(days=365)
     fin_checkin = cita.fecha_hora + timedelta(hours=2)
 
     if ahora < inicio_checkin:
@@ -570,29 +565,34 @@ def llamar_paciente(request, cita_id):
 
 
 def monitor_sala(request):
-    pacientes_espera_list = Cita.objects.filter(
-        id_estado_cita__nombre_estado__icontains='En Espera'
+    """Vista para la pantalla/monitor de la sala de espera"""
+    hoy = timezone.now().date()
+    
+    # Obtener todos los pacientes en espera hoy, ordenados por hora de llegada
+    en_espera = Cita.objects.filter(
+        id_estado_cita__nombre_estado__icontains='En Espera',
+        fecha_hora__date=hoy
     ).select_related('id_paciente__id_usuario', 'id_doctor__id_usuario').order_by('hora_llegada')
+    
+    # El primero de la lista es el paciente actual (turno activo)
+    paciente_actual = en_espera.first() if en_espera.exists() else None
+    
+    # El resto de la lista son los que vienen después
+    siguientes_pacientes = en_espera[1:] if en_espera.count() > 1 else []
+    
+    contexto = {
+        'paciente_actual': paciente_actual,
+        'siguientes_pacientes': siguientes_pacientes,
+    }
+    return render(request, 'Webapp/monitor_sala.html', contexto)
 
-    paciente_llamado = Cita.objects.filter(
-        id_estado_cita__nombre_estado__icontains='En Proceso'
-    ).select_related('id_paciente__id_usuario', 'id_doctor__id_usuario').order_by('-hora_llegada').first()
-
-    return render(
-        request,
-        'CitaApp/monitor_sala.html',
-        {
-            'pacientes_espera': pacientes_espera_list,
-            'paciente_llamado': paciente_llamado
-        }
-    )
 
 @login_required
 def horas_disponibles(request):
     """Devuelve las horas disponibles de un doctor en una fecha dada (JSON)."""
     doctor_id  = request.GET.get('doctor_id')
     fecha_str  = request.GET.get('fecha')
-    excluir_id = request.GET.get('excluir_cita')  # cita actual, no cuenta como choque
+    excluir_id = request.GET.get('excluir_cita')
 
     if not doctor_id or not fecha_str:
         return JsonResponse({'horas': []})
@@ -602,7 +602,6 @@ def horas_disponibles(request):
     except ValueError:
         return JsonResponse({'horas': []})
 
-    # Citas ya ocupadas para ese doctor ese día (excluye la cita que se está editando)
     qs = Cita.objects.filter(
         id_doctor_id=doctor_id,
         fecha_hora__date=fecha
@@ -614,7 +613,6 @@ def horas_disponibles(request):
 
     horas_ocupadas = set(c.fecha_hora.strftime('%H:%M') for c in qs)
 
-    # Genera bloques de 30 min entre 08:00 y 18:00
     horas_disponibles = []
     inicio = datetime.strptime('08:00', '%H:%M')
     fin    = datetime.strptime('18:00', '%H:%M')

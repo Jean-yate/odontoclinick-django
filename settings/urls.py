@@ -39,6 +39,7 @@ urlpatterns = [
     path('inventario/', include('InventarioApp.urls')),
     path('datawizard/', include('data_wizard.urls')),
     path('Empresa/', include('EmpresaApp.urls')),
+    
 ]
 
 if settings.DEBUG:
