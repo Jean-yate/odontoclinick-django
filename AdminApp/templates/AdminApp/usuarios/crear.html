@@ -155,35 +155,67 @@
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function () {
         const rolSelect = document.getElementById('id_id_rol');
         const especiales = document.getElementById('campos-especiales');
         const medico = document.getElementById('campos-medico');
         const secretaria = document.getElementById('campos-secretaria');
         const paciente = document.getElementById('campos-paciente');
 
+        const todasLasSecciones = [medico, secretaria, paciente];
+
+        /**
+         * Agrega o quita el atributo "required" en todos los inputs/selects/textareas
+         * de una sección dada, guardando el estado original para poder restaurarlo.
+         */
+        function setRequired(section, isRequired) {
+            section.querySelectorAll('input, select, textarea').forEach(function (el) {
+                if (isRequired) {
+                    // Restaurar required solo si el campo lo tenía originalmente
+                    if (el.dataset.wasRequired === 'true') {
+                        el.setAttribute('required', '');
+                    }
+                } else {
+                    // Guardar si tenía required y luego eliminarlo
+                    if (el.hasAttribute('required')) {
+                        el.dataset.wasRequired = 'true';
+                    } else {
+                        el.dataset.wasRequired = 'false';
+                    }
+                    el.removeAttribute('required');
+                }
+            });
+        }
+
         function actualizarCampos() {
+            // 1. Ocultar el contenedor principal y todas las sub-secciones
             especiales.style.display = 'none';
-            medico.style.display = 'none';
-            secretaria.style.display = 'none';
-            paciente.style.display = 'none';
+            todasLasSecciones.forEach(function (sec) {
+                sec.style.display = 'none';
+                setRequired(sec, false); // ✅ Quitar required de campos ocultos
+            });
 
             if (!rolSelect || rolSelect.selectedIndex === -1) return;
 
             const texto = rolSelect.options[rolSelect.selectedIndex].text.toLowerCase();
 
+            // 2. Mostrar solo la sección que corresponde y activar sus required
             if (texto.includes('doctor') || texto.includes('medico')) {
                 especiales.style.display = 'block';
                 medico.style.display = 'block';
+                setRequired(medico, true); // ✅ Restaurar required en campos visibles
             } else if (texto.includes('secretaria')) {
                 especiales.style.display = 'block';
                 secretaria.style.display = 'block';
+                setRequired(secretaria, true);
             } else if (texto.includes('paciente')) {
                 especiales.style.display = 'block';
                 paciente.style.display = 'block';
+                setRequired(paciente, true);
             }
         }
 
+        // Ejecutar al cargar la página y al cambiar el rol
         actualizarCampos();
         rolSelect.addEventListener('change', actualizarCampos);
     });

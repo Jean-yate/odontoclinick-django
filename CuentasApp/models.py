@@ -90,12 +90,6 @@ class Usuario(AbstractBaseUser):
     def __str__(self):
         return f"{self.nombre} {self.apellidos} ({self.nombre_usuario})"
     
-    def save(self, *args, **kwargs):
-        # Si la contraseña no está encriptada (no empieza con el algoritmo de Django)
-        if self.password and not self.password.startswith('pbkdf2_'):
-            self.set_password(self.password)
-        super().save(*args, **kwargs)
-    
 class Secretaria(models.Model):
     id_secretaria = models.AutoField(primary_key=True)
     id_usuario = models.OneToOneField('Usuario', models.DO_NOTHING, db_column='id_usuario')

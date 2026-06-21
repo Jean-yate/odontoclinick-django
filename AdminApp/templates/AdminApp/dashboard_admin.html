@@ -53,7 +53,8 @@
 
   .cita-item   { padding: 9px 0;  border-bottom: 1px solid var(--bg-body); }
   .alerta-item { padding: 10px 0; border-bottom: 1px solid var(--bg-body); }
-  .cita-item:last-child, .alerta-item:last-child { border-bottom: none; }
+  .cita-item:last-child, .alerta-item:last-child,
+  .pago-item:last-child { border-bottom: none; }
 
   .avatar-circle {
     width: 36px; height: 36px; border-radius: 50%;
@@ -85,6 +86,10 @@
     background: var(--bg-body); border-radius: 10px; overflow: hidden;
   }
   .doc-bar { height: 100%; border-radius: 10px; background: var(--primary-color); }
+
+  /* Pagos pendientes */
+  .pago-item { padding: 10px 0; border-bottom: 1px solid var(--bg-body); }
+  .pago-saldo { font-size: 0.85rem; font-weight: 800; color: #791F1F; }
 </style>
 {% endblock %}
 
@@ -118,7 +123,9 @@
       {% for message in messages %}
       <div class="alert alert-{{ message.tags }} alert-dismissible fade show border-0 shadow-sm" role="alert" style="border-radius: 12px;">
         {{ message }}
-        <button type="button" class="btn-close" data-dismiss="alert" aria-label="Close"></button>
+        <!-- FIX: data-dismiss es Bootstrap 4. Este proyecto usa btn-close (BS5),
+             así que el atributo correcto es data-bs-dismiss. -->
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
       </div>
       {% endfor %}
     </div>
@@ -169,7 +176,7 @@
     <div class="col-6 col-md-4 col-xl-2">
       <div class="kpi-card">
         <div class="kpi-label"><i class="bi bi-cash-coin me-1"></i>Ingresos mes</div>
-        <div class="kpi-val text-success">${{ ingresos_mes|default:recaudado_mes_actual|floatformat:0 }}</div>
+        <div class="kpi-val text-success">${{ recaudado_mes_actual|default:0|floatformat:0 }}</div>
         <div class="kpi-delta {% if delta_ingresos >= 0 %}text-success{% else %}text-danger{% endif %}">
           {% if delta_ingresos >= 0 %}▲{% else %}▼{% endif %} {{ delta_ingresos|default:0 }}% vs mes ant.
         </div>
@@ -214,13 +221,13 @@
       <div class="panel-card">
         <div class="panel-card-title"><i class="bi bi-graph-up-arrow me-1"></i>Flujo Financiero Anual</div>
         <div style="position: relative; height: 180px; width: 100%;">
-          <canvas id="canvasIngresos"></canvas>
+          <canvas id="canvasIngresos" role="img" aria-label="Ingresos mensuales del año actual"></canvas>
         </div>
       </div>
     </div>
 
     <!-- Citas de la Semana -->
-    <div class="col-12 md-6 col-xl-3">
+    <div class="col-12 col-md-6 col-xl-3">
       <div class="panel-card">
         <div class="panel-card-title"><i class="bi bi-bar-chart me-1"></i>Citas esta semana</div>
         <div class="d-flex gap-2 mb-2" style="font-size:0.68rem; font-weight:700;">
@@ -228,13 +235,13 @@
           <span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#D3D1C7;margin-right:3px;"></span>Canceladas</span>
         </div>
         <div style="position: relative; height: 150px; width: 100%;">
-          <canvas id="chartCitas"></canvas>
+          <canvas id="chartCitas" role="img" aria-label="Citas realizadas y canceladas por día, semana actual"></canvas>
         </div>
       </div>
     </div>
 
     <!-- Distribución de Pagos -->
-    <div class="col-12 md-6 col-xl-3">
+    <div class="col-12 col-md-6 col-xl-3">
       <div class="panel-card">
         <div class="panel-card-title"><i class="bi bi-pie-chart me-1"></i>Estado de pagos</div>
         <div class="d-flex gap-2 mb-2 flex-wrap" style="font-size:0.65rem; font-weight:700;">
@@ -242,7 +249,7 @@
           <span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#BA7517;margin-right:3px;"></span>Abono {{ pct_con_abono|default:0 }}%</span>
         </div>
         <div style="position: relative; height: 150px; width: 100%;">
-          <canvas id="chartPagos"></canvas>
+          <canvas id="chartPagos" role="img" aria-label="Distribución porcentual de estados de pago"></canvas>
         </div>
       </div>
     </div>
@@ -291,11 +298,46 @@
       </div>
     </div>
 
+    <!-- NUEVO: Pagos pendientes más urgentes (accionable, no solo un contador) -->
+    <div class="col-lg-4">
+      <div class="panel-card">
+        <div class="panel-card-title"><i class="bi bi-exclamation-circle me-1"></i>Pagos pendientes prioritarios</div>
+        {% for cita in pagos_pendientes_top %}
+        <div class="pago-item d-flex align-items-center gap-2">
+          <div class="avatar-circle" style="background:#FCEBEB; color:#791F1F;">
+            {{ cita.id_paciente.id_usuario.nombre|first }}{{ cita.id_paciente.id_usuario.apellidos|first }}
+          </div>
+          <div style="flex:1; min-width:0;">
+            <div class="fw-bold text-truncate" style="font-size:0.85rem;">
+              {{ cita.id_paciente.id_usuario.nombre }} {{ cita.id_paciente.id_usuario.apellidos }}
+            </div>
+            <div class="text-muted text-truncate" style="font-size:0.72rem;">
+              {{ cita.fecha_hora|date:"d/m/Y" }}
+            </div>
+          </div>
+          <div class="text-end flex-shrink-0">
+            <div class="pago-saldo">${{ cita.saldo_pendiente|floatformat:0 }}</div>
+          </div>
+        </div>
+        {% empty %}
+          <p class="text-muted small text-center py-3">
+            <i class="bi bi-check-circle d-block fs-3 mb-2 text-success opacity-50"></i>
+            No hay saldos pendientes registrados.
+          </p>
+        {% endfor %}
+        <div class="mt-3">
+          <a href="{% url 'lista_citas' %}?pago=pendiente" class="acceso-btn">
+            <i class="bi bi-arrow-right-circle"></i>Ver todos los pagos pendientes
+          </a>
+        </div>
+      </div>
+    </div>
+
     <!-- Alertas de Stock e Insumos Críticos -->
     <div class="col-lg-4">
       <div class="panel-card">
         <div class="panel-card-title"><i class="bi bi-bell me-1"></i>Alertas del sistema</div>
-        
+
         <!-- Renderizado dinámico de productos críticos desde base de datos -->
         {% for prod in productos_criticos %}
         <div class="alerta-item d-flex gap-2 align-items-start">
@@ -402,6 +444,8 @@
               {{ doc.total }} citas
             </div>
             <div class="doc-bar-wrap">
+              <!-- FIX: max_citas_doctor ya nunca llega como 0 desde la vista,
+                   pero se deja default:1 como segunda capa de seguridad -->
               <div class="doc-bar" style="width:{% widthratio doc.total max_citas_doctor|default:1 100 %}%"></div>
             </div>
           </div>
@@ -417,6 +461,23 @@
 
   </div>
 </div>
+
+<!--
+  FIX DE SEGURIDAD (XSS): los datos numéricos/listas que antes se inyectaban
+  con {{ valor|safe }} directo dentro de <script> se exponen ahora vía
+  json_script, que Django escapa correctamente para contexto HTML/JS.
+  Esto evita que un nombre con comillas, '</script>', etc. rompa el JS
+  o inyecte código.
+-->
+{{ chart_labels|json_script:"data-chart-labels" }}
+{{ chart_data|json_script:"data-chart-data" }}
+{{ labels_semana|json_script:"data-labels-semana" }}
+{{ realizadas_sem|json_script:"data-realizadas-sem" }}
+{{ canceladas_sem|json_script:"data-canceladas-sem" }}
+{{ pct_pagadas|default:0|json_script:"data-pct-pagadas" }}
+{{ pct_con_abono|default:0|json_script:"data-pct-abono" }}
+{{ pct_sin_pagar|default:0|json_script:"data-pct-sinpagar" }}
+
 {% endblock %}
 
 {% block extra_js %}
@@ -424,16 +485,26 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
   document.addEventListener("DOMContentLoaded", function() {
-    
+
+    // Lectura segura de los datos inyectados vía json_script
+    const chartLabels   = JSON.parse(document.getElementById('data-chart-labels').textContent);
+    const chartData     = JSON.parse(document.getElementById('data-chart-data').textContent);
+    const labelsSemana  = JSON.parse(document.getElementById('data-labels-semana').textContent);
+    const realizadasSem = JSON.parse(document.getElementById('data-realizadas-sem').textContent);
+    const canceladasSem = JSON.parse(document.getElementById('data-canceladas-sem').textContent);
+    const pctPagadas    = JSON.parse(document.getElementById('data-pct-pagadas').textContent);
+    const pctAbono      = JSON.parse(document.getElementById('data-pct-abono').textContent);
+    const pctSinPagar   = JSON.parse(document.getElementById('data-pct-sinpagar').textContent);
+
     // 1. Gráfica de Línea: Flujo Financiero Anual
     const ctxIngresos = document.getElementById('canvasIngresos').getContext('2d');
     new Chart(ctxIngresos, {
         type: 'line',
         data: {
-            labels: {{ chart_labels|safe|default:"['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']" }},
+            labels: chartLabels,
             datasets: [{
                 label: 'Ingresos ($)',
-                data: {{ chart_data|safe|default:"[]" }},
+                data: chartData,
                 borderColor: '#0d6efd',
                 backgroundColor: 'rgba(13, 110, 253, 0.04)',
                 borderWidth: 3,
@@ -454,21 +525,21 @@
         }
     });
 
-    // 2. Gráfica de Barras: Citas de la Semana
+    // 2. Gráfica de Barras: Citas de la Semana (ahora con datos reales por día)
     new Chart(document.getElementById('chartCitas'), {
       type: 'bar',
       data: {
-        labels: {{ labels_semana|safe|default:"[]" }},
+        labels: labelsSemana,
         datasets: [
           {
             label: 'Realizadas',
-            data: {{ realizadas_sem|safe|default:"[]" }},
+            data: realizadasSem,
             backgroundColor: '#378ADD',
             borderRadius: 6,
           },
           {
             label: 'Canceladas',
-            data: {{ canceladas_sem|safe|default:"[]" }},
+            data: canceladasSem,
             backgroundColor: '#D3D1C7',
             borderRadius: 6,
           }
@@ -491,11 +562,7 @@
       data: {
         labels: ['Saldado', 'Con abono', 'Sin pagar'],
         datasets: [{
-          data: [
-            {{ pct_pagadas|default:0 }}, 
-            {{ pct_con_abono|default:0 }}, 
-            {{ pct_sin_pagar|default:0 }}
-          ],
+          data: [pctPagadas, pctAbono, pctSinPagar],
           backgroundColor: ['#639922', '#BA7517', '#E24B4A'],
           borderWidth: 0,
           hoverOffset: 4
