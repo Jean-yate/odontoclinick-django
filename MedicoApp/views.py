@@ -368,27 +368,52 @@ def perfil_paciente(request, paciente_id):
 def obtener_slots_ajax(request):
     doctor_id = request.GET.get('doctor_id')
     fecha_str = request.GET.get('fecha')  # Formato 'YYYY-MM-DD'
-    
+
     if not doctor_id or not fecha_str:
         return JsonResponse({'slots': []})
-        
-    try:
-        # 1. Definir la jornada laboral base (Ejemplo: 8:00 AM a 5:00 PM)
-        # Ajusta estos horarios según las reglas de OdontoClinick
-        hora_inicio = datetime.strptime("08:00", "%H:%M").time()
-        hora_fin = datetime.strptime("17:00", "%H:%M").time()
-        duracion_cita = timedelta(minutes=30) # Citas de 30 minutos
 
-        # Construir la lista base de todos los horarios posibles del día
+    try:
         fecha_obj = datetime.strptime(fecha_str, "%Y-%m-%d").date()
+
+        # FIX: antes la jornada laboral estaba hardcodeada a 8:00-17:00 con
+        # citas fijas de 30 min, ignorando por completo lo que el doctor
+        # configura en "Mis Horarios" (modelo Disponibilidad). Ahora se
+        # consulta la disponibilidad real para el día de la semana de la
+        # fecha pedida.
+        #
+        # Conversión de día: date.weekday() de Python da lunes=0..domingo=6,
+        # mientras que Disponibilidad.dia_semana usa lunes=1..domingo=7
+        # (ver choices en MedicoApp/models.py) — de ahí el +1.
+        dia_semana_modelo = fecha_obj.weekday() + 1
+
+        jornadas = Disponibilidad.objects.filter(
+            id_medico_id=doctor_id,
+            dia_semana=dia_semana_modelo,
+            activo=True,
+        )
+
+        if not jornadas.exists():
+            # El doctor no tiene ninguna jornada configurada para este día
+            # de la semana — no hay horario fijo de respaldo, simplemente
+            # no hay slots (igual que "el doctor no atiende este día").
+            return JsonResponse({'slots': []})
+
+        # 1. Construir todos los slots posibles a partir de CADA jornada
+        # configurada para ese día (un doctor puede tener más de un bloque
+        # de horario el mismo día, ej. mañana y tarde, cada uno con su
+        # propia duración de cita).
         slots_posibles = []
-        
-        actual_dt = datetime.combine(fecha_obj, hora_inicio)
-        fin_dt = datetime.combine(fecha_obj, hora_fin)
-        
-        while actual_dt < fin_dt:
-            slots_posibles.append(actual_dt.time().strftime("%H:%M"))
-            actual_dt += duracion_cita
+        for jornada in jornadas:
+            duracion_cita = timedelta(minutes=jornada.duracion_cita or 30)
+            actual_dt = datetime.combine(fecha_obj, jornada.hora_inicio)
+            fin_dt = datetime.combine(fecha_obj, jornada.hora_fin)
+
+            while actual_dt < fin_dt:
+                slots_posibles.append(actual_dt.time().strftime("%H:%M"))
+                actual_dt += duracion_cita
+
+        # Quitar duplicados (por si dos jornadas se solaparan) y ordenar
+        slots_posibles = sorted(set(slots_posibles))
 
         # 2. Obtener las citas que YA TIENE ese doctor en esa fecha
         # Excluimos las citas que estén 'Canceladas' para que esas horas sí se liberen
@@ -408,7 +433,7 @@ def obtener_slots_ajax(request):
         ahora_time = timezone.now().time().strftime("%H:%M") if fecha_obj == hoy else "00:00"
 
         slots_libres = [
-            slot for slot in slots_posibles 
+            slot for slot in slots_posibles
             if slot not in horas_ocupadas and slot >= ahora_time
         ]
 
