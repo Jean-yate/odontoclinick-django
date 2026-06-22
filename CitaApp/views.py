@@ -4,9 +4,6 @@ from io import BytesIO
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-# NOTA: EmailMessage de Django no se usa porque Railway bloquea SMTP
-# saliente. El envío de correo se hace vía la utilidad Resend
-# (_enviar_correo_resend) que vive en Webapp.views.
 from django.db import transaction
 from django.db.models import Case, Value, When, Q, F
 from django.http import HttpResponse, JsonResponse
@@ -30,7 +27,6 @@ from .utils import enviar_sms_twilio, generar_qr_cita
 
 @login_required
 def agendar_cita(request):
-    # AJUSTE: Solo el rol operativo (Secretaria) puede agendar la cita directamente
     if request.user.id_rol.nombre_rol != 'Secretaria':
         messages.error(request, "❌ No tienes permisos para agendar citas. Acción exclusiva de Secretaría.")
         return redirect('home')
@@ -57,13 +53,24 @@ def agendar_cita(request):
 
             if form.is_valid():
                 with transaction.atomic():
-                    # NOTA: Cita.save() ya genera el QR automáticamente la
-                    # primera vez que se guarda (ver CitaApp/models.py).
-                    # Antes aquí se llamaba también a generar_qr_cita(cita),
-                    # una función duplicada en utils.py que regeneraba el QR
-                    # innecesariamente y, al no rebobinar el buffer con
-                    # seek(0), causaba el error "Empty file" al subir a
-                    # Cloudinary. Se quita la llamada redundante.
+                    # Validar que no exista una cita ACTIVA (no cancelada) en
+                    # el mismo slot antes de guardar. Esto permite reutilizar
+                    # slots de citas canceladas sin romper en la BD.
+                    ya_ocupado = Cita.objects.filter(
+                        id_doctor=form.cleaned_data['id_doctor'],
+                        fecha_hora=fecha_hora_obj
+                    ).exclude(
+                        id_estado_cita__nombre_estado__icontains='Cancelada'
+                    ).exists()
+
+                    if ya_ocupado:
+                        messages.error(request, "❌ El doctor ya tiene una cita activa en esa fecha y hora.")
+                        return render(request, 'CitaApp/agendar_cita.html', {
+                            'form': form,
+                            'hoy': timezone.now().date(),
+                            'paciente_preseleccionado': paciente_id,
+                        })
+
                     cita = form.save()
 
                 try:
@@ -109,7 +116,6 @@ def agendar_cita(request):
 
 @login_required
 def lista_citas(request):
-    # AJUSTE: Tanto Secretaria como Administrador pueden VER la lista y generar reportes (Excel/PDF)
     if request.user.id_rol.nombre_rol not in ['Secretaria', 'Administrador']:
         return redirect('home')
 
@@ -165,7 +171,6 @@ def lista_citas(request):
     if estado:
         citas = citas.filter(id_estado_cita__id_estado_cita=estado)
 
-    # Filtrado por estados financieros basados en las propiedades del modelo Cita
     if pago == 'pendiente':
         citas = [c for c in citas if c.total_abonado == 0 and c.costo_final > 0]
     elif pago == 'parcial':
@@ -417,8 +422,6 @@ def enviar_recordatorio_manual(request, cita_id):
 
         html_content = render_to_string('emails/recordatorio_cita.html', context)
 
-        # Import diferido para evitar cualquier riesgo de import circular
-        # entre CitaApp.views y Webapp.views durante el arranque de Django.
         from Webapp.views import _enviar_correo_resend
         ok, err = _enviar_correo_resend(
             asunto="Confirmación de tu Cita - OdontoClinick",
@@ -456,10 +459,13 @@ def editar_cita_rapido(request, id_cita):
                     if timezone.is_aware(timezone.now()):
                         nueva_fecha_hora = timezone.make_aware(nueva_fecha_hora)
 
+                    # Excluir canceladas al verificar choque
                     existe_choque = Cita.objects.filter(
                         id_doctor=cita.id_doctor,
                         fecha_hora=nueva_fecha_hora
-                    ).exclude(pk=id_cita).exists()
+                    ).exclude(pk=id_cita).exclude(
+                        id_estado_cita__nombre_estado__icontains='Cancelada'
+                    ).exists()
 
                     if existe_choque:
                         messages.error(request, "❌ El Dr. ya tiene una cita reservada para esa fecha y hora.")
@@ -574,19 +580,14 @@ def llamar_paciente(request, cita_id):
 
 
 def monitor_sala(request):
-    """Vista para la pantalla/monitor de la sala de espera"""
     hoy = timezone.now().date()
     
-    # Obtener todos los pacientes en espera hoy, ordenados por hora de llegada
     en_espera = Cita.objects.filter(
         id_estado_cita__nombre_estado__icontains='En Espera',
         fecha_hora__date=hoy
     ).select_related('id_paciente__id_usuario', 'id_doctor__id_usuario').order_by('hora_llegada')
     
-    # El primero de la lista es el paciente actual (turno activo)
     paciente_actual = en_espera.first() if en_espera.exists() else None
-    
-    # El resto de la lista son los que vienen después
     siguientes_pacientes = en_espera[1:] if en_espera.count() > 1 else []
     
     contexto = {
@@ -604,12 +605,12 @@ def horas_disponibles(request):
     excluir_id = request.GET.get('excluir_cita')
 
     if not doctor_id or not fecha_str:
-        return JsonResponse({'horas': []})
+        return JsonResponse({'slots': []})
 
     try:
         fecha = datetime.strptime(fecha_str, '%Y-%m-%d').date()
     except ValueError:
-        return JsonResponse({'horas': []})
+        return JsonResponse({'slots': []})
 
     qs = Cita.objects.filter(
         id_doctor_id=doctor_id,
@@ -622,7 +623,7 @@ def horas_disponibles(request):
 
     horas_ocupadas = set(c.fecha_hora.strftime('%H:%M') for c in qs)
 
-    horas_disponibles = []
+    slots_disponibles = []
     inicio = datetime.strptime('08:00', '%H:%M')
     fin    = datetime.strptime('18:00', '%H:%M')
     delta  = timedelta(minutes=30)
@@ -630,7 +631,9 @@ def horas_disponibles(request):
     while actual <= fin:
         hora_str = actual.strftime('%H:%M')
         if hora_str not in horas_ocupadas:
-            horas_disponibles.append(hora_str)
+            slots_disponibles.append(hora_str)
         actual += delta
 
-    return JsonResponse({'horas': horas_disponibles})
+    # Se devuelve "slots" (no "horas") para que coincida con lo que
+    # espera el JS del template agendar_cita.html (data.slots).
+    return JsonResponse({'slots': slots_disponibles})

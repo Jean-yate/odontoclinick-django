@@ -41,12 +41,6 @@ class Cita(models.Model):
         super().save(*args, **kwargs)
 
         if not self.qr_code:
-            # FIX: antes esto tenía 'http://127.0.0.1:8000' hardcodeado, lo
-            # que hacía que CUALQUIER QR generado en producción apuntara a
-            # localhost — inútil al escanearlo desde un celular real. Ahora
-            # usa settings.SITE_URL, que se configura por entorno (variable
-            # de entorno SITE_URL): localhost en desarrollo, el dominio real
-            # de Railway en producción.
             qr_data = f"{settings.SITE_URL}/citas/checkin/{self.id_cita}/"
 
             qr = qrcode.make(qr_data)
@@ -67,7 +61,9 @@ class Cita(models.Model):
 
     class Meta:
         db_table = 'cita'
-        unique_together = ('id_doctor', 'fecha_hora')
+        # unique_together eliminado: la unicidad doctor+fecha_hora se valida
+        # en el código (excluyendo citas canceladas), no a nivel de BD.
+        # Tener unique_together aquí impedía reutilizar un slot cancelado.
     
     def __str__(self):
         return f"{self.id_paciente} - {self.fecha_hora}"
