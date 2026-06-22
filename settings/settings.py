@@ -17,47 +17,18 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SEGURIDAD
 # =============================================================================
 
-# La SECRET_KEY ahora viene de una variable de entorno. En local, se lee de
-# tu archivo .env (que nunca se sube a git). En Railway, se configura en el
-# panel de Variables del servicio.
 SECRET_KEY = config('SECRET_KEY')
 
-# DEBUG=False por defecto. En local pones DEBUG=True en tu .env.
-# CRÍTICO: en producción (Railway) esto debe ser False, o Django expone
-# tracebacks completos (incluyendo rutas del servidor y variables) a
-# cualquiera que provoque un error 500.
 DEBUG = config('DEBUG', default=False, cast=bool)
 
-# ALLOWED_HOSTS viene de una variable de entorno, separada por comas.
-# Pon ahí el dominio real de tu servicio (ej. en Railway, el que ves en
-# Settings > Networking > Public Networking), sin "https://" y sin barra
-# al final.
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=Csv())
 
-# NOTA: Railway NO inyecta automáticamente una variable de entorno con el
-# dominio público dentro del contenedor (a diferencia de otras plataformas
-# como Heroku). Por eso ALLOWED_HOSTS y CSRF_TRUSTED_ORIGINS deben
-# configurarse a mano en el panel de Variables con el dominio real.
-
-# Necesario para que Django confíe en peticiones POST (formularios, login)
-# que llegan a través del dominio HTTPS de Railway. Sin esto, vas a ver
-# errores de "CSRF verification failed" en producción aunque todo esté bien.
 CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', default='', cast=Csv())
 
-# URL pública completa del sitio (con esquema), usada para construir enlaces
-# absolutos fuera del contexto de una petición HTTP — por ejemplo, el QR de
-# check-in de citas, o links en correos electrónicos. Sin esto, el código
-# tendría que adivinar o hardcodear localhost, lo cual rompe en producción.
-# En local: SITE_URL=http://127.0.0.1:8000 (o se usa ese valor por defecto).
-# En Railway: SITE_URL=https://tu-dominio-real.up.railway.app
 SITE_URL = config('SITE_URL', default='http://127.0.0.1:8000').rstrip('/')
 
-# Railway sirve todo detrás de un proxy HTTPS. Esto le dice a Django que
-# confíe en el header que indica que la conexión original era HTTPS,
-# para que url-building, cookies seguras, etc. funcionen bien.
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
-# Solo forzar HTTPS y cookies seguras cuando NO estás en modo debug local.
 if not DEBUG:
     SECURE_SSL_REDIRECT = True
     SESSION_COOKIE_SECURE = True
@@ -74,30 +45,25 @@ INSTALLED_APPS = [
     'django.contrib.sites',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'cloudinary_storage',  # debe ir ANTES de staticfiles según la doc de cloudinary, pero
-                           # como staticfiles ya está arriba, esto sigue funcionando bien
-                           # para MEDIA (que es lo único que usamos cloudinary para)
+    'cloudinary_storage',
     'cloudinary',
     'data_wizard',
     'data_wizard.sources',
     'rest_framework',
-    'Webapp',            # La página principal
-    'CuentasApp',        # Usuarios y Roles
-    'PacienteApp',       # Fichas de pacientes
-    'MedicoApp',         # Doctores y Horarios
-    'CitaApp',           # Gestión de citas
-    'TratamientoApp',    # Servicios y procedimientos
-    'InventarioApp',     # Stock de insumos
-    'FacturacionApp',    # Pagos y recibos
-    'EmpresaApp',        # Empresas
-    'AdminApp'           # Administración
+    'Webapp',
+    'CuentasApp',
+    'PacienteApp',
+    'MedicoApp',
+    'CitaApp',
+    'TratamientoApp',
+    'InventarioApp',
+    'FacturacionApp',
+    'EmpresaApp',
+    'AdminApp'
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    # WhiteNoise sirve los archivos estáticos directamente desde Django en
-    # producción, sin necesitar un servidor web aparte (nginx, etc.). Va
-    # justo después de SecurityMiddleware, como indica su documentación.
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -130,13 +96,6 @@ WSGI_APPLICATION = 'settings.wsgi.application'
 # =============================================================================
 # BASE DE DATOS
 # =============================================================================
-# Railway, al añadir el plugin de MySQL, inyecta automáticamente una variable
-# de entorno MYSQL_URL (o DATABASE_URL según el plugin) con todo dentro:
-# usuario, password, host, puerto, nombre de la base. dj_database_url la
-# parsea directamente, así que no hay que copiar cada dato a mano.
-#
-# En LOCAL, como no tienes esa variable, usamos los valores sueltos de tu
-# .env (DB_NAME, DB_USER, etc.) como respaldo.
 
 DATABASE_URL = config('DATABASE_URL', default='') or config('MYSQL_URL', default='')
 
@@ -145,7 +104,7 @@ if DATABASE_URL:
         'default': dj_database_url.parse(
             DATABASE_URL,
             conn_max_age=600,
-            ssl_require=False,  # Railway maneja la red internamente, no exige SSL entre servicios
+            ssl_require=False,
         )
     }
     DATABASES['default']['OPTIONS'] = {
@@ -168,35 +127,21 @@ else:
 
 
 # Password validation
-# https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
 
 AUTH_PASSWORD_VALIDATORS = [
-    {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
-    },
+    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
 
 # Internationalization
-# https://docs.djangoproject.com/en/6.0/topics/i18n/
 
 LANGUAGE_CODE = 'es-co'
-
 TIME_ZONE = 'America/Bogota'
-
 USE_I18N = True
-
 USE_TZ = False
-
 SITE_ID = 1
 
 DATA_WIZARD = {
@@ -210,26 +155,13 @@ DATA_WIZARD = {
 
 
 # =============================================================================
-# ARCHIVOS ESTÁTICOS (CSS, JS) — servidos por WhiteNoise en producción
+# ARCHIVOS ESTÁTICOS
 # =============================================================================
 
 STATIC_URL = 'static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
-# Carpeta donde `collectstatic` reúne todo para producción. WhiteNoise sirve
-# los archivos desde aquí. Este directorio NO se sube a git (está en
-# .gitignore) — Railway lo genera en cada deploy al correr collectstatic.
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-# Comprime y le pone hash al nombre de cada archivo estático (cache-busting
-# automático: si cambias un CSS, el navegador no sirve la versión vieja
-# cacheada).
-#
-# El storage "default" (usado por ImageField/FileField, como el QR de Cita)
-# usa Cloudinary cuando hay credenciales configuradas — necesario porque
-# Railway no tiene almacenamiento persistente: cualquier archivo guardado en
-# disco se borra en cada redeploy. Si CLOUDINARY_URL no está seteada (ej. en
-# desarrollo local sin querer usar Cloudinary), cae de vuelta a
-# FileSystemStorage normal, guardando en MEDIA_ROOT como antes.
 _using_cloudinary = bool(config('CLOUDINARY_URL', default=''))
 
 STORAGES = {
@@ -245,15 +177,8 @@ STORAGES = {
 
 
 # =============================================================================
-# ARCHIVOS MULTIMEDIA (fotos, QR codes, comprobantes)
+# ARCHIVOS MULTIMEDIA
 # =============================================================================
-# Cloudinary se configura completo mediante la variable de entorno
-# CLOUDINARY_URL (formato: cloudinary://API_KEY:API_SECRET@CLOUD_NAME),
-# que el propio paquete cloudinary lee automáticamente del entorno — no
-# hace falta declarar CLOUDINARY_STORAGE aquí manualmente.
-#
-# Si no hay CLOUDINARY_URL (ej. desarrollo local), los archivos se guardan
-# en disco local normalmente, igual que antes.
 
 MEDIA_URL = 'media/'
 MEDIA_ROOT = BASE_DIR / 'media'
@@ -262,19 +187,17 @@ MEDIA_ROOT = BASE_DIR / 'media'
 # =============================================================================
 # EMAIL — vía Resend API HTTP (NO SMTP)
 # =============================================================================
-# Railway bloquea SMTP saliente (puerto 587, 25, etc.), por eso no se puede
-# usar el backend SMTP de Django con Gmail. Resend funciona sobre HTTPS
-# (puerto 443) que sí está permitido. La API key se lee de la variable de
-# entorno RESEND_API_KEY.
-#
-# El remitente "onboarding@resend.dev" es el dominio de prueba que Resend
-# provee sin verificación. Con la cuenta gratuita, los correos SOLO se
-# pueden enviar a la dirección con la que se registró la cuenta de Resend
-# (modo sandbox) — para enviar a cualquier destinatario se requiere
-# verificar un dominio propio en Resend.
 
 RESEND_API_KEY = config('RESEND_API_KEY', default='')
 RESEND_FROM = config('RESEND_FROM', default='OdontoClinick <onboarding@resend.dev>')
+
+# Override de destinatario para modo sandbox de Resend (sin dominio verificado).
+# Cuando está configurado, TODOS los correos (PQRS, recordatorios, recuperación
+# de contraseña) se redirigen a este email en lugar del destinatario real.
+# Útil en pruebas: solo el email registrado en Resend puede recibir correos.
+# Para producción real: elimina RESEND_TO_OVERRIDE de las variables de Railway
+# y verifica un dominio en resend.com/domains.
+RESEND_TO_OVERRIDE = config('RESEND_TO_OVERRIDE', default='')
 
 
 # =============================================================================
@@ -288,7 +211,7 @@ LOGOUT_REDIRECT_URL = 'home'
 
 
 # =============================================================================
-# TWILIO (SMS) — credenciales ahora vía variable de entorno
+# TWILIO (SMS)
 # =============================================================================
 
 TWILIO_ACCOUNT_SID = config('TWILIO_ACCOUNT_SID')

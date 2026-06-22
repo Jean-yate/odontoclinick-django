@@ -51,24 +51,33 @@ def _enviar_correo_resend(asunto, cuerpo, destinatario, timeout=10, html=False):
       asunto, cuerpo, destinatario: lo evidente.
       timeout: segundos de espera para la llamada HTTP.
       html: si True, el cuerpo se manda como HTML; si False (default),
-            como texto plano. Resend acepta cualquiera de los dos
-            campos ('html' o 'text') en el JSON de la petición.
+            como texto plano.
 
     Por qué no usamos send_mail() de Django con SMTP:
-      Railway bloquea el tráfico SMTP saliente (puertos 25, 465, 587 hacia
-      servidores externos como smtp.gmail.com). Eso hizo que cualquier
-      llamada a send_mail() colgara la petición hasta el timeout de
-      gunicorn, devolviendo 500. Resend funciona sobre HTTPS (443), que
-      Railway sí permite, así que el envío es instantáneo (~200ms).
+      Railway bloquea el tráfico SMTP saliente (puertos 25, 465, 587).
+      Resend funciona sobre HTTPS (443), que Railway sí permite.
 
     LIMITACIÓN del plan gratuito de Resend sin dominio verificado:
       Solo se pueden enviar correos al email con el que se registró la
-      cuenta de Resend. Si destinatario es otro, Resend responde 403
-      con mensaje claro y la función devuelve ok=False con el detalle.
+      cuenta de Resend. Si RESEND_TO_OVERRIDE está configurado en las
+      variables de entorno, todos los correos se redirigen a ese email
+      (útil en modo sandbox/pruebas). Cuando verifiques un dominio en
+      Resend, elimina esa variable y los correos llegarán al destinatario
+      real.
     """
     api_key = settings.RESEND_API_KEY
     if not api_key:
         return False, "RESEND_API_KEY no está configurada en variables de entorno."
+
+    # En modo sandbox (sin dominio verificado en Resend), redirige todos
+    # los correos al email autorizado para pruebas. Aplica para PQRS,
+    # recordatorios, recuperación de contraseña — cualquier correo que
+    # pase por esta función. Cuando tengas dominio verificado, elimina
+    # la variable RESEND_TO_OVERRIDE de Railway y cada correo llegará
+    # a su destinatario real.
+    override = getattr(settings, 'RESEND_TO_OVERRIDE', None)
+    if override:
+        destinatario = override
 
     payload = {
         'from': settings.RESEND_FROM,
@@ -92,7 +101,6 @@ def _enviar_correo_resend(asunto, cuerpo, destinatario, timeout=10, html=False):
         )
         if response.status_code in (200, 201):
             return True, None
-        # Resend devuelve JSON con detalles del error; lo extraemos si se puede.
         try:
             error_data = response.json()
             error_msg = error_data.get('message') or error_data.get('error') or response.text
@@ -133,13 +141,10 @@ def contacto_pqrs(request):
                 f"Pronto nos comunicaremos contigo.\n\nDetalles:\n\"{mensaje}\""
             )
 
-            # Enviar a la clínica primero (es el más importante: registra
-            # la PQRS en el correo institucional).
             ok_clinica, err_clinica = _enviar_correo_resend(
                 asunto_clinica, cuerpo_clinica, 'odontoclinick77@gmail.com'
             )
 
-            # Enviar copia al usuario si tiene email (no es crítico si falla).
             ok_usuario = True
             err_usuario = None
             if email_usuario:
@@ -151,7 +156,6 @@ def contacto_pqrs(request):
                 messages.success(request, "✅ PQRS enviada con éxito. Revisa tu correo para ver la copia.")
                 return redirect('home')
             elif ok_clinica and not ok_usuario:
-                # Lo importante (la clínica recibe la PQRS) sí pasó.
                 messages.warning(
                     request,
                     f"✅ Tu PQRS llegó a la clínica, pero no pudimos enviarte la copia ({err_usuario})."
@@ -184,7 +188,6 @@ def panel_secretaria(request):
         id_estado_cita__nombre_estado__icontains='Cancelada'
     ).count()
 
-    # NUEVA CONSULTA: Pacientes actualmente en sala de espera ordenados por llegada
     pacientes_espera = Cita.objects.filter(
         id_estado_cita__nombre_estado__icontains='En Espera',
         fecha_hora__date=hoy
@@ -198,7 +201,7 @@ def panel_secretaria(request):
         'total_pacientes': total_pacientes,
         'citas_hoy_count': citas_hoy_count,
         'nombre_usuario': request.user.nombre,
-        'pacientes_espera': pacientes_espera,  # Inyectado al template
+        'pacientes_espera': pacientes_espera,
     }
     
     return render(request, 'Webapp/panel_secretaria.html', contexto)
