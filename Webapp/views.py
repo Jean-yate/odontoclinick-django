@@ -10,7 +10,8 @@ from django.db import transaction
 from django.db.models import Q, Sum, Count, F
 from django.utils import timezone
 from django.contrib import messages
-from django.core.mail import send_mail, get_connection, EmailMessage
+from django.core.mail import send_mail
+import requests
 from django.conf import settings
 from django.core.paginator import Paginator
 from django.http import HttpResponse
@@ -41,8 +42,60 @@ def home(request):
     return render(request, 'Webapp/index.html')
 
 
+def _enviar_correo_resend(asunto, cuerpo, destinatario, timeout=10):
+    """
+    Envía un correo a través de la API HTTP de Resend.
+
+    Devuelve (ok: bool, error_msg: str|None).
+
+    Por qué no usamos send_mail() de Django con SMTP:
+      Railway bloquea el tráfico SMTP saliente (puertos 25, 465, 587 hacia
+      servidores externos como smtp.gmail.com). Eso hizo que cualquier
+      llamada a send_mail() colgara la petición hasta el timeout de
+      gunicorn, devolviendo 500. Resend funciona sobre HTTPS (443), que
+      Railway sí permite, así que el envío es instantáneo (~200ms).
+
+    LIMITACIÓN del plan gratuito de Resend sin dominio verificado:
+      Solo se pueden enviar correos al email con el que se registró la
+      cuenta de Resend. Si destinatario es otro, Resend responde 403
+      con mensaje claro y la función devuelve ok=False con el detalle.
+    """
+    api_key = settings.RESEND_API_KEY
+    if not api_key:
+        return False, "RESEND_API_KEY no está configurada en variables de entorno."
+
+    try:
+        response = requests.post(
+            'https://api.resend.com/emails',
+            headers={
+                'Authorization': f'Bearer {api_key}',
+                'Content-Type': 'application/json',
+            },
+            json={
+                'from': settings.RESEND_FROM,
+                'to': [destinatario],
+                'subject': asunto,
+                'text': cuerpo,
+            },
+            timeout=timeout,
+        )
+        if response.status_code in (200, 201):
+            return True, None
+        # Resend devuelve JSON con detalles del error; lo extraemos si se puede.
+        try:
+            error_data = response.json()
+            error_msg = error_data.get('message') or error_data.get('error') or response.text
+        except Exception:
+            error_msg = response.text
+        return False, f"Resend respondió {response.status_code}: {error_msg}"
+    except requests.exceptions.Timeout:
+        return False, "La API de Resend tardó demasiado en responder."
+    except requests.exceptions.RequestException as e:
+        return False, f"Error de red al contactar Resend: {e}"
+
+
 def contacto_pqrs(request):
-    """Gestión de PQRS con envío automatizado de correos"""
+    """Gestión de PQRS con envío automatizado de correos vía Resend."""
     if request.method == 'POST':
         form = PQRSForm(request.POST, user=request.user)
         if form.is_valid():
@@ -52,49 +105,52 @@ def contacto_pqrs(request):
             else:
                 nombre = form.cleaned_data.get('nombre')
                 email_usuario = form.cleaned_data.get('email')
-            
+
             tipo = form.cleaned_data['tipo']
             mensaje = form.cleaned_data['mensaje']
 
             asunto_clinica = f"NUEVA {tipo.upper()} - {nombre}"
-            cuerpo_clinica = f"Se ha recibido una solicitud:\n\nNombre: {nombre}\nCorreo: {email_usuario}\nTipo: {tipo}\n\nMensaje:\n{mensaje}"
-            
+            cuerpo_clinica = (
+                f"Se ha recibido una solicitud:\n\n"
+                f"Nombre: {nombre}\nCorreo: {email_usuario}\nTipo: {tipo}\n\n"
+                f"Mensaje:\n{mensaje}"
+            )
+
             asunto_usuario = f"Copia de su {tipo} - OdontoClinick"
-            cuerpo_usuario = f"Hola {nombre},\n\nHemos recibido tu {tipo.lower()} con éxito. Pronto nos comunicaremos contigo.\n\nDetalles:\n\"{mensaje}\""
+            cuerpo_usuario = (
+                f"Hola {nombre},\n\nHemos recibido tu {tipo.lower()} con éxito. "
+                f"Pronto nos comunicaremos contigo.\n\nDetalles:\n\"{mensaje}\""
+            )
 
-            try:
-                # FIX: antes cada send_mail() abría y cerraba su propia
-                # conexión SMTP a Gmail por separado. Con dos correos
-                # seguidos, el tiempo total de dos handshakes SMTP podía
-                # superar el timeout por defecto de gunicorn (30s),
-                # matando el worker con un 500 genérico ANTES de que este
-                # try/except tuviera oportunidad de capturar el error real.
-                # Ahora se abre una sola conexión y se reutiliza para
-                # ambos correos, reduciendo el tiempo total de la petición.
-                conexion = get_connection()
-                conexion.open()
-                try:
-                    mensajes = [
-                        EmailMessage(asunto_clinica, cuerpo_clinica, settings.EMAIL_HOST_USER,
-                                     ['odontoclinick77@gmail.com'], connection=conexion)
-                    ]
-                    if email_usuario:
-                        mensajes.append(
-                            EmailMessage(asunto_usuario, cuerpo_usuario, settings.EMAIL_HOST_USER,
-                                         [email_usuario], connection=conexion)
-                        )
-                    for m in mensajes:
-                        m.send()
-                finally:
-                    conexion.close()
+            # Enviar a la clínica primero (es el más importante: registra
+            # la PQRS en el correo institucional).
+            ok_clinica, err_clinica = _enviar_correo_resend(
+                asunto_clinica, cuerpo_clinica, 'odontoclinick77@gmail.com'
+            )
 
+            # Enviar copia al usuario si tiene email (no es crítico si falla).
+            ok_usuario = True
+            err_usuario = None
+            if email_usuario:
+                ok_usuario, err_usuario = _enviar_correo_resend(
+                    asunto_usuario, cuerpo_usuario, email_usuario
+                )
+
+            if ok_clinica and ok_usuario:
                 messages.success(request, "✅ PQRS enviada con éxito. Revisa tu correo para ver la copia.")
                 return redirect('home')
-            except Exception as e:
-                messages.error(request, f"❌ No se pudo enviar el correo: {e}")
+            elif ok_clinica and not ok_usuario:
+                # Lo importante (la clínica recibe la PQRS) sí pasó.
+                messages.warning(
+                    request,
+                    f"✅ Tu PQRS llegó a la clínica, pero no pudimos enviarte la copia ({err_usuario})."
+                )
+                return redirect('home')
+            else:
+                messages.error(request, f"❌ No se pudo enviar la PQRS a la clínica: {err_clinica}")
     else:
         form = PQRSForm(user=request.user)
-        
+
     return render(request, 'Webapp/pqrs.html', {'form': form})
 
 

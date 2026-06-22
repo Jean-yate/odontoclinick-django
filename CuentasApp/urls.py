@@ -11,8 +11,11 @@ from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_encode
 from django.utils.encoding import force_bytes
 from django.template.loader import render_to_string
-from django.core.mail import send_mail
 from django.contrib.sites.shortcuts import get_current_site
+# NOTA: send_mail() de Django no se usa aquí porque Railway bloquea SMTP
+# saliente. El correo de reseteo se manda vía la utilidad Resend que vive
+# en Webapp.views (misma que usa PQRS).
+from Webapp.views import _enviar_correo_resend
 
 # --- FORMULARIO BLINDADO ---
 class CustomPasswordResetForm(PasswordResetForm):
@@ -50,14 +53,18 @@ class CustomPasswordResetForm(PasswordResetForm):
             # Nota: Asegúrate de tener este archivo en templates/registration/
             body = render_to_string('registration/password_reset_email.html', context)
             
-            # 3. Enviamos usando el campo 'correo' de tu modelo
-            send_mail(
-                subject=f"Restablecer contraseña - {site_name}",
-                message=body,
-                from_email=None, # Usa el DEFAULT_FROM_EMAIL de settings.py
-                recipient_list=[user.correo],
-                fail_silently=False,
+            # 3. Enviamos vía Resend HTTP (SMTP está bloqueado por Railway).
+            # No propagamos el resultado: el flujo de PasswordResetView de
+            # Django espera que save() retorne sin error; si el correo
+            # falla, el log lo registra pero la pantalla "se envió" se
+            # muestra igual (por seguridad: no revelar si el email existe).
+            ok, err = _enviar_correo_resend(
+                asunto=f"Restablecer contraseña - {site_name}",
+                cuerpo=body,
+                destinatario=user.correo,
             )
+            if not ok:
+                print(f"[ERROR PASSWORD RESET]: no se pudo enviar a {user.correo}: {err}")
 
 # --- TUS URLS (Sin cambios en la estructura) ---
 urlpatterns = [

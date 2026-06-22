@@ -260,15 +260,27 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 
 # =============================================================================
-# EMAIL (SMTP) — credenciales ahora vía variable de entorno
+# EMAIL — vía Resend API HTTP (NO SMTP)
 # =============================================================================
+# Railway bloquea SMTP saliente (puerto 587, 25, etc.), por eso no se puede
+# usar el backend SMTP de Django con Gmail. Resend funciona sobre HTTPS
+# (puerto 443) que sí está permitido. La API key se lee de la variable de
+# entorno RESEND_API_KEY.
+#
+# El remitente "onboarding@resend.dev" es el dominio de prueba que Resend
+# provee sin verificación. Con la cuenta gratuita, los correos SOLO se
+# pueden enviar a la dirección con la que se registró la cuenta de Resend
+# (modo sandbox) — para enviar a cualquier destinatario se requiere
+# verificar un dominio propio en Resend.
 
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = config('EMAIL_HOST_USER')
-EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
+RESEND_API_KEY = config('RESEND_API_KEY', default='')
+RESEND_FROM = config('RESEND_FROM', default='OdontoClinick <onboarding@resend.dev>')
+
+# EMAIL_HOST_USER se mantiene SOLO como la dirección "from" cuando
+# otras partes del código (que aún usan send_mail) referencien
+# settings.EMAIL_HOST_USER. La envoltura nueva en Webapp/views.py
+# no la usa.
+EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='odontoclinick77@gmail.com')
 
 
 # =============================================================================
