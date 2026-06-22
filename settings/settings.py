@@ -276,12 +276,6 @@ MEDIA_ROOT = BASE_DIR / 'media'
 RESEND_API_KEY = config('RESEND_API_KEY', default='')
 RESEND_FROM = config('RESEND_FROM', default='OdontoClinick <onboarding@resend.dev>')
 
-# EMAIL_HOST_USER se mantiene SOLO como la dirección "from" cuando
-# otras partes del código (que aún usan send_mail) referencien
-# settings.EMAIL_HOST_USER. La envoltura nueva en Webapp/views.py
-# no la usa.
-EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='odontoclinick77@gmail.com')
-
 
 # =============================================================================
 # AUTENTICACIÓN

@@ -4,7 +4,9 @@ from io import BytesIO
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.core.mail import EmailMessage
+# NOTA: EmailMessage de Django no se usa porque Railway bloquea SMTP
+# saliente. El envío de correo se hace vía la utilidad Resend
+# (_enviar_correo_resend) que vive en Webapp.views.
 from django.db import transaction
 from django.db.models import Case, Value, When, Q, F
 from django.http import HttpResponse, JsonResponse
@@ -414,19 +416,20 @@ def enviar_recordatorio_manual(request, cita_id):
         }
 
         html_content = render_to_string('emails/recordatorio_cita.html', context)
-        email = EmailMessage(
-            subject="Confirmación de tu Cita - OdontoClinick",
-            body=html_content,
-            from_email='OdontoClinick <tu-correo@gmail.com>',
-            to=[user_paciente.correo],
-        )
-        email.content_subtype = "html"
 
-        try:
-            email.send()
+        # Import diferido para evitar cualquier riesgo de import circular
+        # entre CitaApp.views y Webapp.views durante el arranque de Django.
+        from Webapp.views import _enviar_correo_resend
+        ok, err = _enviar_correo_resend(
+            asunto="Confirmación de tu Cita - OdontoClinick",
+            cuerpo=html_content,
+            destinatario=user_paciente.correo,
+            html=True,
+        )
+        if ok:
             messages.success(request, f"✅ Recordatorio enviado por Correo a {user_paciente.correo}")
-        except Exception as e:
-            messages.error(request, f"❌ No se pudo despachar el correo: {str(e)}")
+        else:
+            messages.error(request, f"❌ No se pudo despachar el correo: {err}")
             
     else:
         messages.warning(request, "⚠️ Canal de envío seleccionado no válido.")

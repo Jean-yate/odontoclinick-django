@@ -10,7 +10,6 @@ from django.db import transaction
 from django.db.models import Q, Sum, Count, F
 from django.utils import timezone
 from django.contrib import messages
-from django.core.mail import send_mail
 import requests
 from django.conf import settings
 from django.core.paginator import Paginator
@@ -42,11 +41,18 @@ def home(request):
     return render(request, 'Webapp/index.html')
 
 
-def _enviar_correo_resend(asunto, cuerpo, destinatario, timeout=10):
+def _enviar_correo_resend(asunto, cuerpo, destinatario, timeout=10, html=False):
     """
     Envía un correo a través de la API HTTP de Resend.
 
     Devuelve (ok: bool, error_msg: str|None).
+
+    Parámetros:
+      asunto, cuerpo, destinatario: lo evidente.
+      timeout: segundos de espera para la llamada HTTP.
+      html: si True, el cuerpo se manda como HTML; si False (default),
+            como texto plano. Resend acepta cualquiera de los dos
+            campos ('html' o 'text') en el JSON de la petición.
 
     Por qué no usamos send_mail() de Django con SMTP:
       Railway bloquea el tráfico SMTP saliente (puertos 25, 465, 587 hacia
@@ -64,6 +70,16 @@ def _enviar_correo_resend(asunto, cuerpo, destinatario, timeout=10):
     if not api_key:
         return False, "RESEND_API_KEY no está configurada en variables de entorno."
 
+    payload = {
+        'from': settings.RESEND_FROM,
+        'to': [destinatario],
+        'subject': asunto,
+    }
+    if html:
+        payload['html'] = cuerpo
+    else:
+        payload['text'] = cuerpo
+
     try:
         response = requests.post(
             'https://api.resend.com/emails',
@@ -71,12 +87,7 @@ def _enviar_correo_resend(asunto, cuerpo, destinatario, timeout=10):
                 'Authorization': f'Bearer {api_key}',
                 'Content-Type': 'application/json',
             },
-            json={
-                'from': settings.RESEND_FROM,
-                'to': [destinatario],
-                'subject': asunto,
-                'text': cuerpo,
-            },
+            json=payload,
             timeout=timeout,
         )
         if response.status_code in (200, 201):

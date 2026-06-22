@@ -1,7 +1,9 @@
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 from django.template.loader import render_to_string
-from django.core.mail import EmailMessage
+# NOTA: EmailMessage de Django no se usa aquí porque Railway bloquea SMTP
+# saliente. Se usa el helper Resend (vía HTTP) que vive en Webapp.views.
+from Webapp.views import _enviar_correo_resend
 from CitaApp.models import Cita
 from datetime import timedelta
 
@@ -53,30 +55,24 @@ class Command(BaseCommand):
                 context
             )
 
-            email = EmailMessage(
-                subject=f"Recordatorio de Cita: {paciente.nombre}, ¡te esperamos mañana!",
-                body=html_content,
-                from_email='OdontoClinick <tu-correo@gmail.com>',
-                to=[paciente.correo],
+            ok, err = _enviar_correo_resend(
+                asunto=f"Recordatorio de Cita: {paciente.nombre}, ¡te esperamos mañana!",
+                cuerpo=html_content,
+                destinatario=paciente.correo,
+                html=True,
             )
 
-            email.content_subtype = "html"
-
-            try:
-                email.send()
-
+            if ok:
                 sent_count += 1
-
                 self.stdout.write(
                     self.style.SUCCESS(
                         f'✓ Correo enviado a {paciente.correo}'
                     )
                 )
-
-            except Exception as e:
+            else:
                 self.stdout.write(
                     self.style.ERROR(
-                        f'✗ Error enviando a {paciente.correo}: {e}'
+                        f'✗ Error enviando a {paciente.correo}: {err}'
                     )
                 )
 
