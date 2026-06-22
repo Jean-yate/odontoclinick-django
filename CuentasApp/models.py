@@ -15,9 +15,28 @@ class UsuarioManager(BaseUserManager):
         user.save(using=self._db)
         return user
 
-    # Dejamos esto simple por si decides usarlo después, 
-    # pero ahora el control es por el campo 'id_rol'
     def create_superuser(self, nombre_usuario, correo, password=None, **extra_fields):
+        # 1. Obtener o crear el Rol "Administrador" de forma automática
+        # Usamos tu modelo 'Rol' y el campo 'nombre_rol'
+        rol_admin, _ = Rol.objects.get_or_create(
+            nombre_rol='Administrador', 
+            defaults={'descripcion': 'Rol con acceso total al sistema'}
+        )
+        
+        # 2. Obtener o crear el Estado "Activo" (o como se llame en tu sistema)
+        # Usamos tu modelo 'Estado' y el campo 'nombre_estado'
+        estado_activo, _ = Estado.objects.get_or_create(
+            nombre_estado='Activo'
+        )
+        
+        # 3. Asignamos los objetos foráneos obligatorios a los campos extra
+        extra_fields.setdefault('id_rol', rol_admin)
+        extra_fields.setdefault('id_estado', estado_activo)
+        
+        # 4. Campos requeridos por tu modelo de forma manual (ya que no los pide la consola)
+        extra_fields.setdefault('nombre', 'Admin')
+        extra_fields.setdefault('apellidos', 'General')
+
         return self.create_user(nombre_usuario, correo, password, **extra_fields)
 
 class Rol(models.Model):
