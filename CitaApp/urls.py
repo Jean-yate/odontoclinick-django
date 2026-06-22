@@ -3,7 +3,7 @@ from django.contrib.auth import views as auth_views
 from . import views
 from CitaApp import views as cita_views
 from Webapp import views as web_views
-from .models import Usuario
+from CuentasApp.models import Usuario
 
 # Imports necesarios para el envío manual
 from django.contrib.auth.forms import PasswordResetForm
