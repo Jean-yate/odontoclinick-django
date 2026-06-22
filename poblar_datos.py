@@ -1,14 +1,12 @@
 """
 Script de datos iniciales para OdontoClinick.
 Pobla: Especialidades, Categorías de Producto, Productos, Empresas y Tratamientos.
-
-Uso:
-    python manage.py shell < poblar_datos.py
-
-O desde el shell interactivo:
-    python manage.py shell
-    exec(open('poblar_datos.py').read())
 """
+
+import django
+import os
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'settings.settings')
+django.setup()
 
 from MedicoApp.models import Especialidad
 from InventarioApp.models import CategoriaProducto, Producto
