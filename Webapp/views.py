@@ -10,7 +10,7 @@ from django.db import transaction
 from django.db.models import Q, Sum, Count, F
 from django.utils import timezone
 from django.contrib import messages
-from django.core.mail import send_mail
+from django.core.mail import send_mail, get_connection, EmailMessage
 from django.conf import settings
 from django.core.paginator import Paginator
 from django.http import HttpResponse
@@ -63,10 +63,31 @@ def contacto_pqrs(request):
             cuerpo_usuario = f"Hola {nombre},\n\nHemos recibido tu {tipo.lower()} con éxito. Pronto nos comunicaremos contigo.\n\nDetalles:\n\"{mensaje}\""
 
             try:
-                send_mail(asunto_clinica, cuerpo_clinica, settings.EMAIL_HOST_USER, ['odontoclinick77@gmail.com'])
-                if email_usuario:
-                    send_mail(asunto_usuario, cuerpo_usuario, settings.EMAIL_HOST_USER, [email_usuario])
-                
+                # FIX: antes cada send_mail() abría y cerraba su propia
+                # conexión SMTP a Gmail por separado. Con dos correos
+                # seguidos, el tiempo total de dos handshakes SMTP podía
+                # superar el timeout por defecto de gunicorn (30s),
+                # matando el worker con un 500 genérico ANTES de que este
+                # try/except tuviera oportunidad de capturar el error real.
+                # Ahora se abre una sola conexión y se reutiliza para
+                # ambos correos, reduciendo el tiempo total de la petición.
+                conexion = get_connection()
+                conexion.open()
+                try:
+                    mensajes = [
+                        EmailMessage(asunto_clinica, cuerpo_clinica, settings.EMAIL_HOST_USER,
+                                     ['odontoclinick77@gmail.com'], connection=conexion)
+                    ]
+                    if email_usuario:
+                        mensajes.append(
+                            EmailMessage(asunto_usuario, cuerpo_usuario, settings.EMAIL_HOST_USER,
+                                         [email_usuario], connection=conexion)
+                        )
+                    for m in mensajes:
+                        m.send()
+                finally:
+                    conexion.close()
+
                 messages.success(request, "✅ PQRS enviada con éxito. Revisa tu correo para ver la copia.")
                 return redirect('home')
             except Exception as e:
