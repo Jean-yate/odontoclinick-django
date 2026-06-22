@@ -14,6 +14,8 @@ from PacienteApp.models import Paciente
 from CitaApp.models import Cita, EstadoCita
 from FacturacionApp.models import Pago, MetodoPago
 from InventarioApp.models import Producto, MovimientoInventario, CategoriaProducto
+from .models import Auditoria
+from .auditoria import registrar_auditoria
  
 from .forms import (
     UsuarioForm,
@@ -398,6 +400,12 @@ def crear_usuario(request):
                         # Reconectar SIEMPRE, aunque haya error
                         post_save.connect(crear_perfil_usuario, sender=Usuario)
 
+                registrar_auditoria(
+                    request,
+                    "Crear usuario",
+                    f"Se creó el usuario '{nuevo_usuario.nombre_usuario}' ({nuevo_usuario.nombre} {nuevo_usuario.apellidos}), rol: {nuevo_usuario.id_rol.nombre_rol}."
+                )
+
                 messages.success(
                     request,
                     f"✅ Usuario '{nuevo_usuario.nombre_usuario}' guardado correctamente."
@@ -443,6 +451,7 @@ def editar_usuario(request, id_usuario):
             try:
                 with transaction.atomic():
                     form.save()
+                registrar_auditoria(request, "Editar usuario", f"Se actualizaron los datos del usuario '{usuario.nombre_usuario}'.")
                 messages.success(request, f"✅ Datos de '{usuario.nombre_usuario}' actualizados perfectamente.")
                 return redirect('admin_app:lista_usuarios')
             except Exception as e:
@@ -469,9 +478,11 @@ def cambiar_estado(request, id_usuario):
     
     if usuario.id_estado == estado_activo:
         usuario.id_estado = estado_inactivo
+        registrar_auditoria(request, "Desactivar usuario", f"Se desactivó al usuario '{usuario.nombre_usuario}'.")
         messages.warning(request, f"🚫 El usuario '{usuario.nombre_usuario}' ha sido desactivado del sistema.")
     else:
         usuario.id_estado = estado_activo
+        registrar_auditoria(request, "Reactivar usuario", f"Se reactivó al usuario '{usuario.nombre_usuario}'.")
         messages.success(request, f"⚡ El usuario '{usuario.nombre_usuario}' ha sido reactivado exitosamente.")
         
     usuario.save()
@@ -495,6 +506,9 @@ def cambiar_password(request, id_usuario):
             try:
                 usuario.set_password(form.cleaned_data['password'])
                 usuario.save()
+                # NOTA: nunca se registra la contraseña en sí, solo el hecho
+                # de que cambió y quién/cuándo lo hizo.
+                registrar_auditoria(request, "Cambiar contraseña", f"Se modificó la contraseña del usuario '{usuario.nombre_usuario}'.")
                 messages.success(request, f"🔑 Credencial de '{usuario.nombre_usuario}' modificada con éxito.")
                 return redirect('admin_app:lista_usuarios')
             except Exception as e:
@@ -533,6 +547,7 @@ def crear_rol(request):
         else:
             try:
                 Rol.objects.create(nombre_rol=nombre_rol)
+                registrar_auditoria(request, "Crear rol", f"Se creó el rol '{nombre_rol}'.")
                 messages.success(request, f"✅ El rol '{nombre_rol}' ha sido creado con éxito.")
                 return redirect('admin_app:lista_roles')
             except Exception as e:
@@ -560,6 +575,7 @@ def editar_rol(request, id_rol):
             try:
                 rol.nombre_rol = nombre_rol
                 rol.save()
+                registrar_auditoria(request, "Editar rol", f"Se actualizó el rol a '{nombre_rol}'.")
                 messages.success(request, f"✅ El rol se ha actualizado a '{nombre_rol}'.")
                 return redirect('admin_app:lista_roles')
             except Exception as e:
@@ -603,6 +619,7 @@ def crear_estado_cita(request):
         else:
             try:
                 EstadoCita.objects.create(nombre_estado=nombre_estado, color=color)
+                registrar_auditoria(request, "Crear estado de cita", f"Se creó el estado de cita '{nombre_estado}' (color {color}).")
                 messages.success(request, f"✅ El estado '{nombre_estado}' ha sido creado con éxito.")
                 return redirect('admin_app:lista_estados_cita')
             except Exception as e:
@@ -632,6 +649,7 @@ def editar_estado_cita(request, id_estado_cita):
                 estado_cita.nombre_estado = nombre_estado
                 estado_cita.color = color
                 estado_cita.save()
+                registrar_auditoria(request, "Editar estado de cita", f"Se actualizó el estado de cita a '{nombre_estado}' (color {color}).")
                 messages.success(request, f"✅ El estado se ha actualizado a '{nombre_estado}'.")
                 return redirect('admin_app:lista_estados_cita')
             except Exception as e:
@@ -669,6 +687,7 @@ def crear_especialidad(request):
         else:
             try:
                 Especialidad.objects.create(nombre_especialidad=nombre_especialidad, descripcion=descripcion or None)
+                registrar_auditoria(request, "Crear especialidad", f"Se creó la especialidad '{nombre_especialidad}'.")
                 messages.success(request, f"✅ La especialidad '{nombre_especialidad}' ha sido creada con éxito.")
                 return redirect('admin_app:lista_especialidades')
             except Exception as e:
@@ -698,6 +717,7 @@ def editar_especialidad(request, id_especialidad):
                 especialidad.nombre_especialidad = nombre_especialidad
                 especialidad.descripcion = descripcion or None
                 especialidad.save()
+                registrar_auditoria(request, "Editar especialidad", f"Se actualizó la especialidad a '{nombre_especialidad}'.")
                 messages.success(request, f"✅ La especialidad se ha actualizado a '{nombre_especialidad}'.")
                 return redirect('admin_app:lista_especialidades')
             except Exception as e:
@@ -734,6 +754,7 @@ def crear_estado_usuario(request):
         else:
             try:
                 Estado.objects.create(nombre_estado=nombre_estado)
+                registrar_auditoria(request, "Crear estado de usuario", f"Se creó el estado de usuario '{nombre_estado}'.")
                 messages.success(request, f"✅ El estado '{nombre_estado}' ha sido creado con éxito.")
                 return redirect('admin_app:lista_estados_usuario')
             except Exception as e:
@@ -761,6 +782,7 @@ def editar_estado_usuario(request, id_estado):
             try:
                 estado_usuario.nombre_estado = nombre_estado
                 estado_usuario.save()
+                registrar_auditoria(request, "Editar estado de usuario", f"Se actualizó el estado de usuario a '{nombre_estado}'.")
                 messages.success(request, f"✅ El estado se ha actualizado a '{nombre_estado}'.")
                 return redirect('admin_app:lista_estados_usuario')
             except Exception as e:
@@ -798,6 +820,7 @@ def crear_categoria_producto(request):
         else:
             try:
                 CategoriaProducto.objects.create(nombre_categoria=nombre_categoria, descripcion=descripcion or None)
+                registrar_auditoria(request, "Crear categoría de producto", f"Se creó la categoría '{nombre_categoria}'.")
                 messages.success(request, f"✅ La categoría '{nombre_categoria}' ha sido creada con éxito.")
                 return redirect('admin_app:lista_categorias_producto')
             except Exception as e:
@@ -827,6 +850,7 @@ def editar_categoria_producto(request, id_categoria):
                 categoria.nombre_categoria = nombre_categoria
                 categoria.descripcion = descripcion or None
                 categoria.save()
+                registrar_auditoria(request, "Editar categoría de producto", f"Se actualizó la categoría a '{nombre_categoria}'.")
                 messages.success(request, f"✅ La categoría se ha actualizado a '{nombre_categoria}'.")
                 return redirect('admin_app:lista_categorias_producto')
             except Exception as e:
@@ -864,6 +888,7 @@ def crear_metodo_pago(request):
         else:
             try:
                 MetodoPago.objects.create(nombre_metodo=nombre_metodo, activo=int(activo))
+                registrar_auditoria(request, "Crear método de pago", f"Se creó el método de pago '{nombre_metodo}' (activo: {activo}).")
                 messages.success(request, f"✅ El método de pago '{nombre_metodo}' ha sido creado con éxito.")
                 return redirect('admin_app:lista_metodos_pago')
             except Exception as e:
@@ -893,9 +918,41 @@ def editar_metodo_pago(request, id_metodo_pago):
                 metodo_pago.nombre_metodo = nombre_metodo
                 metodo_pago.activo = int(activo)
                 metodo_pago.save()
+                registrar_auditoria(request, "Editar método de pago", f"Se actualizó el método de pago a '{nombre_metodo}' (activo: {activo}).")
                 messages.success(request, f"✅ El método de pago se ha actualizado a '{nombre_metodo}'.")
                 return redirect('admin_app:lista_metodos_pago')
             except Exception as e:
                 messages.error(request, f"❌ Error al intentar guardar los cambios: {e}")
 
     return render(request, 'AdminApp/metodos_pago/crear.html', {'metodo_pago': metodo_pago})
+
+
+# --- Bitácora de Auditoría ---
+
+@login_required
+def lista_auditoria(request):
+    """Muestra el historial de acciones críticas registradas en el sistema"""
+    if not es_administrador(request.user):
+        return redirect('home')
+
+    query = request.GET.get('q', '').strip()
+
+    registros_qs = Auditoria.objects.select_related('id_usuario').all()
+
+    if query:
+        registros_qs = registros_qs.filter(
+            Q(accion__icontains=query) |
+            Q(detalles__icontains=query) |
+            Q(id_usuario__nombre__icontains=query) |
+            Q(id_usuario__apellidos__icontains=query) |
+            Q(id_usuario__nombre_usuario__icontains=query)
+        )
+
+    paginator = Paginator(registros_qs, 25)
+    page_number = request.GET.get('page')
+    registros = paginator.get_page(page_number)
+
+    return render(request, 'AdminApp/audotira/lista.html', {
+        'registros': registros,
+        'query': query,
+    })

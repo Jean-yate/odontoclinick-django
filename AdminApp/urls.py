@@ -37,4 +37,7 @@ urlpatterns = [
     path('metodos-pago/', views.lista_metodos_pago, name='lista_metodos_pago'),
     path('metodos-pago/nuevo/', views.crear_metodo_pago, name='crear_metodo_pago'),
     path('metodos-pago/<int:id_metodo_pago>/editar/', views.editar_metodo_pago, name='editar_metodo_pago'),
+
+    # Bitácora de auditoría
+    path('auditoria/', views.lista_auditoria, name='lista_auditoria'),
 ]

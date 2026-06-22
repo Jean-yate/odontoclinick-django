@@ -7,6 +7,7 @@ from PacienteApp.models import Paciente
 from .models import Secretaria
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import update_session_auth_hash
+from AdminApp.auditoria import registrar_auditoria
 
 def login_view(request):
     if request.method == 'POST':
@@ -22,6 +23,7 @@ def login_view(request):
             
             # Si pasa la validación, procedemos al login
             login(request, user)
+            registrar_auditoria(request, "Inicio de sesión", f"El usuario '{user.nombre_usuario}' inició sesión.")
             
             rol = user.id_rol.nombre_rol
             if rol == 'Administrador':
@@ -61,6 +63,7 @@ def registro_view(request):
             # de crear el registro en la tabla Paciente automáticamente.
             
             login(request, usuario)
+            registrar_auditoria(request, "Registro de paciente", f"Se registró un nuevo paciente: '{usuario.nombre_usuario}' ({usuario.nombre} {usuario.apellidos}).")
             return redirect('perfil_paciente')
     else:
         form = RegistroForm()
