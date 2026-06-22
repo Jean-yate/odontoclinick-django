@@ -5,6 +5,7 @@ import qrcode
 from io import BytesIO
 from django.core.files import File
 from PIL import Image
+from CuentasApp.models import Usuario
 
 class EstadoCita(models.Model):
     id_estado_cita = models.AutoField(primary_key=True)
